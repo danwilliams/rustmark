@@ -14,4 +14,10 @@ This project uses the [Bulma CSS framework](https://bulma.io/), which is
 [MIT license](http://opensource.org/licenses/MIT) and free to use without
 restriction.
 
+The [Font Awesome](https://fontawesome.com/) icons are [published](https://fontawesome.com/license/free)
+under the [CC-BY (Creative Commons Attribution) license](https://creativecommons.org/licenses/by/4.0/),
+and the webfonts under the [SIL OFL (Open Font License)](https://scripts.sil.org/OFL).
+They are freely usable, along with the CSS code used to display them, which is
+released under the [MIT license](http://opensource.org/licenses/MIT).
+
 

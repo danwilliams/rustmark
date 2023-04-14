@@ -91,8 +91,9 @@ async fn main() {
 		Template:       tera,
 	});
 	let app           = Router::new()
-		.route("/",          get(get_index))
-		.route("/css/*path", get(get_static_asset))
+		.route("/",               get(get_index))
+		.route("/css/*path",      get(get_static_asset))
+		.route("/webfonts/*path", get(get_static_asset))
 		.with_state(shared_state)
 		.layer(tower_http::trace::TraceLayer::new_for_http()
 			.on_request(
