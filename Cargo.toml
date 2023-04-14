@@ -13,3 +13,6 @@ opt-level = "z"  # Optimise for size
 lto = true       # Enable link-time optimisation
 
 [dependencies]
+axum = "0.6.15"
+serde = { version = "1.0.160", features = ["derive"] }
+tokio = { version = "1.27.0", features = ["macros", "rt-multi-thread"] }
