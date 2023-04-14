@@ -3,6 +3,7 @@
 //		Packages
 
 use serde::Deserialize;
+use tera::Tera;
 
 
 
@@ -18,7 +19,8 @@ pub struct Config {
 //		AppState																
 #[allow(dead_code)]
 pub struct AppState {
-	pub Config: Config,
+	pub Config:   Config,
+	pub Template: Tera,
 }
 
 

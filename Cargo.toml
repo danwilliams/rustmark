@@ -16,7 +16,9 @@ lto = true       # Enable link-time optimisation
 axum = "0.6.15"
 bytes = "1.4.0"
 figment = { version = "0.10.8", features = ["toml", "env"] }
+include_dir = { version = "0.7.3", features = ["glob"] }
 serde = { version = "1.0.160", features = ["derive"] }
+tera = "1.18.1"
 tokio = { version = "1.27.0", features = ["macros", "rt-multi-thread"] }
 tower-http = { version = "0.4.0", features = ["trace"] }
 tracing = "0.1.37"

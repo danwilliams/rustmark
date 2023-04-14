@@ -19,11 +19,13 @@ use figment::{
 	Figment,
 	providers::{Env, Format, Toml},
 };
+use include_dir::{Dir, include_dir};
 use std::{
 	net::SocketAddr,
 	sync::Arc,
 	time::Duration,
 };
+use tera::Tera;
 use tracing::{Level, Span, info};
 use tracing_appender::{self};
 use tracing_subscriber::{
@@ -31,6 +33,12 @@ use tracing_subscriber::{
 	layer::SubscriberExt,
 	util::SubscriberInitExt,
 };
+
+
+
+//		Constants
+
+static TEMPLATE_DIR: Dir<'_> = include_dir!("html");
 
 
 
@@ -64,8 +72,22 @@ async fn main() {
 		.init()
 	;
 	let addr          = SocketAddr::from(([127, 0, 0, 1], config.port));
+	let mut templates = vec![];
+	for file in TEMPLATE_DIR.find("**/*.tera.html").expect("Failed to read glob pattern") {
+		templates.push((
+			file.path().file_name().unwrap()
+				.to_str().unwrap()
+				.strip_suffix(".tera.html").unwrap()
+				.to_owned(),
+			TEMPLATE_DIR.get_file(file.path()).unwrap().contents_utf8().unwrap(),
+		));
+	}
+	let mut tera      = Tera::default();
+	tera.add_raw_templates(templates).expect("Error parsing templates");
+	tera.autoescape_on(vec![".tera.html", ".html"]);
 	let shared_state  = Arc::new(AppState {
 		Config:         config,
+		Template:       tera,
 	});
 	let app           = Router::new()
 		.route("/", get(get_index))
