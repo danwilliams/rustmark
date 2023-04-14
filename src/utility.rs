@@ -11,7 +11,8 @@ use serde::Deserialize;
 //		Config																	
 #[derive(Deserialize)]
 pub struct Config {
-	pub port: u16,
+	pub port:   u16,
+	pub logdir: String,
 }
 
 //		AppState																
