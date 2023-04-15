@@ -5,7 +5,8 @@
 use axum::http::Uri;
 use ring::hmac;
 use std::collections::HashMap;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use smart_default::SmartDefault;
 use tera::Tera;
 use url::form_urlencoded;
 
@@ -14,10 +15,13 @@ use url::form_urlencoded;
 //		Structs
 
 //		Config																	
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, SmartDefault)]
 pub struct Config {
+	#[default = 8000]
 	pub port:   u16,
+	#[default = "log"]
 	pub logdir: String,
+	#[default(HashMap::new())]
 	pub users:  HashMap<String, String>,
 }
 

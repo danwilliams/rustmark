@@ -26,7 +26,7 @@ use axum_sessions::{
 };
 use figment::{
 	Figment,
-	providers::{Env, Format, Toml},
+	providers::{Env, Format, Serialized, Toml},
 };
 use include_dir::{Dir, include_dir};
 use rand::Rng;
@@ -60,7 +60,7 @@ static ASSETS_DIR:   Dir<'_> = include_dir!("static");
 //		main																	
 #[tokio::main]
 async fn main() {
-	let config: Config = Figment::new()
+	let config: Config = Figment::from(Serialized::defaults(Config::default()))
 		.merge(Toml::file("Config.toml"))
 		.merge(Env::raw())
 		.extract()
