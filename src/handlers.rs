@@ -2,6 +2,7 @@
 
 use crate::{
 	ASSETS_DIR,
+	MARKDOWN_DIR,
 	utility::*,
 };
 use axum::{
@@ -10,6 +11,7 @@ use axum::{
 	http::{HeaderValue, StatusCode, Uri, header},
 	response::{Html, IntoResponse, Response},
 };
+use markdown::{self};
 use mime_guess::{self};
 use std::sync::Arc;
 use tera::Context;
@@ -24,6 +26,26 @@ pub async fn get_index(State(state): State<Arc<AppState>>) -> Html<String> {
 	context.insert("Title",   &state.Config.title);
 	context.insert("Content", "Index");
 	Html(state.Template.render("index", &context).unwrap())
+}
+
+//		get_page																
+pub async fn get_page(
+	State(state): State<Arc<AppState>>,
+	uri: Uri,
+) -> impl IntoResponse {
+	let path       =  uri.path().trim_start_matches('/');
+	match MARKDOWN_DIR.get_file(path) {
+		None       => (StatusCode::NOT_FOUND).into_response(),
+		Some(file) => {
+			let mut context = Context::new();
+			context.insert("Title",   &path);
+			context.insert("Content", &markdown::to_html(file.contents_utf8().unwrap()));
+			(
+				StatusCode::OK,
+				Html(state.Template.render("page", &context).unwrap()),
+			).into_response()
+		},
+	}
 }
 
 //		get_static_asset														

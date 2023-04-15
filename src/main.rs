@@ -52,6 +52,7 @@ use tracing_subscriber::{
 
 static TEMPLATE_DIR: Dir<'_> = include_dir!("html");
 static ASSETS_DIR:   Dir<'_> = include_dir!("static");
+static MARKDOWN_DIR: Dir<'_> = include_dir!("markdown");
 
 
 
@@ -108,7 +109,8 @@ async fn main() {
 	});
 	//	Protected routes
 	let app           = Router::new()
-		.route("/", get(get_index))
+		.route("/",      get(get_index))
+		.route("/*path", get(get_page))
 		.route_layer(middleware::from_fn_with_state(Arc::clone(&shared_state), protect))
 		.merge(
 			//	Public routes
