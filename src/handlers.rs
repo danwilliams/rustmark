@@ -11,7 +11,14 @@ use axum::{
 	http::{HeaderValue, StatusCode, Uri, header},
 	response::{Html, IntoResponse, Response},
 };
-use markdown::{self};
+use comrak::{
+	ComrakOptions,
+	ComrakExtensionOptions,
+	ComrakParseOptions,
+	ComrakRenderOptions,
+	ListStyleType,
+	markdown_to_html,
+};
 use mime_guess::{self};
 use std::sync::Arc;
 use tera::Context;
@@ -39,7 +46,39 @@ pub async fn get_page(
 		Some(file) => {
 			let mut context = Context::new();
 			context.insert("Title",   &path);
-			context.insert("Content", &markdown::to_html(file.contents_utf8().unwrap()));
+			context.insert("Content", &markdown_to_html(
+				file.contents_utf8().unwrap(),
+				&ComrakOptions {
+					extension:                     ComrakExtensionOptions {
+						strikethrough:             true,
+						tagfilter:                 true,
+						table:                     true,
+						autolink:                  true,
+						tasklist:                  true,
+						superscript:               true,
+						header_ids:                Some("".to_owned()),
+						footnotes:                 true,
+						description_lists:         true,
+						front_matter_delimiter:    Some("---".to_owned()),
+						shortcodes:                true,
+					},
+					parse:                         ComrakParseOptions {
+						smart:                     true,
+						default_info_string:       Some("".to_owned()),
+						relaxed_tasklist_matching: true,
+					},
+					render:                        ComrakRenderOptions {
+						hardbreaks:                false,
+						github_pre_lang:           false,
+						full_info_string:          true,
+						width:                     80,
+						unsafe_:                   true,
+						escape:                    false,
+						list_style:                ListStyleType::Dash,
+						sourcepos:                 false,
+					},
+				},
+			));
 			(
 				StatusCode::OK,
 				Html(state.Template.render("page", &context).unwrap()),
