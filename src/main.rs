@@ -1,6 +1,7 @@
 //		Modules
 
 mod auth;
+mod errors;
 mod handlers;
 mod utility;
 
@@ -10,6 +11,7 @@ mod utility;
 
 use crate::{
 	auth::*,
+	errors::*,
 	handlers::*,
 	utility::*,
 };
@@ -35,6 +37,7 @@ use std::{
 	time::Duration,
 };
 use tera::Tera;
+use tower_http::catch_panic::CatchPanicLayer;
 use tracing::{Level, Span, info};
 use tracing_appender::{self};
 use tracing_subscriber::{
@@ -115,6 +118,9 @@ async fn main() {
 				.route("/css/*path",      get(get_static_asset))
 				.route("/webfonts/*path", get(get_static_asset))
 		)
+		.fallback(no_route)
+		.layer(CatchPanicLayer::new())
+		.layer(middleware::from_fn_with_state(Arc::clone(&shared_state), graceful_error_layer))
 		.layer(middleware::from_fn_with_state(Arc::clone(&shared_state), auth_layer))
 		.layer(SessionLayer::new(session_store, &secret).with_secure(false))
 		.with_state(shared_state)
@@ -138,6 +144,8 @@ async fn main() {
 				tracing::error!("Something went wrong")
 			})
 		)
+		.layer(CatchPanicLayer::new())
+		.layer(middleware::from_fn(final_error_layer))
 	;
 	info!("Listening on {}", addr);
 	axum::Server::bind(&addr)
