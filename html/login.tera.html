@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Terracotta</title>
+  <link rel="stylesheet" href="/css/bulma.min.css">
+  <link rel="stylesheet" href="/css/fontawesome-all.min.css">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <section class="section">
+    <div class="container">
+      <h1 class="title columns is-centered">
+        Terracotta
+      </h1>
+      <hr />
+      <div class="content">
+        <div class="columns is-centered">
+          <div class="column is-5-tablet is-4-desktop is-3-widescreen">
+            <form action="/login" method="POST" class="box">
+              <input type="hidden" name="uri" value="{{ PageURL }}">
+              <div class="field">
+                <label for="username" class="label">Username</label>
+                <div class="control has-icons-left">
+                  <input type="text" name="username" placeholder="e.g. bobsmith" class="input" required>
+                  <span class="icon is-small is-left">
+                    <i class="fa fa-user"></i>
+                  </span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="password" class="label">Password</label>
+                <div class="control has-icons-left">
+                  <input type="password" name="password" placeholder="*******" class="input" required>
+                  <span class="icon is-small is-left">
+                    <i class="fa fa-lock"></i>
+                  </span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="remember" class="checkbox">
+                  <input type="checkbox" name="remember">
+                  Remember me
+                </label>
+              </div>
+              <div class="field">
+                <button type="submit" class="button is-success">
+                  Login
+                </button>
+              </div>
+            </form>
+            {% if Failed %}
+            <div class="notification is-warning">
+              <span class="icon">
+                <i class="fa fa-triangle-exclamation"></i>
+              </span>
+              Incorrect credentials
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

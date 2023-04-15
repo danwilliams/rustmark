@@ -14,10 +14,15 @@ lto = true       # Enable link-time optimisation
 
 [dependencies]
 axum = "0.6.15"
+axum-sessions = "0.5.0"
+base64 = "0.21.0"
 bytes = "1.4.0"
 figment = { version = "0.10.8", features = ["toml", "env"] }
 include_dir = { version = "0.7.3", features = ["glob"] }
 mime_guess = "2.0.4"
+rand = { version = "0.8.5", features = ["min_const_gen"] }
+ring = "0.16.20"
+secrecy = "0.8.0"
 serde = { version = "1.0.160", features = ["derive"] }
 tera = "1.18.1"
 tokio = { version = "1.27.0", features = ["macros", "rt-multi-thread"] }
@@ -25,3 +30,4 @@ tower-http = { version = "0.4.0", features = ["trace"] }
 tracing = "0.1.37"
 tracing-appender = "0.2.2"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+url = "2.3.1"

@@ -1,5 +1,6 @@
 //		Modules
 
+mod auth;
 mod handlers;
 mod utility;
 
@@ -8,18 +9,26 @@ mod utility;
 //		Packages
 
 use crate::{
+	auth::*,
 	handlers::*,
 	utility::*,
 };
 use axum::{
 	Router,
-	routing::get,
+	middleware,
+	routing::{get, post},
+};
+use axum_sessions::{
+	SessionLayer,
+	async_session::MemoryStore as SessionMemoryStore,
 };
 use figment::{
 	Figment,
 	providers::{Env, Format, Toml},
 };
 use include_dir::{Dir, include_dir};
+use rand::Rng;
+use ring::hmac::{self, HMAC_SHA512};
 use std::{
 	net::SocketAddr,
 	sync::Arc,
@@ -86,14 +95,28 @@ async fn main() {
 	let mut tera      = Tera::default();
 	tera.add_raw_templates(templates).expect("Error parsing templates");
 	tera.autoescape_on(vec![".tera.html", ".html"]);
+	let secret        = rand::thread_rng().gen::<[u8; 64]>();
+	let session_store = SessionMemoryStore::new();
 	let shared_state  = Arc::new(AppState {
 		Config:         config,
+		Secret:         secret,
+		Key:            hmac::Key::new(HMAC_SHA512, &secret),
 		Template:       tera,
 	});
+	//	Protected routes
 	let app           = Router::new()
-		.route("/",               get(get_index))
-		.route("/css/*path",      get(get_static_asset))
-		.route("/webfonts/*path", get(get_static_asset))
+		.route("/", get(get_index))
+		.route_layer(middleware::from_fn_with_state(Arc::clone(&shared_state), protect))
+		.merge(
+			//	Public routes
+			Router::new()
+				.route("/login",          post(post_login))
+				.route("/logout",         get(get_logout))
+				.route("/css/*path",      get(get_static_asset))
+				.route("/webfonts/*path", get(get_static_asset))
+		)
+		.layer(middleware::from_fn_with_state(Arc::clone(&shared_state), auth_layer))
+		.layer(SessionLayer::new(session_store, &secret).with_secure(false))
 		.with_state(shared_state)
 		.layer(tower_http::trace::TraceLayer::new_for_http()
 			.on_request(
