@@ -16,8 +16,10 @@ use comrak::{
 	ComrakExtensionOptions,
 	ComrakParseOptions,
 	ComrakRenderOptions,
+	ComrakPlugins,
 	ListStyleType,
-	markdown_to_html,
+	markdown_to_html_with_plugins,
+	plugins::syntect::SyntectAdapter,
 };
 use mime_guess::{self};
 use std::sync::Arc;
@@ -44,9 +46,12 @@ pub async fn get_page(
 	match MARKDOWN_DIR.get_file(path) {
 		None       => (StatusCode::NOT_FOUND).into_response(),
 		Some(file) => {
+			let adaptor     = SyntectAdapter::new("base16-ocean.dark");
+			let mut plugins = ComrakPlugins::default();
+			plugins.render.codefence_syntax_highlighter = Some(&adaptor);
 			let mut context = Context::new();
 			context.insert("Title",   &path);
-			context.insert("Content", &markdown_to_html(
+			context.insert("Content", &markdown_to_html_with_plugins(
 				file.contents_utf8().unwrap(),
 				&ComrakOptions {
 					extension:                     ComrakExtensionOptions {
@@ -78,6 +83,7 @@ pub async fn get_page(
 						sourcepos:                 false,
 					},
 				},
+				&plugins,
 			));
 			(
 				StatusCode::OK,
