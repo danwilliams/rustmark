@@ -53,7 +53,8 @@ pub async fn graceful_error_layer<B>(
 					).into_response();
 				}
 			}
-			let context = Context::new();
+			let mut context = Context::new();
+			context.insert("Title", &state.Config.title);
 			(
 				parts,
 				Html(state.Template.render("404-notfound", &context).unwrap()),
@@ -61,7 +62,8 @@ pub async fn graceful_error_layer<B>(
 		},
 		//	500
 		StatusCode::INTERNAL_SERVER_ERROR => {
-			let context = Context::new();
+			let mut context = Context::new();
+			context.insert("Title", &state.Config.title);
 			parts.headers.remove("content-length");
 			parts.headers.remove("content-type");
 			parts.headers.insert("error-handled", "gracefully".parse().unwrap());

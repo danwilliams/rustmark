@@ -1,5 +1,6 @@
 port   = 8000
 logdir = "log"
+title  = "Terracotta"
 
 [users]
 #joe = "1a2b3c"

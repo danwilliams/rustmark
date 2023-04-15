@@ -21,6 +21,8 @@ pub struct Config {
 	pub port:   u16,
 	#[default = "log"]
 	pub logdir: String,
+	#[default = "Terracotta"]
+	pub title:  String,
 	#[default(HashMap::new())]
 	pub users:  HashMap<String, String>,
 }

@@ -222,6 +222,7 @@ pub async fn get_login(
 	}
 	uri             = build_uri(uri.path().to_string(), params);
 	let mut context = Context::new();
+	context.insert("Title",   &state.Config.title);
 	context.insert("PageURL", &uri.path_and_query().unwrap().to_string());
 	context.insert("Failed",  &failed);
 	Html(state.Template.render("login", &context).unwrap())

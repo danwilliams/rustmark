@@ -21,7 +21,7 @@ use tera::Context;
 //		get_index																
 pub async fn get_index(State(state): State<Arc<AppState>>) -> Html<String> {
 	let mut context = Context::new();
-	context.insert("Title",   "Terracotta");
+	context.insert("Title",   &state.Config.title);
 	context.insert("Content", "Index");
 	Html(state.Template.render("index", &context).unwrap())
 }
