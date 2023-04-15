@@ -1,10 +1,14 @@
-# Terracotta
+# Rustmark
 
-This repository provides a boilerplate webserver application, based on Axum, to
-act as a foundation and springboard for building web applications and APIs.
+Rustmark is a simple Markdown server written in [Rust](https://www.rust-lang.org/).
+It is intended to be easy to use, and easy to deploy.
 
-The name Terracotta was chosen because it's rusty in colour, and clay represents
-something that can be moulded into different shapes.
+
+## Disclaimer
+
+The name "Rustmark" is a combination of the words "Rust" and "Markdown". There
+is no affiliation with the Rust project or the Rust Foundation, nor any intent
+to imply any.
 
 
 ## Attributions
