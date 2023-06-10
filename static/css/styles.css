@@ -1,10 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&family=Roboto+Slab&display=swap');
+
 @font-face {
 	font-family: ConsolasNF;
 	src:         url(/webfonts/consolas-nf.ttf);
 }
 
+* {
+	font-family: Quicksand, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
 .navbar-item .icon {
 	margin-right: 0.25em;
+}
+
+h1, h2, h3 {
+	font-family: "Roboto Slab", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 h1 {
