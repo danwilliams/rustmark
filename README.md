@@ -13,6 +13,11 @@ to imply any.
 
 ## Attributions
 
+An image of Ferris the crab (the Rust mascot) is used to illustrate the Markdown
+content examples. This image is sourced from [rustacean.net](https://rustacean.net/)
+and is in the [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/),
+so can be freely used.
+
 This project uses the [Bulma CSS framework](https://bulma.io/), which is
 [published](https://github.com/jgthms/bulma/blob/master/LICENSE) under the
 [MIT license](http://opensource.org/licenses/MIT) and free to use without
