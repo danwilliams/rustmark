@@ -125,6 +125,11 @@ to imply any.
 
 ## Attributions
 
+This project uses the [Rust logo](https://github.com/rust-lang/rust/issues/11562#issuecomment-32700278)
+as a default, due to being written in Rust. The logo is
+[freely usable](https://github.com/rust-lang/rust/issues/11562#issuecomment-50833809)
+under the [CC-BY (Creative Commons Attribution) license](https://creativecommons.org/licenses/by/4.0/).
+
 An image of Ferris the crab (the Rust mascot) is used to illustrate the Markdown
 content examples. This image is sourced from [rustacean.net](https://rustacean.net/)
 and is in the [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/),

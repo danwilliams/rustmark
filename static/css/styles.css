@@ -24,6 +24,27 @@ h1 {
 }
 h1.title {
 	margin-bottom: 0.5em !important;
+	display:       flex;
+}
+h1.title i.logo,
+nav i.logo {
+	-webkit-mask-size:  cover;
+	mask-size:          cover;
+	-webkit-mask-image: url(/img/logo.svg);
+	mask-image:         url(/img/logo.svg);
+}
+h1.title i.logo {
+	height:           1.4em;
+	width:            1.4em;
+	margin:           -0.1em 0.3em -0.2em -0.2em;
+	background-color: #363636;
+}
+nav i.logo {
+	height:           2.2em;
+	width:            2.2em;
+	margin:           0;
+	display:          block;
+	background-color: rgba(0, 0, 0, 0.7);
 }
 
 form {
