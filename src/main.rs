@@ -109,8 +109,9 @@ async fn main() {
 	});
 	//	Protected routes
 	let app           = Router::new()
-		.route("/",      get(get_index))
-		.route("/*path", get(get_page))
+		.route("/",             get(get_index))
+		.route("/images/*path", get(get_static_asset))
+		.route("/*path",        get(get_page))
 		.route_layer(middleware::from_fn_with_state(Arc::clone(&shared_state), protect))
 		.merge(
 			//	Public routes
