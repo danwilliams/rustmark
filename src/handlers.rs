@@ -41,11 +41,8 @@ pub enum BaseDir {
 //		Functions
 
 //		get_index																
-pub async fn get_index(State(state): State<Arc<AppState>>) -> Html<String> {
-	let mut context = Context::new();
-	context.insert("Title",   &state.Config.title);
-	context.insert("Content", "Index");
-	Html(state.Template.render("index", &context).unwrap())
+pub async fn get_index(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+	get_page(State(state), Uri::from_static("/index.md")).await
 }
 
 //		get_page																
@@ -64,7 +61,13 @@ pub async fn get_page(
 			let mut plugins = ComrakPlugins::default();
 			plugins.render.codefence_syntax_highlighter = Some(&adaptor);
 			let mut context = Context::new();
-			context.insert("Title",   &format!("{} - {}", &path, &state.Config.title));
+			let template    = if path == "index.md" { "index" } else { "page" };
+			let title       = if path == "index.md" {
+				state.Config.title.clone()
+			} else {
+				format!("{} - {}", path.trim_end_matches(".md"), &state.Config.title)
+			};
+			context.insert("Title",   &title);
 			context.insert("Content", &markdown_to_html_with_plugins(
 				file.contents_utf8().unwrap(),
 				&ComrakOptions {
@@ -101,7 +104,7 @@ pub async fn get_page(
 			));
 			(
 				StatusCode::OK,
-				Html(state.Template.render("page", &context).unwrap()),
+				Html(state.Template.render(template, &context).unwrap()),
 			).into_response()
 		},
 	}

@@ -4,6 +4,13 @@ Rustmark is a simple Markdown server written in [Rust](https://www.rust-lang.org
 It is intended to be easy to use, and easy to deploy.
 
 
+## Content
+
+The entry point for reading the Markdown files is [`content/index.md`](content/index.md).
+If you are here to read the content (for instance if you are using a Git system
+to preview the Markdown, such as GitHub or Gitea), start there.
+
+
 ## Setup
 
 The steps to set up this project are simple and standard. You need a
