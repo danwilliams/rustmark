@@ -118,6 +118,7 @@ async fn main() {
 				.route("/login",          post(post_login))
 				.route("/logout",         get(get_logout))
 				.route("/css/*path",      get(get_static_asset))
+				.route("/js/*path",       get(get_static_asset))
 				.route("/webfonts/*path", get(get_static_asset))
 		)
 		.fallback(no_route)

@@ -24,3 +24,110 @@ code, pre, code *, pre * {
 	font-family: ConsolasNF, monospace;
 }
 
+.content blockquote.blocked p,
+.content blockquote.broken p,
+.content blockquote.warning p,
+.content blockquote.caution p,
+.content blockquote.note p,
+.content blockquote.tip p,
+.content blockquote.complete p,
+.content blockquote.finished p,
+.content blockquote.approved p,
+.content blockquote.info p,
+.content blockquote.question p,
+.content blockquote.todo p {
+	padding-left: 2.5em;
+}
+
+.content blockquote.blocked::before,
+.content blockquote.broken::before,
+.content blockquote.warning::before,
+.content blockquote.caution::before,
+.content blockquote.note::before,
+.content blockquote.tip::before,
+.content blockquote.complete::before,
+.content blockquote.finished::before,
+.content blockquote.approved::before,
+.content blockquote.info::before,
+.content blockquote.question::before,
+.content blockquote.todo::before {
+	position:    absolute;
+	font-size:   1em;
+	font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+}
+.content blockquote.blocked p:first-child strong:first-child,
+.content blockquote.broken p:first-child strong:first-child,
+.content blockquote.warning p:first-child strong:first-child,
+.content blockquote.caution p:first-child strong:first-child,
+.content blockquote.note p:first-child strong:first-child,
+.content blockquote.tip p:first-child strong:first-child,
+.content blockquote.complete p:first-child strong:first-child,
+.content blockquote.finished p:first-child strong:first-child,
+.content blockquote.approved p:first-child strong:first-child,
+.content blockquote.info p:first-child strong:first-child,
+.content blockquote.question p:first-child strong:first-child,
+.content blockquote.todo p:first-child strong:first-child {
+	display: block;
+}
+
+.content blockquote.blocked,
+.content blockquote.broken {
+	border-left:      5px solid hsl(0, 80%, 44%);
+	background-color: hsl(0, 73%, 94%);
+}
+.content blockquote.warning,
+.content blockquote.caution {
+	border-left:      5px solid hsl(30, 70%, 50%);
+	background-color: hsl(30, 77%, 92%);
+}
+.content blockquote.note,
+.content blockquote.tip {
+	border-left:      5px solid hsl(50, 90%, 45%);
+	background-color: hsl(50, 78%, 92%);
+}
+.content blockquote.complete,
+.content blockquote.finished,
+.content blockquote.approved {
+	border-left:      5px solid hsl(80, 70%, 37%);
+	background-color: hsl(80, 47%, 93%);
+}
+.content blockquote.info {
+	border-left:      5px solid hsl(210, 60%, 45%);
+	background-color: hsl(210, 65%, 93%);
+}
+.content blockquote.question {
+	border-left:      5px solid hsl(275, 60%, 45%);
+	background-color: hsl(275, 70%, 94%);
+}
+.content blockquote.todo {
+	border-left:      5px solid hsl(40, 80%, 35%);
+	background-color: hsl(40, 73%, 93%);
+}
+
+.content blockquote.blocked::before,
+.content blockquote.broken::before {
+	content: "⛔";
+}
+.content blockquote.warning::before,
+.content blockquote.caution::before {
+	content: "⚠️";
+}
+.content blockquote.note::before,
+.content blockquote.tip::before {
+	content: "💡";
+}
+.content blockquote.complete::before,
+.content blockquote.finished::before,
+.content blockquote.approved::before {
+	content: "✅";
+}
+.content blockquote.info::before {
+	content: "ℹ️";
+}
+.content blockquote.question::before {
+	content: "❓";
+}
+.content blockquote.todo::before {
+	content: "🚧";
+}
+
