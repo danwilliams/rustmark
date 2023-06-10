@@ -52,7 +52,7 @@ use tracing_subscriber::{
 
 static TEMPLATE_DIR: Dir<'_> = include_dir!("html");
 static ASSETS_DIR:   Dir<'_> = include_dir!("static");
-static MARKDOWN_DIR: Dir<'_> = include_dir!("markdown");
+static CONTENT_DIR:  Dir<'_> = include_dir!("content");
 
 
 
@@ -109,18 +109,18 @@ async fn main() {
 	});
 	//	Protected routes
 	let app           = Router::new()
-		.route("/",             get(get_index))
-		.route("/images/*path", get(get_static_asset))
-		.route("/*path",        get(get_page))
+		.route("/",      get(get_index))
+		.route("/*path", get(get_page))   //  Also handles get_protected_static_asset(uri)
 		.route_layer(middleware::from_fn_with_state(Arc::clone(&shared_state), protect))
 		.merge(
 			//	Public routes
 			Router::new()
 				.route("/login",          post(post_login))
 				.route("/logout",         get(get_logout))
-				.route("/css/*path",      get(get_static_asset))
-				.route("/js/*path",       get(get_static_asset))
-				.route("/webfonts/*path", get(get_static_asset))
+				.route("/css/*path",      get(get_public_static_asset))
+				.route("/img/*path",      get(get_public_static_asset))
+				.route("/js/*path",       get(get_public_static_asset))
+				.route("/webfonts/*path", get(get_public_static_asset))
 		)
 		.fallback(no_route)
 		.layer(CatchPanicLayer::new())

@@ -75,13 +75,13 @@ The repository is designed so that it can be forked, and content added. As such,
 it is best to keep in line with the existing structure and intended usage, to
 make updates from the upstream repository easier to merge and apply.
 
-Markdown files should be placed in the `markdown` directory, and images should
-be placed in the `static/images` directory. All images will be served from the
-`/images` URL path, and will be protected by the same authentication as the
-rendered Markdown pages.
+Markdown files should be placed in the `content` directory, along with any
+images and other files that need to be protected by the same authentication as
+the rendered Markdown pages. Public images should be placed in the `static/img`
+path, and will be served from the `/img` URL path.
 
-All of the static material is included in the compiled binary, making it very
-straightforward to deploy.
+All of the content and static material is included in the compiled binary,
+making it very straightforward to deploy.
 
 
 ## Customisation

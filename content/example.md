@@ -62,10 +62,35 @@ changes.
 
 ### Structure
 
-Markdown files should be placed in the `markdown` directory, and images should
-be placed in the `static/images` directory. All images will be served from the
-`/images` URL path, and will be protected by the same authentication as the
-rendered Markdown pages.
+Markdown files and other content, such as images and files for download, should
+be placed in the `content` directory. The Markdown files will be rendered as
+HTML, and other files will be served directly. All files placed in the `content`
+directory will be served from the root URL path, and will be protected by the
+application's authentication layer, just like the rendered Markdown pages. This
+allows for relative URLs to be used from the Markdown files, making it easier to
+author them and increasing compatibility with other systems such as previews in
+GitHub, Gitea, etc. This benefit outweighs the slight inconvenience of having
+other files mixed in with the Markdown files.
+
+The exact structure of the `content` directory is not important, but it is
+recommended to create subdirectories for images and other files, to maintain
+clarity through separation of concerns, and to do so relative to the Markdown
+files that use them. This can be seen in this example, where the images are
+placed in the `content/images/example` directory, which is then accessible from
+this Markdown file both when previewing using a Git server and also when
+properly rendered and served using Rustmark in the same way, using relative URLs
+such as `images/example/image.png`.
+
+Any images placed in the `static/img` directory will be publicly available
+without needing authentication. This is useful for logos and other files that
+may be used to customise the application. It is possible to encounter name
+clashes between files in `content` and `static` if the same root folder names
+are used, which is why images in `static` are placed in a directory called `img`
+rather than `images`. Although it could be desirable to allow files in one
+location to override the other, the Axum router does not allow multiple handlers
+to process the same route, so this is not possible without moving away from that
+router. This may be done in future, as the application routing is very simple,
+but for now it is not a requirement.
 
 
 ## Features
@@ -275,12 +300,12 @@ Term 2 with *inline markup*
 Images can be added to Markdown documents using the following syntax: `![Alt
 text](url)`.
 
-For example, `![Ferris](/images/example/rustacean-flat-happy.png)` will be
+For example, `![Ferris](images/example/rustacean-flat-happy.png)` will be
 rendered as in the example below.
 
 #### Examples
 
-![Ferris](/images/example/rustacean-flat-happy.png)
+![Ferris](images/example/rustacean-flat-happy.png)
 
 Source: [rustacean.net](https://rustacean.net/) *(Public Domain)*
 

@@ -2,7 +2,7 @@
 
 use crate::{
 	ASSETS_DIR,
-	MARKDOWN_DIR,
+	CONTENT_DIR,
 	utility::*,
 };
 use axum::{
@@ -27,6 +27,17 @@ use tera::Context;
 
 
 
+//		Enums
+
+//		BaseDir																	
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum BaseDir {
+	Assets,
+	Content,
+}
+
+
+
 //		Functions
 
 //		get_index																
@@ -43,7 +54,10 @@ pub async fn get_page(
 	uri: Uri,
 ) -> impl IntoResponse {
 	let path       =  uri.path().trim_start_matches('/');
-	match MARKDOWN_DIR.get_file(path) {
+	if !path.ends_with(".md") {
+		return get_protected_static_asset(uri).await.into_response();
+	}
+	match CONTENT_DIR.get_file(path) {
 		None       => (StatusCode::NOT_FOUND).into_response(),
 		Some(file) => {
 			let adaptor     = SyntectAdapter::new("base16-ocean.dark");
@@ -93,11 +107,25 @@ pub async fn get_page(
 	}
 }
 
+//		get_protected_static_asset												
+pub async fn get_protected_static_asset(uri: Uri) -> impl IntoResponse {
+	get_static_asset(uri, BaseDir::Content).await
+}
+
+//		get_public_static_asset													
+pub async fn get_public_static_asset(uri: Uri) -> impl IntoResponse {
+	get_static_asset(uri, BaseDir::Assets).await
+}
+
 //		get_static_asset														
-pub async fn get_static_asset(uri: Uri) -> impl IntoResponse {
+async fn get_static_asset(uri: Uri, basedir: BaseDir) -> impl IntoResponse {
 	let path       =  uri.path().trim_start_matches('/');
 	let mime_type  =  mime_guess::from_path(path).first_or_text_plain();
-	match ASSETS_DIR.get_file(path) {
+	let basedir    =  match basedir {
+		BaseDir::Assets  => &ASSETS_DIR,
+		BaseDir::Content => &CONTENT_DIR,
+	};
+	match basedir.get_file(path) {
 		None       => Response::builder()
 			.status(StatusCode::NOT_FOUND)
 			.body(body::boxed(body::Empty::new()))
