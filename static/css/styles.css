@@ -1,3 +1,8 @@
+@font-face {
+	font-family: ConsolasNF;
+	src:         url(/webfonts/consolas-nf.ttf);
+}
+
 .navbar-item .icon {
 	margin-right: 0.25em;
 }
@@ -13,5 +18,9 @@ h1.title {
 
 form {
 	margin-top: 0.75em;
+}
+
+code, pre, code *, pre * {
+	font-family: ConsolasNF, monospace;
 }
 
