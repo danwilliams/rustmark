@@ -2,3 +2,16 @@
 	margin-right: 0.25em;
 }
 
+h1 {
+	padding-bottom: 0.5em;
+	margin-bottom:  0.5em;
+	border-bottom:  1px solid #eee;
+}
+h1.title {
+	margin-bottom: 0.5em !important;
+}
+
+form {
+	margin-top: 0.75em;
+}
+

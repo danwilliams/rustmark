@@ -50,7 +50,7 @@ pub async fn get_page(
 			let mut plugins = ComrakPlugins::default();
 			plugins.render.codefence_syntax_highlighter = Some(&adaptor);
 			let mut context = Context::new();
-			context.insert("Title",   &path);
+			context.insert("Title",   &format!("{} - {}", &path, &state.Config.title));
 			context.insert("Content", &markdown_to_html_with_plugins(
 				file.contents_utf8().unwrap(),
 				&ComrakOptions {
