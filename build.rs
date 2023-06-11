@@ -17,6 +17,7 @@ use std::{
 	io::prelude::*,
 	path::Path,
 };
+use tokio::{self};
 use walkdir::WalkDir;
 
 
@@ -24,10 +25,12 @@ use walkdir::WalkDir;
 //		Functions
 
 //		main																	
-fn main() {
+#[tokio::main]
+async fn main() {
 	let env_out_dir = env::var("OUT_DIR").unwrap();
 	let input_root  = Path::new("content");
 	let output_root = Path::new(&env_out_dir);
+	let mut tasks   = vec![];
 	
 	for input_path in WalkDir::new(input_root).follow_links(true) {
 		//	This uses unwrap because this is a build script, and if there are any
@@ -39,6 +42,10 @@ fn main() {
 			continue;
 		}
 		//		Create directories												
+		//	We don't create the directories as an async process for two reasons:
+		//	first, there's no real advantage in doing so; and secondly, we want to
+		//	avoid any collisions that might occur if we try to create the same
+		//	directory from two different async tasks at the same time.
 		if input_path.is_dir() {
 			if !output_path.exists() {
 				println!("Creating directory: {}", output_path.display());
@@ -47,16 +54,25 @@ fn main() {
 			continue;
 		}
 		//		Handle files													
-		if input_path.extension().is_none() || input_path.extension().unwrap() != "md" {
-			copy(&input_path, &output_path);
-		} else {
-			parse(&input_path, &output_path);
-		}
+		//	We spawn a new task for each file, so that we can process them in
+		//	parallel to whatever degree is allowed by the runtime.
+		let task = tokio::spawn(async move {
+			if input_path.extension().is_some() && input_path.extension().unwrap() == "md" {
+				parse(&input_path, &output_path).await;
+			} else {
+				copy(&input_path, &output_path).await;
+			}
+		});
+		tasks.push(task);
+	}
+	//	Wait for all tasks to finish
+	for task in tasks {
+		task.await.unwrap();
 	}
 }
 
 //		copy																	
-fn copy(input_path: &Path, output_path: &Path) {
+async fn copy(input_path: &Path, output_path: &Path) {
 	//	Normally we might want to use hardlinks in order to save space, but the
 	//	way that cargo build works is to create a new directory every time. It
 	//	might therefore be confusing to use hardlinks given that changes would
@@ -68,7 +84,7 @@ fn copy(input_path: &Path, output_path: &Path) {
 }
 
 //		parse																	
-fn parse(input_path: &Path, output_path: &Path) {
+async fn parse(input_path: &Path, output_path: &Path) {
 	//		Parse Markdown														
 	//	Under different circumstances, i.e. in other build systems, we might
 	//	want to keep track of file modification times, and only re-parse files
