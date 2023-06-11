@@ -1,8 +1,11 @@
+# Index
+
 Welcome to Rustmark!
 
-This is the index page. It does not have a title, as the main application title
-will be used. (This is a special case - all other pages should have titles,
-using the H1 heading.)
+This is the index page. Its title is somewhat optional, as the main application
+title will be used when viewing through Rustmark. It's recommended to still add
+a title though, for niceness when previewing the file using a Git server or
+other Markdown viewer.
 
 Add what you want here. Usually that would be an introduction to your project,
 and a list of links to other pages.

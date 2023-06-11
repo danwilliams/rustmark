@@ -71,7 +71,7 @@ fn main() {
 		let mut plugins = ComrakPlugins::default();
 		plugins.render.codefence_syntax_highlighter = Some(&adaptor);
 		let html        = markdown_to_html_with_plugins(
-			&fs::read_to_string(input_path).unwrap(),
+			&fs::read_to_string(&input_path).unwrap(),
 			&ComrakOptions {
 				extension:                     ComrakExtensionOptions {
 					strikethrough:             true,
@@ -108,17 +108,22 @@ fn main() {
 		//	We'll use the first h1 element as the title of the page, but only if the
 		//	first H1 is the first element in the document. If any other content
 		//	comes before it, we won't count it as being the title.
-		let document =  Html::parse_document(&html);
-		let title    =  match document.select(&Selector::parse("h1:first-child").unwrap()).next() {
-			Some(h1) => h1.text().collect::<String>(),
-			None     => "Untitled".to_owned(),
+		let mut document =  Html::parse_document(&html);
+		let (title, id)  =  match document.select(&Selector::parse("h1:first-child").unwrap()).next() {
+			Some(h1)     => (h1.text().collect::<String>(), Some(h1.id())),
+			None         => ("Untitled".to_owned(), None),
 		};
+		//	Remove the title from the index page, as it will have one added showing
+		//	the application title.
+		if input_path == Path::new("content/index.md") {
+			if let Some(id) = id { document.tree.get_mut(id).unwrap().detach() }
+		}
 		//		Write output													
 		//	We use a custom format - the first line of the file is the title we
 		//	extracted, and the rest is the HTML.
 		let mut output_file = File::create(&output_path).unwrap();
 		output_file.write_all(format!("{}\n", &title).as_bytes()).unwrap();
-		output_file.write_all(html.as_bytes()).unwrap();
+		output_file.write_all(document.html().as_bytes()).unwrap();
 	}
 }
 
