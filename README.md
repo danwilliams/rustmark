@@ -1,7 +1,16 @@
 # Rustmark
 
 Rustmark is a simple Markdown server written in [Rust](https://www.rust-lang.org/).
-It is intended to be easy to use, and easy to deploy.
+It is intended to be easy to use, easy to fork and customise, and easy to
+deploy.
+
+The main sections in this README are:
+
+  - [Content](#content)
+  - [Why Rustmark?](#why-rustmark)
+  - [Setup](#setup)
+  - [Usage](#usage)
+  - [Deployment](#deployment)
 
 
 ## Content
@@ -10,12 +19,133 @@ The entry point for reading the Markdown files is [`content/index.md`](content/i
 If you are here to read the content (for instance if you are using a Git system
 to preview the Markdown, such as GitHub or Gitea), start there.
 
+An [Example](content/example.md) showing available features is also provided.
+
+
+## Why Rustmark?
+
+The intention is to provide a simple system that is easy to maintain, and
+focused on developer documentation - or at least, documentation written by
+people who are comfortable working in Markdown with text editors, and committing
+their changes to a Git repository.
+
+There are many tools available to provide wiki-style functionality in very
+friendly ways, the leading product (arguably) being [Notion](https://notion.so).
+[Coda](https://coda.io) also deserves an honourable mention, but
+[Confluence](https://www.atlassian.com/software/confluence), although widely
+used due to the popularity of Jira, lags a long way behind.
+
+### So why not just use Notion?
+
+Notion is a great product, with some excellent and powerful features, and it is
+also very easy to use. However, it does not feature any kind of approval
+process, meaning that it is all too easy for incorrect information to creep in -
+and the more pages there are to keep an eye on, the worse this problem becomes.
+Although Notion does have page edit history, and change alerts, it is not
+possible to require that changes are approved before they are published. Locking
+edit access is not really a solution, as it would prevent the very people who
+are most likely to need to make changes from doing so, and focus the work on a
+small number of specific people.
+
+Therefore, the primary purpose of Rustmark is to provide a simple, easy-to-use
+system for publishing developer-focused documentation, with a simple approval
+process managed through standard Git pull requests. It is not intended to be a
+replacement for Notion, or any other wiki-style system, and it is quite likely
+best to use both in tandem, with Notion for general documentation and pages that
+non-techies need to edit.
+
+### If it works with Git server Markdown previewing, why not just use that?
+
+Most Git server systems provide a Markdown preview feature, which is great for
+those people that have access to Git. But what if the documentation needs to be
+accessible to people who do not have access to the Git server? Although Rustmark
+is aimed at developers, that particular focus is in the context of editing. It
+also needs to be accessible to non-developers - plus, browsing pages on a Git
+server is not always the most user-friendly experience.
+
+Additionally, this approach allows for a lot of flexibility in terms of styling
+and presentation, customisation, and hosting.
+
+### What about GitHub Pages?
+
+[GitHub Pages](https://pages.github.com) is a great way to host static content,
+and it is very easy to use. However, not everyone uses or wants to use GitHub,
+and there are constraints on the free accounts that may not make it the ideal
+choice for some people. There are also limitations on the amount of
+customisation that can be performed, and it is not possible to do anything
+dynamic, as ultimately it is based on [Jekyll](https://jekyllrb.com).
+
+### Why not Jekyll, or Hugo, or one of the other static site generators?
+
+There are many, many static site generators available, and each has their pros
+and cons. [Jekyll](https://jekyllrb.com), being written in Ruby, is not very
+performant. [Hugo](https://gohugo.io) is written in Go, and is very fast, but it
+is not the easiest to customise. [Gatsby](https://www.gatsbyjs.com) is written
+in JavaScript, and is very customisable, but it is also very complex, heavily
+dependent upon React, and requires a lot of dependencies. They are just some of
+the most popular and widely-known systems. [mdBook](https://rust-lang.github.io/mdBook)
+is perhaps a close contender, and Rust-based, but it still has critical
+differences.
+
+Each system has had key decisions made about it which differentiate it from the
+others. One key decision that Rustmark makes is to use Markdown files as the
+source of the content, but also to mantain compatibility with general Git server
+previewing. Most regular static site generators use some flavour of templating
+language, and those that use Markdown do not provide quite the same focus or
+features as Rustmark.
+
+With Rustmark, it's possible to easily share things like README files between
+different repositories, without worrying about conversion or compatibility,
+which is a benefit for dev teams. Rustmark also has no JavaScript dependencies,
+and indeed hardly any JavaScript at all.
+
+Additionally, there was a desire to write something in Rust!
+
+### Why run it as a server? Why not just generate static content?
+
+It is totally possible to generate static content from the Markdown files, and
+then host that content on a static web server. If that is a requirement then the
+build output can be used directly, and there is then technically no need to run
+the server. Indeed, being able to do this in a more formal manner may end up
+being a feature of Rustmark.
+
+However, there are three compelling reasons for running it as a server:
+
+  1. It allows self-managed authentication, which can be extended as required in
+     a way that is not possible with a static site alone (and HTTP auth is not
+     exactly ideal).
+  2. Everything is packaged up as one single binary, which is easy to deploy and
+     run.
+  3. It allows for dynamic content and features, such as search (not currently
+     implemented), which is not possible with a static site. Rustmark provides a
+     decent springboard for building a more complex system, if required.
+
+Additionally, because Rustmark has a web sever built in, there is zero secondary
+setup required to get started. Just run the binary, and it works. Of course,
+some people will want to run it behind a reverse proxy, and that is also
+possible.
+
+### With everything being in one binary, isn't that a limiting factor?
+
+Yes. Although, it has been tested with a repository containing over 10,000
+Markdown files, which is 550MB of Markdown, and it works just fine. It is
+unlikely that many people will have a repository that large, and if they do,
+they probably have bigger problems to worry about!
+
+Still, it is a valid concern, and it is something that may be addressed in the
+future, probably with a configuration setting to control whether everything is
+built into the binary or left externally to be deployed alongside it.
+
 
 ## Setup
 
 The steps to set up this project are simple and standard. You need a
 reasonably-recent Rust environment, on a Linux machine. There are currently no
 special requirements beyond what is needed to build a standard Rust project.
+
+### Environment
+
+There are some key points to note about the environment you choose:
 
   - Debian and Ubuntu are the Linux distros of choice, although other distros
     should also work just fine, as there are no special requirements.
@@ -33,8 +163,7 @@ Once you have Rust installed, you can build the project using `cargo build`.
 This will download and compile all dependencies, and build the project. You can
 then run the project using `cargo run`.
 
-
-## Configuration
+### Configuration
 
 Rustmark is configured using a TOML file. The default configuration file is
 `Config.toml`, which should be placed in the same directory as the binary. The
@@ -45,8 +174,7 @@ It is also possible to pass configuration parameters from the command line, as
 environment variables. The environment variables take precedence over the
 configuration file options.
 
-
-## Running
+### Running
 
 Rustmark can be run using the `cargo run` command, or by running the compiled
 binary directly. The server will listen on port 8000 by default, and will serve
@@ -54,8 +182,7 @@ content from the `markdown` and `static` directories. The `markdown` directory
 contains the Markdown files to be rendered, and the `static` directory contains
 the static files to be served.
 
-
-## Testing
+### Testing
 
 You can run the test suite using `cargo test`. This will run all unit and
 integration tests.
@@ -65,8 +192,7 @@ project, as it is mostly a combination of other crates from the Rust ecosystem.
 Tests might be added when the project is more mature and sensible things to test
 have been clearly identified.**
 
-
-## Documentation
+### Documentation
 
 You can build the developer documentation using `cargo doc`. This will generate
 HTML files and place them into `target/doc`. You can then open the documentation
@@ -82,6 +208,8 @@ The repository is designed so that it can be forked, and content added. As such,
 it is best to keep in line with the existing structure and intended usage, to
 make updates from the upstream repository easier to merge and apply.
 
+### Structure
+
 Markdown files should be placed in the `content` directory, along with any
 images and other files that need to be protected by the same authentication as
 the rendered Markdown pages. Public images should be placed in the `static/img`
@@ -90,8 +218,7 @@ path, and will be served from the `/img` URL path.
 All of the content and static material is included in the compiled binary,
 making it very straightforward to deploy.
 
-
-## Customisation
+### Customisation
 
 If any customisations are required, they should be placed in the `js/custom.js`
 and `css/custom.css` files. These files are included after the default CSS and
