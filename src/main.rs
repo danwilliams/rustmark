@@ -52,7 +52,7 @@ use tracing_subscriber::{
 
 static TEMPLATE_DIR: Dir<'_> = include_dir!("html");
 static ASSETS_DIR:   Dir<'_> = include_dir!("static");
-static CONTENT_DIR:  Dir<'_> = include_dir!("content");
+static CONTENT_DIR:  Dir<'_> = include_dir!("$OUT_DIR");
 
 
 
