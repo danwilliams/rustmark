@@ -47,15 +47,16 @@ pub async fn get_page(
 	match CONTENT_DIR.get_file(path) {
 		None       => (StatusCode::NOT_FOUND).into_response(),
 		Some(file) => {
-			let mut context = Context::new();
-			let template    = if path == "index.md" { "index" } else { "page" };
-			let title       = if path == "index.md" {
+			let (title, html) = file.contents_utf8().unwrap().split_once('\n').unwrap();
+			let mut context   = Context::new();
+			let template      = if path == "index.md" { "index" } else { "page" };
+			let title         = if path == "index.md" {
 				state.Config.title.clone()
 			} else {
-				format!("{} - {}", path.trim_end_matches(".md"), &state.Config.title)
+				format!("{} - {}", title, &state.Config.title)
 			};
 			context.insert("Title",   &title);
-			context.insert("Content", file.contents_utf8().unwrap());
+			context.insert("Content", html);
 			(
 				StatusCode::OK,
 				Html(state.Template.render(template, &context).unwrap()),

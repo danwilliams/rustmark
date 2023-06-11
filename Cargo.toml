@@ -35,4 +35,5 @@ url = "2.3.1"
 
 [build-dependencies]
 comrak = { version = "0.18.0", features = ["emojis", "shortcodes"] }
+scraper = { version = "0.16.0", features = ["deterministic"] }
 walkdir = "2.3.3"

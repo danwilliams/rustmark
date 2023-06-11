@@ -10,6 +10,7 @@ use comrak::{
 	markdown_to_html_with_plugins,
 	plugins::syntect::SyntectAdapter,
 };
+use scraper::{Html, Selector};
 use std::{
 	env,
 	fs::{File, self},
@@ -103,7 +104,20 @@ fn main() {
 			},
 			&plugins,
 		);
+		//		Interrogate HTML												
+		//	We'll use the first h1 element as the title of the page, but only if the
+		//	first H1 is the first element in the document. If any other content
+		//	comes before it, we won't count it as being the title.
+		let document =  Html::parse_document(&html);
+		let title    =  match document.select(&Selector::parse("h1:first-child").unwrap()).next() {
+			Some(h1) => h1.text().collect::<String>(),
+			None     => "Untitled".to_owned(),
+		};
+		//		Write output													
+		//	We use a custom format - the first line of the file is the title we
+		//	extracted, and the rest is the HTML.
 		let mut output_file = File::create(&output_path).unwrap();
+		output_file.write_all(format!("{}\n", &title).as_bytes()).unwrap();
 		output_file.write_all(html.as_bytes()).unwrap();
 	}
 }
