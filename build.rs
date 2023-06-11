@@ -27,6 +27,7 @@ use walkdir::WalkDir;
 //		main																	
 #[tokio::main]
 async fn main() {
+	println!("cargo:rerun-if-changed=content");
 	let env_out_dir = env::var("OUT_DIR").unwrap();
 	let input_root  = Path::new("content");
 	let output_root = Path::new(&env_out_dir);
