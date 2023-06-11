@@ -16,6 +16,7 @@ use std::{
 	fs::{File, self},
 	io::prelude::*,
 	path::Path,
+	time,
 };
 use tokio::{self};
 use walkdir::WalkDir;
@@ -28,21 +29,49 @@ use walkdir::WalkDir;
 #[tokio::main]
 async fn main() {
 	println!("cargo:rerun-if-changed=content");
+	//	We use unwrap throughout because this is a build script, and if there
+	//	are any errors, we want the build to fail and for us to see the error.
 	let env_out_dir = env::var("OUT_DIR").unwrap();
 	let input_root  = Path::new("content");
 	let output_root = Path::new(&env_out_dir);
 	let mut tasks   = vec![];
 	
+	//		Traverse output directory											
+	//	We do this first so that we can delete any files that are no longer
+	//	present in the input directory.
+	for output_path in WalkDir::new(output_root).follow_links(true) {
+		let output_path = output_path.unwrap().path().to_path_buf();
+		let input_path  = input_root.join(output_path.strip_prefix(output_root).unwrap());
+		if output_path == output_root || !output_path.exists() {
+			continue;
+		}
+		//		Delete things that no longer exist in the input directory		
+		if
+			!input_path.exists()
+		||	(input_path.is_dir()  && !output_path.is_dir())
+		||	(input_path.is_file() && !output_path.is_file())
+		{
+			if output_path.is_dir() {
+				println!("Deleting directory: {}", output_path.display());
+				fs::remove_dir_all(&output_path).unwrap();
+			}
+			if output_path.is_file() {
+				println!("Deleting file: {}", output_path.display());
+				fs::remove_file(&output_path).unwrap();
+			}
+			continue;
+		}
+	}
+	
+	//		Traverse input directory											
 	for input_path in WalkDir::new(input_root).follow_links(true) {
-		//	This uses unwrap because this is a build script, and if there are any
-		//	errors, we want the build to fail and for us to see the error.
 		let input_path  = input_path.unwrap().path().to_path_buf();
 		let output_path = output_root.join(input_path.strip_prefix(input_root).unwrap());
 		println!("Found: {}", input_path.display());
 		if input_path == input_root {
 			continue;
 		}
-		//		Create directories												
+		//		Create directories												
 		//	We don't create the directories as an async process for two reasons:
 		//	first, there's no real advantage in doing so; and secondly, we want to
 		//	avoid any collisions that might occur if we try to create the same
@@ -54,7 +83,24 @@ async fn main() {
 			}
 			continue;
 		}
-		//		Handle files													
+		//		Compare timestamps												
+		if output_path.exists() {
+			let input_mtime  = fs::metadata(&input_path).unwrap()
+				.modified().unwrap()
+				.duration_since(time::UNIX_EPOCH).unwrap()
+				.as_secs()
+			;
+			let output_mtime = fs::metadata(&output_path).unwrap()
+				.modified().unwrap()
+				.duration_since(time::UNIX_EPOCH).unwrap()
+				.as_secs()
+			;
+			if input_mtime < output_mtime {
+				println!("Skipping file: {}", input_path.display());
+				continue;
+			}
+		}
+		//		Handle files													
 		//	We spawn a new task for each file, so that we can process them in
 		//	parallel to whatever degree is allowed by the runtime.
 		let task = tokio::spawn(async move {
@@ -74,26 +120,16 @@ async fn main() {
 
 //		copy																	
 async fn copy(input_path: &Path, output_path: &Path) {
-	//	Normally we might want to use hardlinks in order to save space, but the
-	//	way that cargo build works is to create a new directory every time. It
-	//	might therefore be confusing to use hardlinks given that changes would
-	//	then pollute the build directories, negating Cargo's intent of being
-	//	able to look at any build directory to see exactly what was built for
-	//	that particular build.
+	//	We try to use hardlinks here in order to save space.
 	println!("Copying file: {} -> {}", input_path.display(), output_path.display());
-	fs::copy(input_path, output_path).unwrap();
+	fs::hard_link(input_path, output_path).unwrap_or_else(|_| {
+		fs::copy(input_path, output_path).unwrap();
+	});
 }
 
 //		parse																	
 async fn parse(input_path: &Path, output_path: &Path) {
 	//		Parse Markdown														
-	//	Under different circumstances, i.e. in other build systems, we might
-	//	want to keep track of file modification times, and only re-parse files
-	//	that have been modified since the last build. However, cargo build
-	//	always creates a new build directory, so we have to re-parse everything.
-	//	Although this does take more time, it fits with Cargo's intent of being
-	//	able to look at any build directory and see exactly what was built for
-	//	that particular build.
 	println!("Parsing file: {}", input_path.display());
 	let adaptor     = SyntectAdapter::new("base16-ocean.dark");
 	let mut plugins = ComrakPlugins::default();
