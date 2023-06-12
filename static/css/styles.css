@@ -115,7 +115,9 @@ code {
 .content blockquote.question::before,
 .content blockquote.todo::before {
 	position:    absolute;
-	font-size:   1em;
+	font-size:   1.2em;
+	margin-top:  -0.1em;
+	margin-left: -0.1em;
 }
 .content blockquote.blocked p:first-child strong:first-child,
 .content blockquote.broken p:first-child strong:first-child,
