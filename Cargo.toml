@@ -1,9 +1,14 @@
 [package]
 name = "rustmark"
 version = "0.1.0"
+description = "Extensible web application for serving Markdown-based content"
+categories = ["asynchronous", "parser-implementations", "text-processing", "web-programming", "web-programming::http-server"]
+keywords = ["web", "server", "markdown", "template", "authentication"]
 edition = "2021"
 license = "MIT"
-authors = ["Dan Williams"]
+authors = ["Dan Williams <dan@dotfive.co.uk>"]
+repository = "https://github.com/danwilliams/rustmark"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
