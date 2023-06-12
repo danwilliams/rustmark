@@ -11,15 +11,17 @@ The main sections in this README are:
   - [Setup](#setup)
   - [Usage](#usage)
   - [Deployment](#deployment)
+  - [Legal](#legal)
 
 
 ## Content
 
-The entry point for reading the Markdown files is [`content/index.md`](content/index.md).
+The entry point for reading the Markdown files is the [index page](content/index.md).
 If you are here to read the content (for instance if you are using a Git system
 to preview the Markdown, such as GitHub or Gitea), start there.
 
-An [Example](content/example.md) showing available features is also provided.
+An example showing available [Features](content/rustmark/features.md) is also
+provided, along with some [Guidelines](content/rustmark/guidelines.md) for use.
 
 
 ## Why Rustmark?
@@ -250,14 +252,16 @@ scp target/release/rustmark you@yourserver:/path/to/deployment/directory
 ```
 
 
-## Disclaimer
+## Legal
+
+### Disclaimer
 
 The name "Rustmark" is a combination of the words "Rust" and "Markdown". There
 is no affiliation with the Rust project or the Rust Foundation, nor any intent
 to imply any.
 
 
-## Attributions
+### Attributions
 
 This project uses the [Rust logo](https://github.com/rust-lang/rust/issues/11562#issuecomment-32700278)
 as a default, due to being written in Rust. The logo is
