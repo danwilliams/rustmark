@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&family=Roboto+Slab&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;700&family=Roboto+Slab&display=swap');
 
 @font-face {
 	font-family: ConsolasNF;
@@ -77,6 +77,10 @@ form {
 
 code, pre, code *, pre *, .is-family-monospace, .is-family-code {
 	font-family: ConsolasNF, monospace !important;
+}
+
+.content a {
+	font-weight: 500;
 }
 
 .content blockquote.blocked p,
