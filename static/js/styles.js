@@ -10,6 +10,8 @@ document.addEventListener("DOMContentLoaded", function() {
 			blockquote.classList.add(strong.textContent.replace(/\W/g, "").toLowerCase());
 		}
 	}
+	
+	twemoji.parse(document.body, { folder: "svg", size: "svg", ext: ".svg" });
 });
 
 

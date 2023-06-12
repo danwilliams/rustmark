@@ -284,4 +284,10 @@ and the webfonts under the [SIL OFL (Open Font License)](https://scripts.sil.org
 They are freely usable, along with the CSS code used to display them, which is
 released under the [MIT license](http://opensource.org/licenses/MIT).
 
+The [Twemoji](https://twemoji.twitter.com/) graphics used to stylise Unicode
+emojis are [published by Twitter](https://github.com/twitter/twemoji#attribution-requirements)
+under the [CC-BY (Creative Commons Attribution) license](https://creativecommons.org/licenses/by/4.0/),
+and are freely usable, along with the Twitter JavaScript code used to transform
+them, which is released under the [MIT license](http://opensource.org/licenses/MIT).
+
 

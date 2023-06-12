@@ -56,6 +56,21 @@ nav i.logo {
 	margin-top: 2em;
 }
 
+img.emoji {
+	height:       1.1em;
+	width:        1.1em;
+	position:     relative;
+	top:          0.18em;
+	margin-right: 0.2em;
+}
+.content h1 img.emoji:first-of-type {
+	height:        2.2em;
+	width:         2.2em;
+	display:       block;
+	top:           0;
+	margin-bottom: 1em;
+}
+
 form {
 	margin-top: 0.75em;
 }
@@ -93,7 +108,6 @@ code, pre, code *, pre *, .is-family-monospace, .is-family-code {
 .content blockquote.todo::before {
 	position:    absolute;
 	font-size:   1em;
-	font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
 }
 .content blockquote.blocked p:first-child strong:first-child,
 .content blockquote.broken p:first-child strong:first-child,
