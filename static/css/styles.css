@@ -78,6 +78,10 @@ form {
 code, pre, code *, pre *, .is-family-monospace, .is-family-code {
 	font-family: ConsolasNF, monospace !important;
 }
+code {
+	background-color: rgba(200, 200, 200, 0.2);
+	border-radius:    0.15em
+}
 
 .content a {
 	font-weight: 500;
