@@ -17,23 +17,23 @@ h1, h2, h3 {
 	font-family: "Roboto Slab", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
-h1 {
+.content h1 {
 	padding-bottom: 0.5em;
 	margin-bottom:  0.5em;
-	border-bottom:  1px solid #eee;
+	border-bottom:  2px solid #eee;
 }
-h1.title {
+.content h1.title {
 	margin-bottom: 0.5em !important;
 	display:       flex;
 }
-h1.title i.logo,
+.content h1.title i.logo,
 nav i.logo {
 	-webkit-mask-size:  cover;
 	mask-size:          cover;
 	-webkit-mask-image: url(/img/logo.svg);
 	mask-image:         url(/img/logo.svg);
 }
-h1.title i.logo {
+.content h1.title i.logo {
 	height:           1.4em;
 	width:            1.4em;
 	margin:           -0.1em 0.3em -0.2em -0.2em;
@@ -47,12 +47,21 @@ nav i.logo {
 	background-color: rgba(0, 0, 0, 0.7);
 }
 
+.content h2 {
+	padding-bottom: 0.5714em;
+	margin-bottom:  0.5714em;
+	border-bottom:  1px solid #eee;
+}
+.content h2:not(:first-child) {
+	margin-top: 2em;
+}
+
 form {
 	margin-top: 0.75em;
 }
 
-code, pre, code *, pre * {
-	font-family: ConsolasNF, monospace;
+code, pre, code *, pre *, .is-family-monospace, .is-family-code {
+	font-family: ConsolasNF, monospace !important;
 }
 
 .content blockquote.blocked p,
