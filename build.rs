@@ -120,11 +120,11 @@ async fn main() {
 
 //		copy																	
 async fn copy(input_path: &Path, output_path: &Path) {
-	//	We try to use hardlinks here in order to save space.
+	//	We ideally want to use hardlinks here in order to save space, but when
+	//	they were used, problems were found whereby the input files were getting
+	//	truncated.
 	println!("Copying file: {} -> {}", input_path.display(), output_path.display());
-	fs::hard_link(input_path, output_path).unwrap_or_else(|_| {
-		fs::copy(input_path, output_path).unwrap();
-	});
+	fs::copy(input_path, output_path).unwrap();
 }
 
 //		parse																	
