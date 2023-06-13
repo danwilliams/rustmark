@@ -98,7 +98,11 @@ code {
 .content blockquote.approved p,
 .content blockquote.info p,
 .content blockquote.question p,
-.content blockquote.todo p {
+.content blockquote.todo p,
+.content blockquote.image p,
+.content blockquote.images p,
+.content blockquote.screenshot p,
+.content blockquote.screenshots p {
 	padding-left: 2.5em;
 }
 
@@ -113,7 +117,11 @@ code {
 .content blockquote.approved::before,
 .content blockquote.info::before,
 .content blockquote.question::before,
-.content blockquote.todo::before {
+.content blockquote.todo::before,
+.content blockquote.image::before,
+.content blockquote.images::before,
+.content blockquote.screenshot::before,
+.content blockquote.screenshots::before {
 	position:    absolute;
 	font-size:   1.2em;
 	margin-top:  -0.1em;
@@ -130,8 +138,18 @@ code {
 .content blockquote.approved p:first-child strong:first-child,
 .content blockquote.info p:first-child strong:first-child,
 .content blockquote.question p:first-child strong:first-child,
-.content blockquote.todo p:first-child strong:first-child {
+.content blockquote.todo p:first-child strong:first-child,
+.content blockquote.image p:first-child strong:first-of-type,
+.content blockquote.images p:first-child strong:first-of-type,
+.content blockquote.screenshot p:first-child strong:first-of-type,
+.content blockquote.screenshots p:first-child strong:first-of-type {
 	display: block;
+}
+.content blockquote.image > p:first-child,
+.content blockquote.images > p:first-child,
+.content blockquote.screenshot > p:first-child,
+.content blockquote.screenshots > p:first-child {
+	margin-bottom: 0;
 }
 
 .content blockquote.blocked,
@@ -194,9 +212,74 @@ code {
 .content blockquote.todo::before {
 	content: "🚧";
 }
+.content blockquote.image::before,
+.content blockquote.images::before {
+	content: "🖼️";
+}
+.content blockquote.screenshot::before,
+.content blockquote.screenshots::before {
+	content: "✨";
+}
+
+.content blockquote.image i.toggle::before,
+.content blockquote.images i.toggle::before,
+.content blockquote.screenshot i.toggle::before,
+.content blockquote.screenshots i.toggle::before {
+	position:     absolute;
+	right:        1.5em;
+	font-size:    1.2em;
+	font-family:  var(--fa-style-family, "Font Awesome 6 Free");
+	font-weight:  var(--fa-style, 900);
+	font-style:   normal;
+	font-variant: normal;
+	margin-top:   -0.1em;
+	margin-left:  -0.1em;
+	content:      "";
+}
+.content blockquote.image:has(input.toggle:checked) i.toggle::before,
+.content blockquote.images:has(input.toggle:checked) i.toggle::before,
+.content blockquote.screenshot:has(input.toggle:checked) i.toggle::before,
+.content blockquote.screenshots:has(input.toggle:checked) i.toggle::before {
+	content: "";
+}
+.content blockquote.image i.toggle:hover::before,
+.content blockquote.images i.toggle:hover::before,
+.content blockquote.screenshot i.toggle:hover::before,
+.content blockquote.screenshots i.toggle:hover::before {
+	color:  grey;
+	cursor: pointer;
+}
+
+.content blockquote.image:has(input.toggle) .collapsible,
+.content blockquote.images:has(input.toggle) .collapsible,
+.content blockquote.screenshot:has(input.toggle) .collapsible,
+.content blockquote.screenshots:has(input.toggle) .collapsible {
+	display: none;
+}
+.content blockquote.image:has(input.toggle:checked) .collapsible,
+.content blockquote.images:has(input.toggle:checked) .collapsible,
+.content blockquote.screenshot:has(input.toggle:checked) .collapsible,
+.content blockquote.screenshots:has(input.toggle:checked) .collapsible {
+	display: block;
+}
+
+.content blockquote.image input.toggle,
+.content blockquote.images input.toggle,
+.content blockquote.screenshot input.toggle,
+.content blockquote.screenshots input.toggle {
+	display: none;
+}
+.content blockquote.image img,
+.content blockquote.images img,
+.content blockquote.screenshot img,
+.content blockquote.screenshots img {
+	height:  auto;
+	width:   auto;
+	display: block;
+}
 
 section.footnotes {
-	margin-top: 3em;
+	margin-top:  3em;
 	padding-top: 1em;
 	border-top:  5px solid #eee;
 }

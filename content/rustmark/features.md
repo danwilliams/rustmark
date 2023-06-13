@@ -301,9 +301,12 @@ words:
   - Info
   - Question
   - Todo
+  - Image(s) / Screenshot(s)
 
 It is advisable to place the emphasised word on a line of its own, but this is
 not strictly necessary. It just makes the Markdown easier to read in some cases.
+
+Notably, the image/screenshot callout will be made collapsible.
 
 #### Examples
 
@@ -338,6 +341,14 @@ Here are the callouts in action:
 >
 > **And...**
 > It also has another piece of bold text, to show how that behaves.
+
+> **Image**
+> This is collapsible, and will be collapsed by default.
+> ![Ferris](images/rustacean-flat-happy.png)
+
+> **Screenshot**
+> This is also collapsible, and will also be collapsed by default.
+> ![Ferris](images/rustacean-flat-happy.png)
 
 ### Inline code
 

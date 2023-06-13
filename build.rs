@@ -185,12 +185,33 @@ async fn parse(input_path: &Path, output_path: &Path) {
 	}
 	//		Process callouts													
 	//	Find all blockquotes that match callout syntax.
+	let mut toggle_count  = 0;
 	for mut blockquote in document.select("blockquote").iter() {
-		let strong = blockquote.select("strong:first-child").first().text().to_string();
-		if strong.is_empty() || strong.contains(' ') {
+		let mut strong    = blockquote.select("strong:first-child").first();
+		let strong_text   = strong.text().to_string();
+		if strong_text.is_empty() || strong_text.contains(' ') {
 			continue;
 		}
-		blockquote.add_class(&strong.replace(|c: char| !c.is_alphanumeric(), "").to_lowercase());
+		let class         = strong_text.replace(|c: char| !c.is_alphanumeric(), "").to_lowercase();
+		blockquote.add_class(&class);
+		if !vec!["image", "images", "screenshot", "screenshots"].contains(&&*class) {
+			continue;
+		}
+		toggle_count     += 1;
+		let strong_html   = format!(
+			"{}{}{}{}{}{}{}{}{}",
+			r#"<input class="toggle" id="toggle-"#,  toggle_count, r#"" type="checkbox" />"#,
+			r#"<label class="toggle" for="toggle-"#, toggle_count, r#"">"#,
+			r#"<i class="toggle"></i>"#,
+			r#"</label>"#,
+			strong.html(),
+		);
+		strong.remove();
+		blockquote.set_html(format!(
+			r#"<p>{}</p><div class="collapsible">{}</div>"#,
+			strong_html,
+			blockquote.children().iter().map(|c| c.html().to_string()).collect::<Vec<String>>().join("\n"),
+		));
 	}
 	//		Write output														
 	//	We use a custom format - the first line of the file is the title we
