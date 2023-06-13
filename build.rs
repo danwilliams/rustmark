@@ -169,6 +169,7 @@ async fn parse(input_path: &Path, output_path: &Path) {
 		&plugins,
 	);
 	//		Interrogate HTML													
+	//		Find page title														
 	//	We'll use the first h1 element as the title of the page, but only if the
 	//	first H1 is the first element in the document. If any other content
 	//	comes before it, we won't count it as being the title.
@@ -181,6 +182,15 @@ async fn parse(input_path: &Path, output_path: &Path) {
 	//	the application title.
 	if input_path == Path::new("content/index.md") {
 		document.select("h1:first-child").remove();
+	}
+	//		Process callouts													
+	//	Find all blockquotes that match callout syntax.
+	for mut blockquote in document.select("blockquote").iter() {
+		let strong = blockquote.select("strong:first-child").first().text().to_string();
+		if strong.is_empty() || strong.contains(' ') {
+			continue;
+		}
+		blockquote.add_class(&strong.replace(|c: char| !c.is_alphanumeric(), "").to_lowercase());
 	}
 	//		Write output														
 	//	We use a custom format - the first line of the file is the title we
