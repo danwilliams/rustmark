@@ -221,41 +221,77 @@ code {
 	content: "✨";
 }
 
-.content blockquote.image i.toggle::before,
-.content blockquote.images i.toggle::before,
-.content blockquote.screenshot i.toggle::before,
-.content blockquote.screenshots i.toggle::before {
+.content h2,
+.content h3,
+.content h4,
+.content h5,
+.content h6 {
+	padding-right: 1.5em;
+}
+.content * i.toggle::before {
 	position:     absolute;
-	right:        1.5em;
+	right:        0;
 	font-size:    1.2em;
 	font-family:  var(--fa-style-family, "Font Awesome 6 Free");
 	font-weight:  var(--fa-style, 900);
 	font-style:   normal;
 	font-variant: normal;
-	margin-top:   -0.1em;
-	margin-left:  -0.1em;
-	content:      "";
 }
+.content blockquote.image i.toggle::before,
+.content blockquote.images i.toggle::before,
+.content blockquote.screenshot i.toggle::before,
+.content blockquote.screenshots i.toggle::before {
+	margin-top:   -0.1em;
+	right:        1.5em;
+}
+.content *:has(input.toggle:checked) i.toggle::before,
+.content blockquote.image i.toggle::before,
+.content blockquote.images i.toggle::before,
+.content blockquote.screenshot i.toggle::before,
+.content blockquote.screenshots i.toggle::before {
+	content: "";
+}
+.content * i.toggle::before,
 .content blockquote.image:has(input.toggle:checked) i.toggle::before,
 .content blockquote.images:has(input.toggle:checked) i.toggle::before,
 .content blockquote.screenshot:has(input.toggle:checked) i.toggle::before,
 .content blockquote.screenshots:has(input.toggle:checked) i.toggle::before {
 	content: "";
 }
-.content blockquote.image i.toggle:hover::before,
-.content blockquote.images i.toggle:hover::before,
-.content blockquote.screenshot i.toggle:hover::before,
-.content blockquote.screenshots i.toggle:hover::before {
+.content * i.toggle:hover::before {
 	color:  grey;
 	cursor: pointer;
 }
 
+.content * > label.toggle i.toggle::before {
+	visibility: hidden;
+}
+.content *:has(input.toggle:checked) > label.toggle i.toggle::before,
+.content blockquote.image i.toggle::before,
+.content blockquote.images i.toggle::before,
+.content blockquote.screenshot i.toggle::before,
+.content blockquote.screenshots i.toggle::before {
+	visibility: visible;
+}
+.content blockquote.image:has(input.toggle:checked) i.toggle::before,
+.content blockquote.images:has(input.toggle:checked) i.toggle::before,
+.content blockquote.screenshot:has(input.toggle:checked) i.toggle::before,
+.content blockquote.screenshots:has(input.toggle:checked) i.toggle::before {
+	visibility: hidden;
+}
+.content *:hover > label.toggle i.toggle::before,
+.content blockquote.screenshots:hover label.toggle i.toggle::before {
+	visibility: visible !important;
+}
+
+.content *:has(input.toggle:checked) + .collapsible,
 .content blockquote.image:has(input.toggle) .collapsible,
 .content blockquote.images:has(input.toggle) .collapsible,
 .content blockquote.screenshot:has(input.toggle) .collapsible,
 .content blockquote.screenshots:has(input.toggle) .collapsible {
 	display: none;
 }
+.content *:has(input.toggle) + .collapsible,
 .content blockquote.image:has(input.toggle:checked) .collapsible,
 .content blockquote.images:has(input.toggle:checked) .collapsible,
 .content blockquote.screenshot:has(input.toggle:checked) .collapsible,
@@ -263,10 +299,7 @@ code {
 	display: block;
 }
 
-.content blockquote.image input.toggle,
-.content blockquote.images input.toggle,
-.content blockquote.screenshot input.toggle,
-.content blockquote.screenshots input.toggle {
+.content * input.toggle {
 	display: none;
 }
 .content blockquote.image img,

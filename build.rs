@@ -213,6 +213,81 @@ async fn parse(input_path: &Path, output_path: &Path) {
 			blockquote.children().iter().map(|c| c.html().to_string()).collect::<Vec<String>>().join("\n"),
 		));
 	}
+	//		Make all headings collapsible										
+	//	We'll assume two things: first, that all headings are top-level elements
+	//	in the HTML generated from the Markdown; and second, that there is only
+	//	one H1 element in the document, which serves as the page title. The
+	//	first assumption seems reasonable, as there doesn't seem to be a valid
+	//	way to end up with a heading nested inside another element. The second
+	//	assumption is not guaranteed, but it's the way we're advising people to
+	//	structure their Markdown files.
+	let mut headings         = vec!["h2", "h3", "h4", "h5", "h6"];
+	loop {
+		let heading_tag      = headings.last().unwrap().to_owned();
+		let mut heading_html = String::new();
+		let mut buffer_html  = String::new();
+		let mut active       = false;
+		let mut elements     = document.select("body > *").iter().enumerate().peekable();
+		while let Some((_, mut element)) = elements.next() {
+			let next_element = elements.peek().cloned();
+			let next_tag     = match &next_element {
+				None               => "".to_owned(),
+				Some((_, element)) => match element.get(0) {
+					None           => "".to_owned(),
+					Some(node)     => {
+						if node.node_name().is_none() {
+							"".to_owned()
+						} else {
+							node.node_name().unwrap().to_string().to_lowercase()
+						}
+					},
+				},
+			};
+			if let Some(node) = element.get(0) {
+				if node.node_name().is_some() {
+					let tag   = node.node_name().unwrap().to_string().to_lowercase();
+					if !active && tag == heading_tag {
+						active        = true;
+						toggle_count += 1;
+						element.append_html(format!(
+							"{}{}{}{}{}{}{}{}",
+							r#"<input class="toggle" id="toggle-"#,  toggle_count, r#"" type="checkbox" />"#,
+							r#"<label class="toggle" for="toggle-"#, toggle_count, r#"">"#,
+							r#"<i class="toggle"></i>"#,
+							r#"</label>"#,
+						));
+						heading_html.push_str(&element.html());
+						element.remove();
+						continue;
+					}
+				}
+			};
+			if !active {
+				continue;
+			}
+			buffer_html.push_str(&element.html());
+			if
+				(!next_tag.is_empty() && headings.contains(&&*next_tag))
+			||	next_tag == "section"
+			||	next_element.is_none()
+			{
+				element.replace_with_html(format!(
+					r#"{}<div class="collapsible">{}</div>"#,
+					heading_html,
+					buffer_html,
+				));
+				active       = false;
+				heading_html = String::new();
+				buffer_html  = String::new();
+				continue;
+			}
+			element.remove();
+		}
+		headings.pop();
+		if headings.is_empty() {
+			break;
+		}
+	}
 	//		Write output														
 	//	We use a custom format - the first line of the file is the title we
 	//	extracted, and the rest is the HTML.
