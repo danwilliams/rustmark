@@ -40,6 +40,6 @@ url = "2.3.1"
 
 [build-dependencies]
 comrak = { version = "0.18.0", features = ["emojis", "shortcodes"] }
-scraper = { version = "0.16.0", features = ["deterministic"] }
+nipper = "0.1.9"
 tokio = { version = "1.28.2", features = ["io-std", "io-util", "macros", "rt", "rt-multi-thread", "time"] }
 walkdir = "2.3.3"
