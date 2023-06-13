@@ -71,6 +71,40 @@ img.emoji {
 	margin-bottom: 1em;
 }
 
+.content h2 > a.anchor::before,
+.content h3 > a.anchor::before,
+.content h4 > a.anchor::before,
+.content h5 > a.anchor::before,
+.content h6 > a.anchor::before {
+	position:      absolute;
+	left:          -1.6em;
+	font-size:     0.8em;
+	font-family:   var(--fa-style-family, "Font Awesome 6 Free");
+	font-weight:   var(--fa-style, 900);
+	font-style:    normal;
+	font-variant:  normal;
+	margin-top:    0.2em;
+	content:       "";
+	color:         #ddd;
+	cursor:        pointer;
+	padding-right: 0.4em;
+	visibility:    hidden;
+}
+.content h2:hover > a.anchor::before,
+.content h3:hover > a.anchor::before,
+.content h4:hover > a.anchor::before,
+.content h5:hover > a.anchor::before,
+.content h6:hover > a.anchor::before {
+	visibility: visible;
+}
+.content h2 > a.anchor:hover::before,
+.content h3 > a.anchor:hover::before,
+.content h4 > a.anchor:hover::before,
+.content h5 > a.anchor:hover::before,
+.content h6 > a.anchor:hover::before {
+	color: #363636;
+}
+
 form {
 	margin-top: 0.75em;
 }
