@@ -194,11 +194,7 @@ code {
 .content blockquote.approved p:first-child strong:first-child,
 .content blockquote.info p:first-child strong:first-child,
 .content blockquote.question p:first-child strong:first-child,
-.content blockquote.todo p:first-child strong:first-child,
-.content blockquote.image p:first-child strong:first-of-type,
-.content blockquote.images p:first-child strong:first-of-type,
-.content blockquote.screenshot p:first-child strong:first-of-type,
-.content blockquote.screenshots p:first-child strong:first-of-type {
+.content blockquote.todo p:first-child strong:first-child {
 	display: block;
 }
 .content blockquote.image > p:first-child,
@@ -365,6 +361,12 @@ code {
 	height:  auto;
 	width:   auto;
 	display: block;
+}
+.content blockquote.image .collapsible > p:first-child > img:first-child,
+.content blockquote.images .collapsible > p:first-child > img:first-child,
+.content blockquote.screenshot .collapsible > p:first-child > img:first-child,
+.content blockquote.screenshots .collapsible > p:first-child > img:first-child {
+	margin-top: 1em;
 }
 
 section.footnotes {

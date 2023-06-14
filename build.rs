@@ -205,7 +205,9 @@ async fn parse(input_path: &Path, output_path: &Path) {
 	//	Find all blockquotes that match callout syntax.
 	let mut toggle_count  = 0;
 	for mut blockquote in document.select("blockquote").iter() {
-		let mut strong    = blockquote.select("strong:first-child").first();
+		let mut paragraph = blockquote.select("p:first-child").first();
+		let mut strong    = paragraph.select("strong:first-child").first();
+		let para_text     = paragraph.text().to_string();
 		let strong_text   = strong.text().to_string();
 		if strong_text.is_empty() || strong_text.contains(' ') {
 			continue;
@@ -224,10 +226,21 @@ async fn parse(input_path: &Path, output_path: &Path) {
 			r#"</label>"#,
 			strong.html(),
 		);
-		strong.remove();
+		let para_html: String;
+		if para_text.strip_prefix(&strong_text).unwrap().starts_with(':') {
+			//	There doesn't seem to be a better way of removing just the text from the
+			//	paragraph, and the paragraph may contain other elements and not just
+			//	text, so those need to be preserved.
+			strong.replace_with_html(strong_html);
+			para_html     = paragraph.html().to_string();
+			paragraph.remove();
+		} else {
+			strong.remove();
+			para_html     = format!(r#"<p>{}</p>"#, strong_html);
+		}
 		blockquote.set_html(format!(
-			r#"<p>{}</p><div class="collapsible">{}</div>"#,
-			strong_html,
+			r#"{}<div class="collapsible">{}</div>"#,
+			para_html,
 			blockquote.children().iter().map(|c| c.html().to_string()).collect::<Vec<String>>().join("\n"),
 		));
 	}

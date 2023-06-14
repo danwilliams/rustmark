@@ -306,7 +306,15 @@ words:
 It is advisable to place the emphasised word on a line of its own, but this is
 not strictly necessary. It just makes the Markdown easier to read in some cases.
 
-Notably, the image/screenshot callout will be made collapsible.
+Notably, the image/screenshot callouts will be made collapsible, and also
+support showing a title alongside the callout heading. This is done by adding
+a colon and then the title, on the same line as the callout heading, e.g.
+`> **Screenshot**: Ferris's day off`. If found, the title will continue until
+a new paragraph is indicated by a blank line in the usual fashion. This has to
+work this way because there may be other elements in the title, such as styled
+text or icons. The title will then be shown even when the callout is collapsed,
+giving a hint as to what it contains. If there is no title then the callout type
+name will be extracted without affecting anything else.
 
 #### Examples
 
@@ -342,13 +350,23 @@ Here are the callouts in action:
 > **And...**
 > It also has another piece of bold text, to show how that behaves.
 
-> **Image**
+> **Image**: Friendly Ferris
+> 
 > This is collapsible, and will be collapsed by default.
+> ![Ferris](images/rustacean-flat-happy.png)
+
+> **Image**: Even *more* Ferris
+> 
 > ![Ferris](images/rustacean-flat-happy.png)
 
 > **Screenshot**
 > This is also collapsible, and will also be collapsed by default.
 > ![Ferris](images/rustacean-flat-happy.png)
+
+Callouts don't have to have any content at all:
+
+> **Complete**
+
 
 ### Inline code
 
