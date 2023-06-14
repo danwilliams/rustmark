@@ -29,6 +29,7 @@ rand = { version = "0.8.5", features = ["min_const_gen"] }
 ring = "0.16.20"
 secrecy = "0.8.0"
 serde = { version = "1.0.160", features = ["derive"] }
+serde_json = { version = "1.0.96", features = ["preserve_order"] }
 smart-default = "0.7.1"
 tera = "1.18.1"
 tokio = { version = "1.27.0", features = ["macros", "rt-multi-thread"] }
@@ -41,5 +42,6 @@ url = "2.3.1"
 [build-dependencies]
 comrak = { version = "0.18.0", features = ["emojis", "shortcodes"] }
 nipper = "0.1.9"
+serde_json = { version = "1.0.96", features = ["preserve_order"] }
 tokio = { version = "1.28.2", features = ["io-std", "io-util", "macros", "rt", "rt-multi-thread", "time"] }
 walkdir = "2.3.3"

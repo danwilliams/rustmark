@@ -11,6 +11,7 @@ use comrak::{
 	plugins::syntect::SyntectAdapter,
 };
 use nipper::Document;
+use serde_json::{self};
 use std::{
 	env,
 	fs::{File, self},
@@ -183,6 +184,23 @@ async fn parse(input_path: &Path, output_path: &Path) {
 	if input_path == Path::new("content/index.md") {
 		document.select("h1:first-child").remove();
 	}
+	//		Find all headings													
+	//	To make a table of contents, we need to find all the headings in order,
+	//	and then construct a hierarchy from them. That hierarchy can then be
+	//	used to represent the links in the table of contents, even though the
+	//	list in the document is most likely flat. The hierarchy is represented
+	//	as a vector of tuples, where each tuple contains the level of the
+	//	heading, the ID of the heading, and the text of the heading, rather than
+	//	using a nested tree structure.
+	let mut toc: Vec<(u8, String, String)> = vec![];
+	for element in document.select("h1, h2, h3, h4, h5, h6").iter() {
+		let node  = element.get(0).unwrap();
+		let id    = element.select("a").attr("id").unwrap().to_string();
+		let tag   = node.node_name().unwrap().to_string().to_lowercase();
+		let text  = node.text().to_string();
+		let level = tag.strip_prefix('h').unwrap().parse::<u8>().unwrap();
+		toc.push((level, id, text));
+	}
 	//		Process callouts													
 	//	Find all blockquotes that match callout syntax.
 	let mut toggle_count  = 0;
@@ -290,9 +308,11 @@ async fn parse(input_path: &Path, output_path: &Path) {
 	}
 	//		Write output														
 	//	We use a custom format - the first line of the file is the title we
-	//	extracted, and the rest is the HTML.
+	//	extracted, the second line is a JSON array with the table of contents,
+	//	and the rest is the HTML.
 	let mut output_file = File::create(output_path).unwrap();
 	output_file.write_all(format!("{}\n", &title).as_bytes()).unwrap();
+	output_file.write_all(format!("{}\n", serde_json::to_string(&toc).unwrap()).as_bytes()).unwrap();
 	output_file.write_all(document.html().as_bytes()).unwrap();
 }
 

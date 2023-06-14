@@ -12,6 +12,28 @@
 .navbar-item .icon {
 	margin-right: 0.25em;
 }
+.navbar-dropdown {
+	max-height: 25em;
+	overflow:   auto;
+}
+.navbar-end .navbar-dropdown a.navbar-item.h1,
+.navbar-end .navbar-dropdown a.navbar-item.h1 * {
+	font-family: "Roboto Slab", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	font-size:   1rem;
+	font-weight: bold;
+}
+.navbar-end .navbar-dropdown a.navbar-item.h2 {
+	font-weight: bold;
+}
+.navbar-end .navbar-dropdown a.navbar-item.h4 {
+	font-style:   italic;
+	padding-left: 2rem;
+}
+.navbar-end .navbar-dropdown a.navbar-item.h4,
+.navbar-end .navbar-dropdown a.navbar-item.h5,
+.navbar-end .navbar-dropdown a.navbar-item.h6 {
+	display: none;
+}
 
 h1, h2, h3 {
 	font-family: "Roboto Slab", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;

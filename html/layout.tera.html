@@ -36,6 +36,22 @@
         </div>
         
         <div class="navbar-end">
+          <div class="navbar-item has-dropdown is-hoverable">
+            <a class="navbar-link">
+              <span class="icon">
+                <i class="fa fa-list"></i>
+              </span>
+              <span>ToC</span>
+            </a>
+            <div class="navbar-dropdown">
+              {% for TocEntry in ToC %}
+              <a class="navbar-item h{{ TocEntry.level }}" href="#{{ TocEntry.id }}">
+                <span>{{ TocEntry.text }}</span>
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+          
           <a class="navbar-item" href="/logout">
             <span class="icon">
               <i class="fa fa-right-from-bracket"></i>
