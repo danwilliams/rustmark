@@ -29,8 +29,8 @@ If you are here to read the content (for instance if you are using a Git system
 to preview the Markdown, such as GitHub or Gitea), start there.
 
 An example showing available [Markdown features](content/rustmark/features.md)
-is also
-provided, along with some [Guidelines](content/rustmark/guidelines.md) for use.
+is also provided, along with some [Guidelines](content/rustmark/guidelines.md)
+for use.
 
 
 ## Features
@@ -110,7 +110,7 @@ simple addition to make.
 ## Why Rustmark?
 
 The intention is to provide a simple system that is easy to maintain, and
-focused on developer documentation - or at least, documentation written by
+focused on developer documentation — or at least, documentation written by
 people who are comfortable working in Markdown with text editors, and committing
 their changes to a Git repository.
 
@@ -124,7 +124,7 @@ used due to the popularity of Jira, lags a long way behind.
 
 Notion is a great product, with some excellent and powerful features, and it is
 also very easy to use. However, it does not feature any kind of approval
-process, meaning that it is all too easy for incorrect information to creep in -
+process, meaning that it is all too easy for incorrect information to creep in —
 and the more pages there are to keep an eye on, the worse this problem becomes.
 Although Notion does have page edit history, and change alerts, it is not
 possible to require that changes are approved before they are published. Locking
@@ -225,9 +225,8 @@ built into the binary or left externally to be deployed alongside it.
 ## Usage
 
 The Rustmark repository is designed so that it can be forked, and content added.
-As such,
-it is best to keep in line with the existing structure and intended usage, to
-make updates from the upstream repository easier to merge and apply.
+As such, it is best to keep in line with the existing structure and intended
+usage, to make updates from the upstream repository easier to merge and apply.
 
 Note that Rustmark is not designed to be used as a library, and its existence
 on [crates.io](https://crates.io/crates/rustmark) is as a binary. This is to
