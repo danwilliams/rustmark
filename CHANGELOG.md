@@ -4,6 +4,29 @@ All notable changes will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## 0.2.0 (15 June 2023)
+
+### Added
+
+  - Implemented Twitter emojis (Twemoji)
+  - Added collapsible callouts for screenshots and images
+  - Made headings collapsible
+  - Added heading link anchors on hover
+  - Added automatic table of contents menu
+  - Added titles for image and screenshot callouts
+
+### Changed
+
+  - Moved extra Markdown processing from client-side JavaScript to Rust build
+    script
+  - Various styling tweaks
+
+### Removed
+
+  - Removed use of hardlinks from build script
+
+
 ## 0.1.0 (12 June 2023)
 
   - Initial release.
