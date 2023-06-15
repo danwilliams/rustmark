@@ -7,6 +7,7 @@ deploy.
 The main sections in this README are:
 
   - [Content](#content)
+  - [Features](#features)
   - [Why Rustmark?](#why-rustmark)
   - [Setup](#setup)
   - [Usage](#usage)
@@ -20,8 +21,83 @@ The entry point for reading the Markdown files is the [index page](content/index
 If you are here to read the content (for instance if you are using a Git system
 to preview the Markdown, such as GitHub or Gitea), start there.
 
-An example showing available [Features](content/rustmark/features.md) is also
+An example showing available [Markdown features](content/rustmark/features.md)
+is also
 provided, along with some [Guidelines](content/rustmark/guidelines.md) for use.
+
+
+## Features
+
+The main high-level points of note are:
+
+  - **Markdown**
+      - Rendering of Markdown files using [Comrak](https://crates.io/crates/comrak)
+      - Syntax highlighting using [Syntect](https://crates.io/crates/syntect)
+      - Full compliance with [CommonMark](https://commonmark.org/) [0.30](https://spec.commonmark.org/0.30/)
+      - Support for [GitHub-flavoured Markdown](https://github.github.com/gfm/)
+      - Tables, task lists, strikethrough, and autolinks (from [GFM](https://github.github.com/gfm/))
+      - Superscript, footnotes, description lists, and emoji shortcodes
+      - Callouts, based on extended blockquotes
+  - **Display**
+      - CSS foundation using the [Bulma](https://bulma.io/) CSS framework
+      - Icons using [Font Awesome](https://fontawesome.com/)
+      - Twitter emojis using [Twemoji](https://twemoji.twitter.com/)
+      - Code displayed using [Nerd Fonts](https://www.nerdfonts.com/)
+      - Collapsible callouts for screenshots and other large images
+      - Collapsible document sections based on headings (automatic)
+      - Linkable headings
+      - Automatic per-page table of contents in navigation menu
+  - **Build**
+      - HTML generated from Markdown asynchronously at build time and included
+        in binary
+      - Efficient rebuild process regenerating only changed files
+  - **Customisation**
+      - Custom JS and CSS files for customisation overrides
+      - Templates implemented using the [Tera](https://crates.io/crates/tera)
+        template engine
+      - Configuration from config file and env vars using [Figment](https://crates.io/crates/figment)
+      - Simple codebase layout
+      - Easy to extend and build upon
+  - **Security**
+      - Simple authentication using sessions and config-based user list
+      - Login page, public and protected routes, logout ability
+      - Protected static content files for use alongside Markdown content
+  - **Performance**
+      - High-performance asynchronous HTTP server using [Tokio Hyper](https://crates.io/crates/hyper)
+      - Based on the robust and ergonomic web framework [Axum](https://crates.io/crates/axum)
+  - **Other**
+      - Compatibility with browsing the content on a Git server such as GitHub
+        or Gitea
+      - Static file handling
+      - Single-file deployment — all assets baked in
+      - Logging of HTTP requests and events using [Tokio Tracing](https://crates.io/crates/tracing)
+      - Graceful handling of 404 and 500 HTTP errors
+      - Graceful handling of runtime application errors
+
+More details are available about the [supported Markdown features](content/rustmark/features.md),
+along with examples.
+
+### Authentication
+
+Rustmark features [Terracotta](https://crates.io/crates/terracotta)'s
+custom-rolled authentication system, providing a basic session-based setup.
+However, it is highly recommended to store the user credentials securely in a
+database. That is currently outside the scope of this project, for a number of
+reasons, primarily the ambition to provide a simple system that can be extended
+to use any database required. You will probably also want to store the sessions
+in a database instead of in memory.
+
+The authentication system is set up to make it easy to configure routes as
+either public or protected, and is fully-implemented including a login page,
+logout action, and handling of every part of the authentication journey and the
+possible situations.
+
+### Databases
+
+Rustmark very purposefully does not include any kind of database integration.
+There are so many, and such a plethora of crates to choose from, that this is
+best left open. Database interaction is very straightforward and so this is a
+simple addition to make.
 
 
 ## Why Rustmark?
