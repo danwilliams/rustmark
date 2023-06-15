@@ -18,26 +18,26 @@ opt-level = "z"  # Optimise for size
 lto = true       # Enable link-time optimisation
 
 [dependencies]
-axum = "0.6.15"
+axum = "0.6.18"
 axum-sessions = "0.5.0"
-base64 = "0.21.0"
+base64 = "0.21.2"
 bytes = "1.4.0"
-figment = { version = "0.10.8", features = ["toml", "env"] }
+figment = { version = "0.10.10", features = ["toml", "env"] }
 include_dir = { version = "0.7.3", features = ["glob"] }
 mime_guess = "2.0.4"
 rand = { version = "0.8.5", features = ["min_const_gen"] }
 ring = "0.16.20"
 secrecy = "0.8.0"
-serde = { version = "1.0.160", features = ["derive"] }
+serde = { version = "1.0.164", features = ["derive"] }
 serde_json = { version = "1.0.96", features = ["preserve_order"] }
 smart-default = "0.7.1"
-tera = "1.18.1"
-tokio = { version = "1.27.0", features = ["macros", "rt-multi-thread"] }
+tera = "1.19.0"
+tokio = { version = "1.28.2", features = ["macros", "rt-multi-thread"] }
 tower-http = { version = "0.4.0", features = ["catch-panic", "trace"] }
 tracing = "0.1.37"
 tracing-appender = "0.2.2"
-tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
-url = "2.3.1"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+url = "2.4.0"
 
 [build-dependencies]
 comrak = { version = "0.18.0", features = ["emojis", "shortcodes"] }
