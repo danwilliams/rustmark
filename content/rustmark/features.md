@@ -381,7 +381,7 @@ the shorthand syntax is recommended, as it is more concise and readable.
 > 
 > These are more details.
 
-> -> Another summary - this one is longer,
+> -> Another summary — this one is longer,
 > and spans multiple lines
 > 
 > These are the details.
@@ -418,12 +418,15 @@ not strictly necessary. It just makes the Markdown easier to read in some cases.
 Notably, the image/screenshot callouts will be made collapsible, and also
 support showing a title alongside the callout heading. This is done by adding
 a colon and then the title, on the same line as the callout heading, e.g.
-`> **Screenshot**: Ferris's day off`. If found, the title will continue until
-a new paragraph is indicated by a blank line in the usual fashion. This has to
-work this way because there may be other elements in the title, such as styled
-text or icons. The title will then be shown even when the callout is collapsed,
-giving a hint as to what it contains. If there is no title then the callout type
-name will be extracted without affecting anything else.
+`> **Screenshot**: Ferris's day off`.
+
+If found, the title will continue until a new paragraph is indicated by a blank
+line in the usual fashion. This has to work this way because there may be other
+elements in the title, such as styled text or icons. The title will then be
+shown even when the callout is collapsed, giving a hint as to what it contains.
+
+If there is no title then the callout type name will be extracted without
+affecting anything else.
 
 > **Warning**
 > When using a title, it is critical to add a blank blockquote line after the
@@ -644,7 +647,7 @@ For a complete list, see the [Emojis reference](#emojis) below.
 
 #### Examples
 
-  - This PR looks great :thumbsup: - it's ready to merge! :rocket: :smile:
+  - This PR looks great :thumbsup: — it's ready to merge! :rocket: :smile:
   - :sparkles: :camel: :boom:
 
 ### HTML
