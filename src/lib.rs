@@ -71,11 +71,30 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<(u8, String, St
 		&plugins,
 	);
 	//		Interrogate HTML													
-	//		Find page title														
-	//	We'll use the first h1 element as the title of the page, but only if the
-	//	first H1 is the first element in the document. If any other content
-	//	comes before it, we won't count it as being the title.
-	let document  = Document::from(&html);
+	let document = Document::from(&html);
+	let title    = find_title(&document, remove_title);
+	let toc	     = find_headings(&document);
+	process_details(&document);
+	process_callouts(&document);
+	process_headings(&document);
+	(title, toc, document.html())
+}
+
+//		find_title																
+/// Find the title of the page, and remove it from the document if requested.
+/// 
+/// The page title is the first `h1` element, but only if the first H1 is the
+/// first element in the document. If any other content comes before it, it is
+/// not counted as being the title.
+/// 
+/// If there is no matching H1, the title is "Untitled".
+/// 
+/// # Parameters
+/// 
+/// * `document`     - The HTML document tree to search for the title.
+/// * `remove_title` - Whether to remove the page title from the document.
+/// 
+pub fn find_title(document: &Document, remove_title: bool) -> String {
 	let mut title = document.select("h1:first-child").text().to_string();
 	if title.is_empty() {
 		title     = "Untitled".to_owned();
@@ -83,14 +102,27 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<(u8, String, St
 	if remove_title {
 		document.select("h1:first-child").remove();
 	}
-	//		Find all headings													
-	//	To make a table of contents, we need to find all the headings in order,
-	//	and then construct a hierarchy from them. That hierarchy can then be
-	//	used to represent the links in the table of contents, even though the
-	//	list in the document is most likely flat. The hierarchy is represented
-	//	as a vector of tuples, where each tuple contains the level of the
-	//	heading, the ID of the heading, and the text of the heading, rather than
-	//	using a nested tree structure.
+	title
+}
+
+//		find_headings															
+/// Find all the headings in the document.
+/// 
+/// To make a table of contents, we need to find all the headings in order, and
+/// then construct a hierarchy from them. That hierarchy can then be used to
+/// represent the links in a table of contents, even though the list in the
+/// document is most likely flat.
+/// 
+/// The hierarchy of headings found is represented by this function as a vector
+/// of tuples, where each tuple contains the level of the heading, the ID of the
+/// heading, and the text of the heading, rather than using a nested tree
+/// structure.
+/// 
+/// # Parameters
+/// 
+/// * `document` - The HTML document tree to search for headings.
+/// 
+pub fn find_headings(document: &Document) -> Vec<(u8, String, String)> {
 	let mut toc: Vec<(u8, String, String)> = vec![];
 	for element in document.select("h1, h2, h3, h4, h5, h6").iter() {
 		let node  = element.get(0).unwrap();
@@ -100,7 +132,22 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<(u8, String, St
 		let level = tag.strip_prefix('h').unwrap().parse::<u8>().unwrap();
 		toc.push((level, id, text));
 	}
-	//		Process details and summary											
+	toc
+}
+
+//		process_details															
+/// Process all the details blocks in the document.
+/// 
+/// The details blocks are used to create collapsible sections in the document.
+/// They are created by using a blockquote with a paragraph that starts with
+/// `->`. The paragraph is converted to a summary, and the blockquote is
+/// converted to a details block.
+/// 
+/// # Parameters
+/// 
+/// * `document` - The HTML document tree to search for details blocks.
+/// 
+pub fn process_details(document: &Document) {
 	//	Find all blockquotes that match details syntax.
 	for mut blockquote in document.select("blockquote").iter() {
 		let mut paragraph = blockquote.select("p:first-child").first();
@@ -127,7 +174,21 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<(u8, String, St
 			));
 		}
 	}
-	//		Process callouts													
+}
+
+//		process_callouts														
+/// Process all the callouts in the document.
+/// 
+/// The callouts are used to create attention-grabbing sections. They are
+/// created by using a blockquote where the first paragraph contains a single
+/// word as a `**strong**` element, which is then used as the class name for the
+/// blockquote.
+/// 
+/// # Parameters
+/// 
+/// * `document` - The HTML document tree to search for callouts.
+/// 
+pub fn process_callouts(document: &Document) {
 	//	Find all blockquotes that match callout syntax.
 	let mut toggle_count  = 0;
 	for mut blockquote in document.select("blockquote").iter() {
@@ -146,8 +207,8 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<(u8, String, St
 		toggle_count     += 1;
 		let strong_html   = format!(
 			"{}{}{}{}{}{}{}{}{}",
-			r#"<input class="toggle" id="toggle-"#,  toggle_count, r#"" type="checkbox" />"#,
-			r#"<label class="toggle" for="toggle-"#, toggle_count, r#"">"#,
+			r#"<input class="toggle" id="toggle-c"#,  toggle_count, r#"" type="checkbox" />"#,
+			r#"<label class="toggle" for="toggle-c"#, toggle_count, r#"">"#,
 			r#"<i class="toggle"></i>"#,
 			r#"</label>"#,
 			strong.html(),
@@ -174,15 +235,31 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<(u8, String, St
 			,
 		));
 	}
-	//		Make all headings collapsible										
-	//	We'll assume two things: first, that all headings are top-level elements
-	//	in the HTML generated from the Markdown; and second, that there is only
-	//	one H1 element in the document, which serves as the page title. The
-	//	first assumption seems reasonable, as there doesn't seem to be a valid
-	//	way to end up with a heading nested inside another element. The second
-	//	assumption is not guaranteed, but it's the way we're advising people to
-	//	structure their Markdown files.
+}
+
+//		process_headings														
+/// Process all the headings in the document and make them collapsible.
+/// 
+/// Two things are assumed: first, that all headings are top-level elements in
+/// the HTML generated from the Markdown; and second, that there is only one H1
+/// element in the document, which serves as the page title.
+/// 
+/// The first assumption seems reasonable, as there doesn't seem to be a valid
+/// way to end up with a heading nested inside another element. The second
+/// assumption is not guaranteed, but it's the way we're advising people to
+/// structure their Markdown files.
+/// 
+/// All headings found in the document are converted to collapsible sections,
+/// with the heading text as the summary and the heading content as the
+/// collapsible content.
+/// 
+/// # Parameters
+/// 
+/// * `document` - The HTML document tree to search for headings.
+/// 
+pub fn process_headings(document: &Document) {
 	let mut headings         = vec!["h2", "h3", "h4", "h5", "h6"];
+	let mut toggle_count     = 0;
 	loop {
 		let heading_tag      = headings.last().unwrap().to_owned();
 		let mut heading_html = String::new();
@@ -212,8 +289,8 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<(u8, String, St
 						toggle_count += 1;
 						element.append_html(format!(
 							"{}{}{}{}{}{}{}{}",
-							r#"<input class="toggle" id="toggle-"#,  toggle_count, r#"" type="checkbox" />"#,
-							r#"<label class="toggle" for="toggle-"#, toggle_count, r#"">"#,
+							r#"<input class="toggle" id="toggle-h"#,  toggle_count, r#"" type="checkbox" />"#,
+							r#"<label class="toggle" for="toggle-h"#, toggle_count, r#"">"#,
 							r#"<i class="toggle"></i>"#,
 							r#"</label>"#,
 						));
@@ -249,8 +326,6 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<(u8, String, St
 			break;
 		}
 	}
-	//		Done																
-	(title, toc, document.html())
 }
 
 
