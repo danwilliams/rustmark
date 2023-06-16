@@ -302,6 +302,81 @@ As Albert Einstein said:
 > I have no special talent.
 > I am only passionately curious.
 
+### Details and summary
+
+*Quick reference:* `>-> details` + `> summary`
+
+HTML provides a [`<details>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/details)
+for creating a disclosure widget from a block of text, and a
+[`<summary>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/summary)
+for the title of the disclosure widget. Information within the `<details>`
+element is hidden by default.
+
+Standard Markdown does not provide a syntax for these elements, but they can be
+added to Markdown documents using raw HTML.
+
+For example, the following HTML:
+
+```html
+<details>
+    <summary>Summary of the details</summary>
+    <p>More details about the thing that was summarised.</p>
+</details>
+```
+
+...will be rendered as:
+
+<details>
+    <summary>Summary of the details</summary>
+    <p>Details about the thing that was summarised.</p>
+</details>
+
+Rustmark provides a shorthand syntax for this, which is more concise and
+readable, as an extension to blockquote syntax. The following Markdown is
+equivalent to the HTML above:
+
+```markdown
+>-> Summary of the details
+>
+> Details about the thing that was summarised.
+```
+
+```markdown
+> -> Another summary
+>
+> More details.
+```
+
+> **Note**
+> You can use either `> ->` or `>->` as the start of the blockquote to indicate
+> that it is a details block. The space is optional, but may be preferred for
+> readability.
+
+> **Warning**
+> It is critical to add a blank blockquote line after the summary and before
+> the details. This is because the summary may span multiple lines.
+
+The decision then becomes one of whether to use the standard HTML syntax, or
+the Rustmark shorthand syntax. If using another platform to preview the
+Markdown on a regular basis then the HTML syntax is recommended, as it will be
+rendered correctly everywhere. If using Rustmark to render the Markdown then
+the shorthand syntax is recommended, as it is more concise and readable.
+
+#### Examples
+
+>-> This is the summary
+> 
+> These are the details.
+
+> -> This will also work
+> 
+> These are more details.
+
+> -> Another summary - this one is longer,
+> and spans multiple lines
+> 
+> These are the details.
+
 ### Callouts
 
 *Quick reference:* `> **Warning**`, `> **Note**`, `> **Info**`, etc.

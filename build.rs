@@ -201,6 +201,33 @@ async fn parse(input_path: &Path, output_path: &Path) {
 		let level = tag.strip_prefix('h').unwrap().parse::<u8>().unwrap();
 		toc.push((level, id, text));
 	}
+	//		Process details and summary											
+	//	Find all blockquotes that match details syntax.
+	for mut blockquote in document.select("blockquote").iter() {
+		let mut paragraph = blockquote.select("p:first-child").first();
+		let para_text     = paragraph.text().to_string();
+		if para_text.starts_with("->") {
+			//	This is somewhat yucky, but Nipper doesn't provide any way to access the
+			//	inner HTML of an element, and the element children only provide access
+			//	to the HTML nodes, not the text nodes.
+			paragraph.replace_with_html(format!(
+				r#"<summary>{}</summary>"#,
+				paragraph.html()
+					.strip_prefix("<p>").unwrap()
+					.strip_suffix("</p>").unwrap()
+					.trim()
+					.strip_prefix("-&gt;").unwrap()
+				,
+			));
+			blockquote.replace_with_html(format!(
+				r#"<details>{}</details>"#,
+				blockquote.html()
+					.strip_prefix("<blockquote>").unwrap()
+					.strip_suffix("</blockquote>").unwrap()
+				,
+			));
+		}
+	}
 	//		Process callouts													
 	//	Find all blockquotes that match callout syntax.
 	let mut toggle_count  = 0;
