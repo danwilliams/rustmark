@@ -10,7 +10,7 @@ use comrak::{
 	markdown_to_html_with_plugins,
 	plugins::syntect::SyntectAdapter,
 };
-use nipper::Document;
+use nipper::{Document, Selection};
 use tendril::StrTendril;
 
 
@@ -74,8 +74,8 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<(u8, String, St
 	let document = Document::from(&html);
 	let title    = find_title(&document, remove_title);
 	let toc	     = find_headings(&document);
-	process_details(&document);
-	process_callouts(&document);
+	process_details(&document.select("blockquote"));
+	process_callouts(&document.select("blockquote"));
 	process_headings(&document);
 	(title, toc, document.html())
 }
@@ -136,7 +136,7 @@ pub fn find_headings(document: &Document) -> Vec<(u8, String, String)> {
 }
 
 //		process_details															
-/// Process all the details blocks in the document.
+/// Process all the details blocks in a selection of blockquotes.
 /// 
 /// The details blocks are used to create collapsible sections in the document.
 /// They are created by using a blockquote with a paragraph that starts with
@@ -145,14 +145,20 @@ pub fn find_headings(document: &Document) -> Vec<(u8, String, String)> {
 /// 
 /// # Parameters
 /// 
-/// * `document` - The HTML document tree to search for details blocks.
+/// * `blockquotes` - The selection of HTML blockquote elements to search for
+///                   details blocks.
 /// 
-pub fn process_details(document: &Document) {
+pub fn process_details(blockquotes: &Selection) {
 	//	Find all blockquotes that match details syntax.
-	for mut blockquote in document.select("blockquote").iter() {
+	for mut blockquote in blockquotes.iter() {
 		let mut paragraph = blockquote.select("p:first-child").first();
 		let para_text     = paragraph.text().to_string();
 		if para_text.starts_with("->") {
+			//	We need to specially process the contents of the blockquote, because the
+			//	HTML will be rewritten, and so any references to nested blockquotes
+			//	inside it that were found in the original selection will be orphaned and
+			//	and will no longer be valid.
+			process_details(&blockquote.select("blockquote"));
 			//	This is somewhat yucky, but Nipper doesn't provide any way to access the
 			//	inner HTML of an element, and the element children only provide access
 			//	to the HTML nodes, not the text nodes.
@@ -177,7 +183,7 @@ pub fn process_details(document: &Document) {
 }
 
 //		process_callouts														
-/// Process all the callouts in the document.
+/// Process all the callouts in a selection of blockquotes.
 /// 
 /// The callouts are used to create attention-grabbing sections. They are
 /// created by using a blockquote where the first paragraph contains a single
@@ -186,12 +192,13 @@ pub fn process_details(document: &Document) {
 /// 
 /// # Parameters
 /// 
-/// * `document` - The HTML document tree to search for callouts.
+/// * `blockquotes` - The selection of HTML blockquote elements to search for
+///                   callouts.
 /// 
-pub fn process_callouts(document: &Document) {
+pub fn process_callouts(blockquotes: &Selection) {
 	//	Find all blockquotes that match callout syntax.
 	let mut toggle_count  = 0;
-	for mut blockquote in document.select("blockquote").iter() {
+	for mut blockquote in blockquotes.iter() {
 		let mut paragraph = blockquote.select("p:first-child").first();
 		let mut strong    = paragraph.select("strong:first-child").first();
 		let para_text     = paragraph.text().to_string();
@@ -234,6 +241,11 @@ pub fn process_callouts(document: &Document) {
 				.join("\n")
 			,
 		));
+		//	We need to specially process the contents of the blockquote, because the
+		//	HTML has been rewritten, and so any references to nested blockquotes
+		//	inside it that were found in the original selection have been orphaned
+		//	and are no longer valid.
+		process_callouts(&blockquote.select("blockquote"));
 	}
 }
 
