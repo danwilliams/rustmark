@@ -22,15 +22,18 @@ axum = "0.6.18"
 axum-sessions = "0.5.0"
 base64 = "0.21.2"
 bytes = "1.4.0"
+comrak = { version = "0.18.0", features = ["emojis", "shortcodes"] }
 figment = { version = "0.10.10", features = ["toml", "env"] }
 include_dir = { version = "0.7.3", features = ["glob"] }
 mime_guess = "2.0.4"
+nipper = "0.1.9"
 rand = { version = "0.8.5", features = ["min_const_gen"] }
 ring = "0.16.20"
 secrecy = "0.8.0"
 serde = { version = "1.0.164", features = ["derive"] }
 serde_json = { version = "1.0.96", features = ["preserve_order"] }
 smart-default = "0.7.1"
+tendril = "0.4.3"
 tera = "1.19.0"
 tokio = { version = "1.28.2", features = ["macros", "rt-multi-thread"] }
 tower-http = { version = "0.4.0", features = ["catch-panic", "trace"] }
@@ -43,5 +46,6 @@ url = "2.4.0"
 comrak = { version = "0.18.0", features = ["emojis", "shortcodes"] }
 nipper = "0.1.9"
 serde_json = { version = "1.0.96", features = ["preserve_order"] }
+tendril = "0.4.3"
 tokio = { version = "1.28.2", features = ["io-std", "io-util", "macros", "rt", "rt-multi-thread", "time"] }
 walkdir = "2.3.3"
