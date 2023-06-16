@@ -268,7 +268,11 @@ async fn parse(input_path: &Path, output_path: &Path) {
 		blockquote.set_html(format!(
 			r#"{}<div class="collapsible">{}</div>"#,
 			para_html,
-			blockquote.children().iter().map(|c| c.html().to_string()).collect::<Vec<String>>().join("\n"),
+			blockquote.children().iter()
+				.map(|c| c.html().to_string())
+				.collect::<Vec<String>>()
+				.join("\n")
+			,
 		));
 	}
 	//		Make all headings collapsible										
