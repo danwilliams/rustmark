@@ -340,6 +340,9 @@ code {
 	visibility: visible !important;
 }
 
+.content .collapsible {
+	margin-bottom: 1em;
+}
 .content *:has(input.toggle:checked) + .collapsible,
 .content blockquote.image:has(input.toggle) .collapsible,
 .content blockquote.images:has(input.toggle) .collapsible,
@@ -371,6 +374,48 @@ code {
 .content blockquote.screenshot .collapsible > p:first-child > img:first-child,
 .content blockquote.screenshots .collapsible > p:first-child > img:first-child {
 	margin-top: 1em;
+}
+
+.content dd,
+.content details {
+	margin-bottom: 1em;
+	margin-left:   2em;
+}
+details > summary {
+	list-style: none;
+	cursor:     pointer;
+}
+details > summary:first-of-type {
+	list-style: outside disclosure-closed;
+	list-style: none;
+}
+details > summary::marker,
+details > summary::-webkit-details-marker {
+	display: none;
+}
+details > summary::marker {
+	content: "";
+}
+details > summary::before {
+	position:      absolute;
+	margin-top:    -0.12em;
+	margin-left:   -1.3em;
+	font-size:     1.2em;
+	font-family:   var(--fa-style-family, "Font Awesome 6 Free");
+	font-weight:   var(--fa-style, 900);
+	font-style:    normal;
+	font-variant:  normal;
+	content:       "⯈";
+	color:         #363636;
+	padding-right: 0.4em;
+}
+details[open] > summary::before {
+	margin-top: -0.2em;
+	content:    "⯆";
+}
+
+li::marker {
+	color: #363636;
 }
 
 section.footnotes {
