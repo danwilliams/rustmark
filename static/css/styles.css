@@ -270,7 +270,7 @@ code {
 }
 .content blockquote.screenshot::before,
 .content blockquote.screenshots::before {
-	content: "✨";
+	content: "🖥️";
 }
 
 .content h2,

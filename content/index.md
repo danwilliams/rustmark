@@ -12,7 +12,7 @@ and a list of links to other pages.
 
 ## Pages
 
-  - [Features](rustmark/features.md) - A page showing supported Markdown
+  - [✨ Features](rustmark/features.md) - A page showing supported Markdown
     features, with examples.
-  - [Guidelines](rustmark/guidelines.md) - Guidelines for writing Markdown
+  - [📜 Guidelines](rustmark/guidelines.md) - Guidelines for writing Markdown
     documents and structuring the `content` directory.

@@ -1,4 +1,4 @@
-# Features
+# ✨ Features
 
 This is an example Markdown file. It demonstrates the range of Markdown features
 available, and how to use them.

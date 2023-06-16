@@ -1,4 +1,4 @@
-# Guidelines
+# 📜 Guidelines
 
 This document provides some guidelines for best practices to follow when writing
 Markdown files for use with Rustmark, and where to place supporting files such
