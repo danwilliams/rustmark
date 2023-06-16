@@ -212,7 +212,6 @@ pub fn process_details(blockquotes: &Selection) {
 /// 
 pub fn process_callouts(blockquotes: &Selection) {
 	//	Find all blockquotes that match callout syntax.
-	let mut toggle_count  = 0;
 	for mut blockquote in blockquotes.iter() {
 		let mut paragraph = blockquote.select("p:first-child").first();
 		let mut strong    = paragraph.select("strong:first-child").first();
@@ -226,29 +225,23 @@ pub fn process_callouts(blockquotes: &Selection) {
 		if !vec!["image", "images", "screenshot", "screenshots"].contains(&&*class) {
 			continue;
 		}
-		toggle_count     += 1;
-		let strong_html   = format!(
-			"{}{}{}{}{}{}{}{}{}",
-			r#"<input class="toggle" id="toggle-c"#,  toggle_count, r#"" type="checkbox" />"#,
-			r#"<label class="toggle" for="toggle-c"#, toggle_count, r#"">"#,
-			r#"<i class="toggle"></i>"#,
-			r#"</label>"#,
-			strong.html(),
-		);
 		let para_html: String;
 		if para_text.strip_prefix(&strong_text).unwrap().starts_with(':') {
 			//	There doesn't seem to be a better way of removing just the text from the
 			//	paragraph, and the paragraph may contain other elements and not just
 			//	text, so those need to be preserved.
-			strong.replace_with_html(strong_html);
-			para_html     = paragraph.html().to_string();
+			para_html     = paragraph.html()
+				.strip_prefix("<p>").unwrap()
+				.strip_suffix("</p>").unwrap()
+				.to_owned()
+			;
 			paragraph.remove();
 		} else {
+			para_html     = strong.html().to_string();
 			strong.remove();
-			para_html     = format!(r#"<p>{}</p>"#, strong_html);
 		}
 		blockquote.set_html(format!(
-			r#"{}<div class="collapsible">{}</div>"#,
+			r#"<details class="callout-collapse"><summary>{}</summary>{}</details>"#,
 			para_html,
 			blockquote.children().iter()
 				.map(|c| c.html().to_string())

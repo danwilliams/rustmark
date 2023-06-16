@@ -284,83 +284,7 @@ code {
 .content h6 {
 	padding-right: 1.5em;
 }
-.content * i.toggle::before {
-	position:     absolute;
-	right:        0;
-	font-size:    1.2em;
-	font-family:  var(--fa-style-family, "Font Awesome 6 Free");
-	font-weight:  var(--fa-style, 900);
-	font-style:   normal;
-	font-variant: normal;
-}
-.content blockquote.image i.toggle::before,
-.content blockquote.images i.toggle::before,
-.content blockquote.screenshot i.toggle::before,
-.content blockquote.screenshots i.toggle::before {
-	margin-top:   -0.1em;
-	right:        1.5em;
-}
-.content *:has(input.toggle:checked) i.toggle::before,
-.content blockquote.image i.toggle::before,
-.content blockquote.images i.toggle::before,
-.content blockquote.screenshot i.toggle::before,
-.content blockquote.screenshots i.toggle::before {
-	content: "";
-}
-.content * i.toggle::before,
-.content blockquote.image:has(input.toggle:checked) i.toggle::before,
-.content blockquote.images:has(input.toggle:checked) i.toggle::before,
-.content blockquote.screenshot:has(input.toggle:checked) i.toggle::before,
-.content blockquote.screenshots:has(input.toggle:checked) i.toggle::before {
-	content: "";
-}
-.content * i.toggle:hover::before {
-	color:  grey;
-	cursor: pointer;
-}
 
-.content * > label.toggle i.toggle::before {
-	visibility: hidden;
-}
-.content *:has(input.toggle:checked) > label.toggle i.toggle::before,
-.content blockquote.image i.toggle::before,
-.content blockquote.images i.toggle::before,
-.content blockquote.screenshot i.toggle::before,
-.content blockquote.screenshots i.toggle::before {
-	visibility: visible;
-}
-.content blockquote.image:has(input.toggle:checked) i.toggle::before,
-.content blockquote.images:has(input.toggle:checked) i.toggle::before,
-.content blockquote.screenshot:has(input.toggle:checked) i.toggle::before,
-.content blockquote.screenshots:has(input.toggle:checked) i.toggle::before {
-	visibility: hidden;
-}
-.content *:hover > label.toggle i.toggle::before,
-.content blockquote.screenshots:hover label.toggle i.toggle::before {
-	visibility: visible !important;
-}
-
-.content .collapsible {
-	margin-bottom: 1em;
-}
-.content *:has(input.toggle:checked) + .collapsible,
-.content blockquote.image:has(input.toggle) .collapsible,
-.content blockquote.images:has(input.toggle) .collapsible,
-.content blockquote.screenshot:has(input.toggle) .collapsible,
-.content blockquote.screenshots:has(input.toggle) .collapsible {
-	display: none;
-}
-.content *:has(input.toggle) + .collapsible,
-.content blockquote.image:has(input.toggle:checked) .collapsible,
-.content blockquote.images:has(input.toggle:checked) .collapsible,
-.content blockquote.screenshot:has(input.toggle:checked) .collapsible,
-.content blockquote.screenshots:has(input.toggle:checked) .collapsible {
-	display: block;
-}
-
-.content * input.toggle {
-	display: none;
-}
 .content blockquote.image img,
 .content blockquote.images img,
 .content blockquote.screenshot img,
@@ -369,10 +293,10 @@ code {
 	width:   auto;
 	display: block;
 }
-.content blockquote.image .collapsible > p:first-child > img:first-child,
-.content blockquote.images .collapsible > p:first-child > img:first-child,
-.content blockquote.screenshot .collapsible > p:first-child > img:first-child,
-.content blockquote.screenshots .collapsible > p:first-child > img:first-child {
+.content blockquote.image details > p:first-of-type > img:first-child,
+.content blockquote.images details > p:first-of-type > img:first-child,
+.content blockquote.screenshot details > p:first-of-type > img:first-child,
+.content blockquote.screenshots details > p:first-of-type > img:first-child {
 	margin-top: 1em;
 }
 
@@ -423,22 +347,38 @@ details.heading-collapse.h2 + details.heading-collapse.h2 {
 details[open].heading-collapse.h2 + details.heading-collapse.h2 {
 	margin-top: 3.5em;
 }
+details.callout-collapse,
 details.heading-collapse {
 	margin-left: 0;
 }
+details.callout-collapse {
+	margin-bottom: 0;
+}
+details[open].callout-collapse {
+	margin-bottom: 1em;
+}
+details.callout-collapse > summary::before,
 details.heading-collapse > summary::before {
 	right:         0;
 	margin-top:    -0.19em;
 	margin-left:   0;
 	padding-right: 0;
-	font-size:     2.1em;
 	content:       "";
 	visibility:    visible;
 }
+details.heading-collapse > summary::before {
+	font-size: 2.1em;
+}
+details.callout-collapse > summary::before {
+	margin-top: -0.1em;
+	right:      1.5em;
+}
+details[open].callout-collapse > summary::before,
 details[open].heading-collapse > summary::before {
 	content:    "";
 	visibility: hidden;
 }
+details.callout-collapse > summary:hover::before,
 details.heading-collapse > summary:hover::before {
 	color:      grey;
 	visibility: visible !important;
