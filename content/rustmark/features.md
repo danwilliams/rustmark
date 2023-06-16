@@ -1,7 +1,7 @@
 # ✨ Features
 
-This is an example Markdown file. It demonstrates the range of Markdown features
-available, and how to use them.
+This is an example Markdown document. It demonstrates the range of Markdown
+features available, and how to use them.
 
 
 ## Standards and compatibility
@@ -30,7 +30,7 @@ the [blockquotes](#blockquotes) syntax.
 
 *Quick reference:* `# h1`, `## h2`, `### h3`, `#### h4`, `##### h5`, `###### h6`
 
-As can be seen throughout this file, there is a range of headings available,
+As can be seen throughout this document, there is a range of headings available,
 from `h1` to `h6`. These are denoted by the number of `#` characters at the
 start of the line.
 
@@ -517,16 +517,7 @@ use three tilde `~` characters.
 Code blocks support Font Awesome icons and the other icons included in the Nerd
 Font range of fonts.
 
-#### Examples
-
-```
-//   Code blocks support Font Awesome icons and the other icons included in the
-//  Nerd Font range of fonts.
-```
-
-### Syntax highlighting
-
-*Quick reference:* ```` ```language ````
+#### Syntax highlighting
 
 Code blocks can have their syntax highlighted. To do this, add the name of the
 language immediately after the opening code block characters.
@@ -535,6 +526,11 @@ For example, ```` ```rust ```` will highlight the code block according to the
 Rust syntax.
 
 #### Examples
+
+```
+//   Code blocks support Font Awesome icons and the other icons included in the
+//  Nerd Font range of fonts.
+```
 
 **JavaScript**
 ```javascript
