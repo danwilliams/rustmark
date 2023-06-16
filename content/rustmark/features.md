@@ -301,6 +301,10 @@ For example, `> This is a blockquote` will be rendered as:
 > This is a blockquote
 
 > **Tip**
+> Other Markdown elements can be included within blockquotes, including other
+> blockquotes.
+
+> **Tip**
 > There are two additional Markdown features implemented that extend the basic
 > blockquote syntax: [callouts](#callouts), and [details and summary](#details-and-summary).
 
@@ -310,6 +314,18 @@ As Albert Einstein said:
 
 > I have no special talent.
 > I am only passionately curious.
+
+> This blockquote contains other Markdown elements.
+> 
+> Some **bold text**, some `inline code`.
+> 
+> ```
+> A code block
+> ```
+> 
+> - A list item
+> 
+> > A blockquote within a blockquote.
 
 ### Details and summary
 
@@ -371,6 +387,10 @@ Markdown on a regular basis then the HTML syntax is recommended, as it will be
 rendered correctly everywhere. If using Rustmark to render the Markdown then
 the shorthand syntax is recommended, as it is more concise and readable.
 
+> **Tip**
+> Other Markdown elements can be included within details and summary blocks,
+> including other details and summary blocks.
+
 #### Examples
 
 >-> This is the summary
@@ -384,7 +404,21 @@ the shorthand syntax is recommended, as it is more concise and readable.
 > -> Another summary — this one is longer,
 > and spans multiple lines
 > 
-> These are the details.
+> This details block contains other Markdown elements.
+>
+> Some **bold text**, some `inline code`.
+> 
+> ```
+> A code block
+> ```
+> 
+> - A list item
+> 
+> > A blockquote within a details block.
+> 
+> > -> A details block within a details block.
+> >
+> > The nested details.
 
 ### Callouts
 
@@ -412,6 +446,10 @@ words:
 
 It is advisable to place the emphasised word on a line of its own, but this is
 not strictly necessary. It just makes the Markdown easier to read in some cases.
+
+> **Tip**
+> Other Markdown elements can be included within callouts, including other
+> callouts.
 
 #### Image titles
 
@@ -464,32 +502,54 @@ Here are the callouts in action:
 > This is an unresolved question.
 
 > **Todo**
-> This is a note about something unfinished that remains to be done. It's quite
-> long on purpose, to show how the wrapping behaves. We'll put some more filler
-> text here, to illustrate this fully.
->
-> It has multiple paragraphs, too.
->
-> **And...**
-> It also has another piece of bold text, to show how that behaves.
+> This is a note about something unfinished that remains to be done.
 
 > **Image**: Friendly Ferris
-> 
+>
 > This is collapsible, and will be collapsed by default.
-> ![Ferris](images/rustacean-flat-happy.png)
-
-> **Image**: Even *more* Ferris
-> 
 > ![Ferris](images/rustacean-flat-happy.png)
 
 > **Screenshot**
 > This is also collapsible, and will also be collapsed by default.
 > ![Ferris](images/rustacean-flat-happy.png)
 
+They can contain multiple paragraphs, and other Markdown elements:
+
+> **Note**
+> This note is quite long on purpose, to show how the wrapping behaves. We'll
+> put some more filler text here, to illustrate this fully.
+>
+> This callout contains other Markdown elements.
+>
+> Some **bold text**, some `inline code`.
+> 
+> ```
+> A code block
+> ```
+> 
+> - A list item
+> 
+> > A blockquote within a callout.
+> 
+> > **Info**
+> > This is a nested callout.
+>
+> **And...**
+> It also has another piece of bold text, in the same style as the callout
+> heading, to show how that behaves.
+
+Image titles can contain formatting and other Markdown elements:
+
+> **Image**: Even *more* Ferris
+>
+> ![Ferris](images/rustacean-flat-happy.png)
+> 
+> > **Info**
+> > This is a nested callout.
+
 Callouts don't have to have any content at all:
 
 > **Complete**
-
 
 ### Inline code
 
