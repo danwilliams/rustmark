@@ -37,6 +37,13 @@ start of the line.
 For example, `# Heading 1` is an `h1` heading, and `###### Heading 6` is an `h6`
 heading.
 
+> **Note**
+> The first `h1` heading in a Markdown document is used as the title of the
+> page, if it is also the first piece of content in the file. It is recommended
+> that there should only be one `h1` heading per document.
+
+#### Heading ids
+
 Headings are automatically assigned an ID, which is the text of the heading
 converted to lowercase, with spaces replaced by hyphens. This is used to create
 anchors for the headings, which can be linked to using the `#` character in a
@@ -44,6 +51,22 @@ URL.
 
 For example, the ID of this heading is `headings`, so it can be linked to using
 `#headings`: [Headings](#headings).
+
+A small `` icon is displayed next to each heading when the mouse hovers over it,
+which can be used to copy the link to the heading.
+
+#### Collapsing headings
+
+Headings will show a small arrow icon next to them when the mouse hovers over
+them. Clicking on this icon will collapse the heading, hiding the content below
+it. Clicking on the icon again will expand the heading, showing the content
+below it again.
+
+> **Broken**
+> A [bug in Firefox](https://bugzilla.mozilla.org/show_bug.cgi?id=418039#c56)
+> means that the arrows will not work at present. This is a known issue, and
+> will be fixed in a future release of Firefox. There is no such issue in
+> Chrome and Chrome-based browsers.
 
 #### Examples
 
