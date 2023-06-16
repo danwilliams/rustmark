@@ -62,12 +62,6 @@ them. Clicking on this icon will collapse the heading, hiding the content below
 it. Clicking on the icon again will expand the heading, showing the content
 below it again.
 
-> **Broken**
-> A [bug in Firefox](https://bugzilla.mozilla.org/show_bug.cgi?id=418039#c56)
-> means that the arrows will not work at present. This is a known issue, and
-> will be fixed in a future release of Firefox. There is no such issue in
-> Chrome and Chrome-based browsers.
-
 #### Examples
 
 ##### Heading 5

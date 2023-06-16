@@ -414,6 +414,36 @@ details[open] > summary::before {
 	content:    "⯆";
 }
 
+details.heading-collapse.h2 {
+	margin-top: 3.5em;
+}
+details.heading-collapse.h2 + details.heading-collapse.h2 {
+	margin-top: 2.5em;
+}
+details[open].heading-collapse.h2 + details.heading-collapse.h2 {
+	margin-top: 3.5em;
+}
+details.heading-collapse {
+	margin-left: 0;
+}
+details.heading-collapse > summary::before {
+	right:         0;
+	margin-top:    -0.19em;
+	margin-left:   0;
+	padding-right: 0;
+	font-size:     2.1em;
+	content:       "";
+	visibility:    visible;
+}
+details[open].heading-collapse > summary::before {
+	content:    "";
+	visibility: hidden;
+}
+details.heading-collapse > summary:hover::before {
+	color:      grey;
+	visibility: visible !important;
+}
+
 li::marker {
 	color: #363636;
 }

@@ -286,7 +286,6 @@ pub fn process_callouts(blockquotes: &Selection) {
 /// 
 pub fn process_headings(document: &Document) {
 	let mut headings         = vec!["h2", "h3", "h4", "h5", "h6"];
-	let mut toggle_count     = 0;
 	loop {
 		let heading_tag      = headings.last().unwrap().to_owned();
 		let mut heading_html = String::new();
@@ -313,15 +312,7 @@ pub fn process_headings(document: &Document) {
 					let tag   = node.node_name().unwrap().to_string().to_lowercase();
 					if !active && tag == heading_tag {
 						active        = true;
-						toggle_count += 1;
-						element.append_html(format!(
-							"{}{}{}{}{}{}{}{}",
-							r#"<input class="toggle" id="toggle-h"#,  toggle_count, r#"" type="checkbox" />"#,
-							r#"<label class="toggle" for="toggle-h"#, toggle_count, r#"">"#,
-							r#"<i class="toggle"></i>"#,
-							r#"</label>"#,
-						));
-						heading_html.push_str(&element.html());
+						heading_html  = element.html().to_string();
 						element.remove();
 						continue;
 					}
@@ -337,7 +328,8 @@ pub fn process_headings(document: &Document) {
 			||	next_element.is_none()
 			{
 				element.replace_with_html(format!(
-					r#"{}<div class="collapsible">{}</div>"#,
+					r#"<details open class="heading-collapse {}"><summary>{}</summary>{}</details>"#,
+					heading_tag,
 					heading_html,
 					buffer_html,
 				));
