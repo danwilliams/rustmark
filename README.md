@@ -139,6 +139,11 @@ replacement for Notion, or any other wiki-style system, and it is quite likely
 best to use both in tandem, with Notion for general documentation and pages that
 non-techies need to edit.
 
+Additionally, some people/companies do not like the idea of their information
+being stored in a third-party system, and would prefer to keep it in-house. This
+is another reason why Rustmark is a good choice, as it allows full control over
+the content, distribution, and access.
+
 ### If it works with Git server Markdown previewing, why not just use that?
 
 Most Git server systems provide a Markdown preview feature, which is great for
