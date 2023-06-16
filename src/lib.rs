@@ -11,7 +11,6 @@ use comrak::{
 	plugins::syntect::SyntectAdapter,
 };
 use nipper::Document;
-use std::path::Path;
 use tendril::StrTendril;
 
 
@@ -19,7 +18,20 @@ use tendril::StrTendril;
 //		Functions
 
 //		parse																	
-pub fn parse(markdown: &str, path: &Path) -> (String, Vec<(u8, String, String)>, StrTendril) {
+/// Parse Markdown into HTML, extract metadata, and return the result.
+/// 
+/// # Parameters
+/// 
+/// * `markdown`     - The Markdown to parse.
+/// * `remove_title` - Whether to remove the page title from the HTML.
+/// 
+/// # Returns
+/// 
+/// * `html`  - The HTML generated from parsing the Markdown.
+/// * `toc`   - A table of contents based on headings found.
+/// * `title` - The page title.
+/// 
+pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<(u8, String, String)>, StrTendril) {
 	//		Parse Markdown														
 	let adaptor     = SyntectAdapter::new("base16-ocean.dark");
 	let mut plugins = ComrakPlugins::default();
@@ -68,9 +80,7 @@ pub fn parse(markdown: &str, path: &Path) -> (String, Vec<(u8, String, String)>,
 	if title.is_empty() {
 		title     = "Untitled".to_owned();
 	}
-	//	Remove the title from the index page, as it will have one added showing
-	//	the application title.
-	if path == Path::new("content/index.md") {
+	if remove_title {
 		document.select("h1:first-child").remove();
 	}
 	//		Find all headings													

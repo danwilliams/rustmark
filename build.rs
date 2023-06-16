@@ -129,7 +129,9 @@ async fn parse(input_path: &Path, output_path: &Path) {
 	println!("Parsing file: {}", input_path.display());
 	let (title, toc, html) = rustmark::parse(
 		&fs::read_to_string(input_path).unwrap(),
-		input_path,
+		//	Remove the title from the index page, as it will have one added showing
+		//	the application title.
+		input_path == Path::new("content/index.md"),
 	);
 	//	We use a custom format - the first line of the file is the title we
 	//	extracted, the second line is a JSON array with the table of contents,
