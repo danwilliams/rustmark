@@ -257,6 +257,11 @@ text](url)`.
 For example, `![Ferris](images/rustacean-flat-happy.png)` will be rendered as
 in the example below.
 
+> **Tip**
+> If you have a large image and want to hide it away from the main document
+> flow, you may wish to use [image callouts](#callouts), which are collapsible,
+> or a [details block](#details-and-summary).
+
 #### Examples
 
 ![Ferris](images/rustacean-flat-happy.png)
@@ -294,6 +299,10 @@ start of the line.
 For example, `> This is a blockquote` will be rendered as:
 
 > This is a blockquote
+
+> **Tip**
+> There are two additional Markdown features implemented that extend the basic
+> blockquote syntax: [callouts](#callouts), and [details and summary](#details-and-summary).
 
 #### Examples
 
@@ -384,7 +393,7 @@ the shorthand syntax is recommended, as it is more concise and readable.
 You can use callouts where appropriate, e.g. to call attention to special notes,
 warnings, etc. as per the styles below. They are an extended form of blockquote,
 as this is a simple approach and degrades gracefully if rendered without
-specific support.
+specific support. You can see them in use throughout this document.
 
 Blockquotes are taken to be callouts if they start with a single, specific word
 in bold text, such as `Warning`, i.e. `> **Warning**`. Punctuation will be
@@ -404,6 +413,8 @@ words:
 It is advisable to place the emphasised word on a line of its own, but this is
 not strictly necessary. It just makes the Markdown easier to read in some cases.
 
+#### Image titles
+
 Notably, the image/screenshot callouts will be made collapsible, and also
 support showing a title alongside the callout heading. This is done by adding
 a colon and then the title, on the same line as the callout heading, e.g.
@@ -413,6 +424,17 @@ work this way because there may be other elements in the title, such as styled
 text or icons. The title will then be shown even when the callout is collapsed,
 giving a hint as to what it contains. If there is no title then the callout type
 name will be extracted without affecting anything else.
+
+> **Warning**
+> When using a title, it is critical to add a blank blockquote line after the
+> title and before the image that is considered to be content. Otherwise the
+> image will be part of the same paragraph as the title.
+
+> **Broken**
+> A [bug in Firefox](https://bugzilla.mozilla.org/show_bug.cgi?id=418039#c56)
+> means that the arrows will not work at present. This is a known issue, and
+> will be fixed in a future release of Firefox. There is no such issue in
+> Chrome and Chrome-based browsers.
 
 #### Examples
 
