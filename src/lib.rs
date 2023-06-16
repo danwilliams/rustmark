@@ -159,17 +159,32 @@ pub fn process_details(blockquotes: &Selection) {
 			//	inside it that were found in the original selection will be orphaned and
 			//	and will no longer be valid.
 			process_details(&blockquote.select("blockquote"));
+			let mut summary: Vec<String> =  vec![];
+			let mut para_html            =  paragraph.html()
+				.strip_prefix("<p>").unwrap()
+				.strip_suffix("</p>").unwrap()
+				.trim()
+				.to_owned()
+			;
+			while para_html.starts_with("-&gt;") {
+				match para_html.split_once('\n') { 
+					Some((line, rest))   => {
+						summary.push(line.strip_prefix("-&gt;").unwrap().trim().to_owned());
+						para_html        =  rest.trim().to_owned();
+					},
+					None                 => {
+						summary.push(para_html.strip_prefix("-&gt;").unwrap().trim().to_owned());
+						para_html        =  "".to_owned();
+					},
+				}
+			}
 			//	This is somewhat yucky, but Nipper doesn't provide any way to access the
 			//	inner HTML of an element, and the element children only provide access
 			//	to the HTML nodes, not the text nodes.
 			paragraph.replace_with_html(format!(
-				r#"<summary>{}</summary>"#,
-				paragraph.html()
-					.strip_prefix("<p>").unwrap()
-					.strip_suffix("</p>").unwrap()
-					.trim()
-					.strip_prefix("-&gt;").unwrap()
-				,
+				r#"<summary>{}</summary><p>{}</p>"#,
+				summary.join("\n"),
+				para_html,
 			));
 			blockquote.replace_with_html(format!(
 				r#"<details>{}</details>"#,

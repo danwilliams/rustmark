@@ -362,13 +362,11 @@ equivalent to the HTML above:
 
 ```markdown
 >-> Summary of the details
->
 > Details about the thing that was summarised.
 ```
 
 ```markdown
 > -> Another summary
->
 > More details.
 ```
 
@@ -377,9 +375,11 @@ equivalent to the HTML above:
 > that it is a details block. The space is optional, but may be preferred for
 > readability.
 
-> **Warning**
-> It is critical to add a blank blockquote line after the summary and before
-> the details. This is because the summary may span multiple lines.
+> **Note**
+> The summary may span multiple lines, in which case the `->` prefix should be
+> repeated on each line. When the prefix ceases to be repeated, the details
+> block will start. Leaving a blank line between the summary and the details
+> block will lead to a larger gap, which may be desirable in some cases.
 
 The decision then becomes one of whether to use the standard HTML syntax, or
 the Rustmark shorthand syntax. If using another platform to preview the
@@ -394,16 +394,14 @@ the shorthand syntax is recommended, as it is more concise and readable.
 #### Examples
 
 >-> This is the summary
-> 
 > These are the details.
 
 > -> This will also work
 > 
-> These are more details.
+> These are more details, with a gap.
 
-> -> Another summary — this one is longer,
-> and spans multiple lines
-> 
+> -> Another summary — this one is *longer*,
+> -> and spans multiple lines
 > This details block contains other Markdown elements.
 >
 > Some **bold text**, some `inline code`.
@@ -417,7 +415,6 @@ the shorthand syntax is recommended, as it is more concise and readable.
 > > A blockquote within a details block.
 > 
 > > -> A details block within a details block.
-> >
 > > The nested details.
 
 ### Callouts
