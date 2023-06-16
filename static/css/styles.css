@@ -143,23 +143,27 @@ code {
 	font-weight: 500;
 }
 
-.content blockquote.blocked p,
-.content blockquote.broken p,
-.content blockquote.warning p,
-.content blockquote.caution p,
-.content blockquote.note p,
-.content blockquote.tip p,
-.content blockquote.complete p,
-.content blockquote.finished p,
-.content blockquote.approved p,
-.content blockquote.info p,
-.content blockquote.question p,
-.content blockquote.todo p,
-.content blockquote.image p,
-.content blockquote.images p,
-.content blockquote.screenshot p,
-.content blockquote.screenshots p {
-	padding-left: 2.5em;
+.content blockquote {
+	background-color: rgba(200, 200, 200, 0.2);
+	border-left:      5px solid rgba(150, 150, 150, 0.25);
+}
+.content blockquote.blocked,
+.content blockquote.broken,
+.content blockquote.warning,
+.content blockquote.caution,
+.content blockquote.note,
+.content blockquote.tip,
+.content blockquote.complete,
+.content blockquote.finished,
+.content blockquote.approved,
+.content blockquote.info,
+.content blockquote.question,
+.content blockquote.todo,
+.content blockquote.image,
+.content blockquote.images,
+.content blockquote.screenshot,
+.content blockquote.screenshots {
+	padding-left: 4em;
 }
 
 .content blockquote.blocked::before,
@@ -181,7 +185,7 @@ code {
 	position:    absolute;
 	font-size:   1.2em;
 	margin-top:  -0.1em;
-	margin-left: -0.1em;
+	margin-left: -2.2em;
 }
 .content blockquote.blocked p:first-child strong:first-child,
 .content blockquote.broken p:first-child strong:first-child,
