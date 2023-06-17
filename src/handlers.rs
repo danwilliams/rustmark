@@ -5,7 +5,7 @@ use crate::{
 	CONTENT_DIR,
 	utility::*,
 };
-use rustmark::TocEntry;
+use rustmark::Heading;
 
 use axum::{
 	body,
@@ -50,12 +50,12 @@ pub async fn get_page(
 	match CONTENT_DIR.get_file(path) {
 		None       => (StatusCode::NOT_FOUND).into_response(),
 		Some(file) => {
-			let (title, html)      = file.contents_utf8().unwrap().split_once('\n').unwrap();
-			let (json,  html)      = html.split_once('\n').unwrap();
-			let toc: Vec<TocEntry> = serde_json::from_str(&json).unwrap();
-			let mut context        = Context::new();
-			let template           = if path == "index.md" { "index" } else { "page" };
-			let title              = if path == "index.md" {
+			let (title, html)     = file.contents_utf8().unwrap().split_once('\n').unwrap();
+			let (json,  html)     = html.split_once('\n').unwrap();
+			let toc: Vec<Heading> = serde_json::from_str(json).unwrap();
+			let mut context       = Context::new();
+			let template          = if path == "index.md" { "index" } else { "page" };
+			let title             = if path == "index.md" {
 				state.Config.title.clone()
 			} else {
 				format!("{} - {}", title, &state.Config.title)

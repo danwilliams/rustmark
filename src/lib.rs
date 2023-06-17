@@ -18,9 +18,9 @@ use tendril::StrTendril;
 
 //		Structs
 
-//		TocEntry																
+//		Heading																	
 #[derive(Debug, Deserialize, Serialize)]
-pub struct TocEntry {
+pub struct Heading {
 	level: u8,
 	id:    String,
 	text:  String,
@@ -44,7 +44,7 @@ pub struct TocEntry {
 /// * `toc`   - A table of contents based on headings found.
 /// * `title` - The page title.
 /// 
-pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<(u8, String, String)>, StrTendril) {
+pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<Heading>, StrTendril) {
 	//		Parse Markdown														
 	let adaptor     = SyntectAdapter::new("base16-ocean.dark");
 	let mut plugins = ComrakPlugins::default();
@@ -127,23 +127,23 @@ pub fn find_title(document: &Document, remove_title: bool) -> String {
 /// document is most likely flat.
 /// 
 /// The hierarchy of headings found is represented by this function as a vector
-/// of tuples, where each tuple contains the level of the heading, the ID of the
-/// heading, and the text of the heading, rather than using a nested tree
-/// structure.
+/// of Heading structs, where each struct contains the level of the heading, the
+/// ID of the heading, and the text of the heading, rather than using a nested
+/// tree structure.
 /// 
 /// # Parameters
 /// 
 /// * `document` - The HTML document tree to search for headings.
 /// 
-pub fn find_headings(document: &Document) -> Vec<(u8, String, String)> {
-	let mut toc: Vec<(u8, String, String)> = vec![];
+pub fn find_headings(document: &Document) -> Vec<Heading> {
+	let mut toc: Vec<Heading> = vec![];
 	for element in document.select("h1, h2, h3, h4, h5, h6").iter() {
 		let node  = element.get(0).unwrap();
 		let id    = element.select("a").attr("id").unwrap().to_string();
 		let tag   = node.node_name().unwrap().to_string().to_lowercase();
 		let text  = node.text().to_string();
 		let level = tag.strip_prefix('h').unwrap().parse::<u8>().unwrap();
-		toc.push((level, id, text));
+		toc.push(Heading { level, id, text });
 	}
 	toc
 }
