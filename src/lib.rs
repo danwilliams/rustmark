@@ -252,16 +252,29 @@ pub fn process_callouts(blockquotes: &Selection) {
 			strong.remove();
 		}
 		let open          = !vec!["image", "images", "screenshot", "screenshots"].contains(&&*class);
-		blockquote.set_html(format!(
-			r#"<details {} class="callout-collapse"><summary>{}</summary>{}</details>"#,
-			if open { "open" } else { "" },
-			para_html,
-			blockquote.children().iter()
-				.map(|c| c.html().to_string())
-				.collect::<Vec<String>>()
-				.join("\n")
-			,
-		));
+		let mut chld_html = blockquote.children().iter()
+			.map(|c| c.html().to_string())
+			.collect::<Vec<String>>()
+			.join("\n")
+		;
+		chld_html         = chld_html
+			.replace("<p></p>", "")
+			.trim()
+			.to_owned()
+		;
+		blockquote.set_html(if chld_html.is_empty() {
+			format!(
+				r#"<p>{}</p>"#,
+				para_html,
+			)
+		} else {
+			format!(
+				r#"<details {} class="callout-collapse"><summary>{}</summary>{}</details>"#,
+				if open { "open" } else { "" },
+				para_html,
+				chld_html,
+			)
+		});
 		//	We need to specially process the contents of the blockquote, because the
 		//	HTML has been rewritten, and so any references to nested blockquotes
 		//	inside it that were found in the original selection have been orphaned

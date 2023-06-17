@@ -157,16 +157,6 @@ code {
 	margin-top:  -0.1em;
 	margin-left: -2.2em;
 }
-.content blockquote.callout p:first-child strong:first-child {
-	display: block;
-}
-.content blockquote.image > p:first-child,
-.content blockquote.images > p:first-child,
-.content blockquote.screenshot > p:first-child,
-.content blockquote.screenshots > p:first-child {
-	margin-bottom: 0;
-	display:       inline;
-}
 
 .content blockquote.blocked,
 .content blockquote.broken {
