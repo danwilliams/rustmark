@@ -5,6 +5,8 @@ use crate::{
 	CONTENT_DIR,
 	utility::*,
 };
+use rustmark::TocEntry;
+
 use axum::{
 	body,
 	extract::State,
@@ -12,7 +14,6 @@ use axum::{
 	response::{Html, IntoResponse, Response},
 };
 use mime_guess::{self};
-use serde::{Deserialize, Serialize};
 use serde_json::{self};
 use std::sync::Arc;
 use tera::Context;
@@ -26,18 +27,6 @@ use tera::Context;
 pub enum BaseDir {
 	Assets,
 	Content,
-}
-
-
-
-//		Structs
-
-//		TocEntry																
-#[derive(Debug, Deserialize, Serialize)]
-struct TocEntry {
-	level: u8,
-	id:    String,
-	text:  String,
 }
 
 

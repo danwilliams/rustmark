@@ -11,7 +11,20 @@ use comrak::{
 	plugins::syntect::SyntectAdapter,
 };
 use nipper::{Document, Selection};
+use serde::{Deserialize, Serialize};
 use tendril::StrTendril;
+
+
+
+//		Structs
+
+//		TocEntry																
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TocEntry {
+	level: u8,
+	id:    String,
+	text:  String,
+}
 
 
 

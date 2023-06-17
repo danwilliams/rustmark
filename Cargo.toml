@@ -45,6 +45,7 @@ url = "2.4.0"
 [build-dependencies]
 comrak = { version = "0.18.0", features = ["emojis", "shortcodes"] }
 nipper = "0.1.9"
+serde = { version = "1.0.164", features = ["derive"] }
 serde_json = { version = "1.0.96", features = ["preserve_order"] }
 tendril = "0.4.3"
 tokio = { version = "1.28.2", features = ["io-std", "io-util", "macros", "rt", "rt-multi-thread", "time"] }
