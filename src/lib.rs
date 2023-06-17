@@ -234,6 +234,7 @@ pub fn process_callouts(blockquotes: &Selection) {
 			continue;
 		}
 		let class         = strong_text.replace(|c: char| !c.is_alphanumeric(), "").to_lowercase();
+		blockquote.add_class("callout");
 		blockquote.add_class(&class);
 		if !vec!["image", "images", "screenshot", "screenshots"].contains(&&*class) {
 			continue;
