@@ -330,12 +330,21 @@ details > summary::before {
 	font-style:    normal;
 	font-variant:  normal;
 	content:       "⯈";
-	color:         #363636;
+	color:         rgba(54, 54, 54, 1);
 	padding-right: 0.4em;
+	transition:    all 0.25s;
 }
 details[open] > summary::before {
-	margin-top: -0.2em;
-	content:    "⯆";
+	margin-top:        -0.35em;
+	margin-left:       -1.05em;
+	padding-top:       0.4em; /* This is now on the right */
+	padding-right:     0;     /* This is now on the bottom */
+	-webkit-transform: rotate(90deg);
+	-moz-transform:    rotate(90deg);
+	transform:         rotate(90deg);
+}
+details > summary:hover::before {
+	color: rgba(54, 54, 54, 0.5) !important;
 }
 
 details.heading-collapse.h2 {
@@ -359,29 +368,34 @@ details[open].callout-collapse {
 }
 details.callout-collapse > summary::before,
 details.heading-collapse > summary::before {
-	right:         0;
-	margin-top:    -0.19em;
-	margin-left:   0;
-	padding-right: 0;
-	content:       "";
-	visibility:    visible;
+	right:   0;
+	padding: 0;
+	margin:  0;
+	content: "";
+	color:   rgba(54, 54, 54, 1);
 }
 details.heading-collapse > summary::before {
-	font-size: 2.1em;
+	font-size:  2.1em;
+	margin-top: -0.19em;
 }
 details.callout-collapse > summary::before {
-	margin-top: -0.1em;
+	margin-top: -0.04em;
 	right:      1.5em;
 }
 details[open].callout-collapse > summary::before,
 details[open].heading-collapse > summary::before {
-	content:    "";
-	visibility: hidden;
+	padding:           0;
+	margin:            0;
+	color:             rgba(54, 54, 54, 0);
+	-webkit-transform: rotate(-180deg);
+	-moz-transform:    rotate(-180deg);
+	transform:         rotate(-180deg);
 }
-details.callout-collapse > summary:hover::before,
-details.heading-collapse > summary:hover::before {
-	color:      grey;
-	visibility: visible !important;
+details[open].heading-collapse > summary::before {
+	margin-top: -0.27em;
+}
+details[open].callout-collapse > summary::before {
+	margin-top: -0.15em;
 }
 
 li::marker {
