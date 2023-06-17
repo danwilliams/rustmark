@@ -326,6 +326,9 @@ details.callout-collapse {
 details[open].callout-collapse {
 	margin-bottom: 1em;
 }
+.content blockquote details[open].callout-collapse {
+	margin-bottom: 0;
+}
 details.callout-collapse > summary::before,
 details.heading-collapse > summary::before {
 	right:   0;

@@ -442,12 +442,20 @@ not strictly necessary. It just makes the Markdown easier to read in some cases.
 > Other Markdown elements can be included within callouts, including other
 > callouts.
 
-#### Image titles
+#### Collapsing callouts
 
-Notably, the image/screenshot callouts will be made collapsible, and also
-support showing a title alongside the callout heading. This is done by adding
-a colon and then the title, on the same line as the callout heading, e.g.
-`> **Screenshot**: Ferris's day off`.
+Callouts will show a small arrow icon when the mouse hovers over them. Clicking
+on this icon will collapse the callout, hiding its content. Clicking on the icon
+again will expand the callout, showing its content again.
+
+Notably, the image/screenshot callouts start off as collapsed by default.
+
+#### Callout titles
+
+Callouts support showing a title alongside the callout heading. This is done by
+adding a colon and then the title, on the same line as the callout heading, e.g.
+`> **Screenshot**: Ferris's day off`. Titles are particularly useful for image
+callouts, but can be used for any type.
 
 If found, the title will continue until a new paragraph is indicated by a blank
 line in the usual fashion. This has to work this way because there may be other
@@ -523,7 +531,9 @@ They can contain multiple paragraphs, and other Markdown elements:
 > It also has another piece of bold text, in the same style as the callout
 > heading, to show how that behaves.
 
-Image titles can contain formatting and other Markdown elements:
+Titles can contain formatting and other Markdown elements:
+
+> **Tip**: You can use titles with **any** type of callout.
 
 > **Image**: Even *more* Ferris
 >

@@ -236,9 +236,6 @@ pub fn process_callouts(blockquotes: &Selection) {
 		let class         = strong_text.replace(|c: char| !c.is_alphanumeric(), "").to_lowercase();
 		blockquote.add_class("callout");
 		blockquote.add_class(&class);
-		if !vec!["image", "images", "screenshot", "screenshots"].contains(&&*class) {
-			continue;
-		}
 		let para_html: String;
 		if para_text.strip_prefix(&strong_text).unwrap().starts_with(':') {
 			//	There doesn't seem to be a better way of removing just the text from the
@@ -254,8 +251,10 @@ pub fn process_callouts(blockquotes: &Selection) {
 			para_html     = strong.html().to_string();
 			strong.remove();
 		}
+		let open          = !vec!["image", "images", "screenshot", "screenshots"].contains(&&*class);
 		blockquote.set_html(format!(
-			r#"<details class="callout-collapse"><summary>{}</summary>{}</details>"#,
+			r#"<details {} class="callout-collapse"><summary>{}</summary>{}</details>"#,
+			if open { "open" } else { "" },
 			para_html,
 			blockquote.children().iter()
 				.map(|c| c.html().to_string())
