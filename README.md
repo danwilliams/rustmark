@@ -80,8 +80,7 @@ The main high-level points of note are:
         and static assets using local files in addition to a pre-compiled binary
         (configurable)
       - Custom JS and CSS files for customisation overrides
-      - Templates implemented using the [Tera][]
-        template engine
+      - Templates implemented using the [Tera][] template engine
       - Configuration from config file and env vars using [Figment][]
       - Simple codebase layout
       - Easy to extend and build upon
@@ -91,7 +90,7 @@ The main high-level points of note are:
       - Protected static content files for use alongside Markdown content
   - **Performance**
       - High-performance asynchronous HTTP server using [Tokio Hyper][Hyper]
-      - Based on the robust and ergonomic web framework [Axum][]
+      - Based on the robust and ergonomic [Axum][] web framework
   - **Other**
       - Compatibility with browsing the content on a Git server such as GitHub
         or Gitea
@@ -179,7 +178,7 @@ Most Git server systems provide a Markdown preview feature, which is great for
 those people that have access to Git. But what if the documentation needs to be
 accessible to people who do not have access to the Git server? Although Rustmark
 is aimed at developers, that particular focus is in the context of editing. It
-also needs to be accessible to non-developers - plus, browsing pages on a Git
+also needs to be accessible to non-developers — plus, browsing pages on a Git
 server is not always the most user-friendly experience.
 
 Additionally, this approach allows for a lot of flexibility in terms of styling
@@ -187,12 +186,12 @@ and presentation, customisation, and hosting.
 
 ### What about GitHub Pages?
 
-[GitHub Pages][] is a great way to host static content,
-and it is very easy to use. However, not everyone uses or wants to use GitHub,
-and there are constraints on the free accounts that may not make it the ideal
-choice for some people. There are also limitations on the amount of
-customisation that can be performed, and it is not possible to do anything
-dynamic, as ultimately it is based on [Jekyll][].
+[GitHub Pages][] is a great way to host static content, and it is very easy to
+use. However, not everyone uses or wants to use GitHub, and there are
+constraints on the free accounts that may not make it the ideal choice for some
+people. There are also limitations on the amount of customisation that can be
+performed, and it is not possible to do anything dynamic, as ultimately it is
+based on [Jekyll][].
 
 ### Why not Jekyll, or Hugo, or one of the other static site generators?
 
