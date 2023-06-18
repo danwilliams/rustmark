@@ -1,7 +1,11 @@
 # Changelog
 
+[Font Awesome]:        https://fontawesome.com/
 [Keep a Changelog]:    https://keepachangelog.com/en/1.0.0/
+[Nerd Font]:           https://www.nerdfonts.com/
 [Semantic Versioning]: https://semver.org/spec/v2.0.0.html
+[Terracotta]:          https://crates.io/crates/terracotta
+[Twemoji]:             https://twemoji.twitter.com/
 
 All notable changes to this project will be documented in this file.
 
@@ -9,11 +13,35 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Semantic Versioning][].
 
 
+## 0.3.0 (18 June 2023)
+
+### Added
+
+  - Extended Markdown with details blocks
+  - Extracted extended Markdown functionality into library
+  - Added micro-animations to collapsible toggle indicators
+  - Made all callout types collapsible
+  - Added page icons to Rustmark content
+
+### Fixed
+
+  - Collapsible elements now work in Firefox
+  - Nested callouts now render correctly
+
+### Changed
+
+  - Changed collapsible elements to use details blocks approach
+  - Various styling tweaks and improvements
+  - Improved features page documentation and examples
+  - Improved README documentation
+  - Improved CSS structure
+
+
 ## 0.2.1 (15 June 2023)
 
 ### Changed
 
-  - Updated Font Awesome
+  - Updated [Font Awesome][]
   - Updated crate dependencies
   - Improved README documentation
 
@@ -22,7 +50,7 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 ### Added
 
-  - Implemented Twitter emojis (Twemoji)
+  - Implemented Twitter emojis ([Twemoji][])
   - Added collapsible callouts for screenshots and images
   - Made headings collapsible
   - Added heading link anchors on hover
@@ -44,9 +72,9 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 ### Added
 
-  - Forked Terracotta repository
+  - Forked [Terracotta][] repository
   - Added rendering of Markdown files
-  - Added Nerd Font for displaying code
+  - Added [Nerd Font][] for displaying code
   - Extended Markdown with callouts
   - Added custom JS and CSS files for customisation overrides
   - Amended routing to allow protected static content files
