@@ -398,6 +398,44 @@ It is also possible to pass configuration parameters from the command line, as
 environment variables. The environment variables take precedence over the
 configuration file options.
 
+#### General options
+
+The following options should be specified without any heading:
+
+  - `host`   - The host to listen on. Defaults to `127.0.0.1`.
+  - `port`   - The port to listen on. Defaults to `8000`.
+  - `logdir` - The directory to store log files in. Defaults to `log`.
+  - `title`  - The title of the application. Defaults to `Rustmark`.
+
+As shown here:
+
+```toml
+host   = "127.0.0.1"
+port   = 8000
+logdir = "log"
+title  = "Rustmark"
+```
+
+#### User list
+
+A list of user credentials can be specified under a `[users]` heading:
+
+  - `username: password` - The username as the key, and the password as the
+                           value.
+
+As shown here:
+
+```toml
+[users]
+joe = "1a2b3c"
+```
+
+This is a simple list of username/password pairs, where the username is the key
+and the password is the value. The password is stored in plain text, so be aware
+of the security implications of this (ideally you would implement an integration
+with your preferred database instead). The username and password are both
+case-sensitive.
+
 ### Running
 
 Rustmark can be run using the `cargo run` command, or by running the compiled
