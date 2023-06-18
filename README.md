@@ -1,16 +1,16 @@
 # Rustmark
 
 [Rust]:     https://www.rust-lang.org/
-[Rustmark]: https://crates.io/crates/rustmark
 
 Rustmark is a simple Markdown server written in [Rust][]. It is intended to be
 easy to use, easy to fork and customise, and easy to deploy.
 
-Rustmark currently exists as a crate on [crates.io][Rustmark] to establish
-presence and gain visibility and awareness while its library and binary features
-mature. (See the [Usage](#usage) section for more information.) It may also be
-useful to able to run it and see it working before then using it as a foundation
-for a new project.
+Rustmark provides both library and binary features, and has also been designed
+to be cloned and used as a starting point for new projects that might extend its
+capabilities (see the [Usage](#usage) section for more information). It has
+definite value and utility as a standalone binary, but it is also beneficial to
+be able to run it and see it working before then using it as a foundation for a
+new project.
 
 The main sections in this README are:
 
@@ -76,6 +76,9 @@ The main high-level points of note are:
         in binary
       - Efficient rebuild process regenerating only changed files
   - **Customisation**
+      - Ability to supplement and override the Markdown content, HTML templates,
+        and static assets using local files in addition to a pre-compiled binary
+        (configurable)
       - Custom JS and CSS files for customisation overrides
       - Templates implemented using the [Tera][]
         template engine
@@ -93,7 +96,7 @@ The main high-level points of note are:
       - Compatibility with browsing the content on a Git server such as GitHub
         or Gitea
       - Static file handling
-      - Single-file deployment — all assets baked in
+      - Single-file deployment — all assets baked in (optional and configurable)
       - Logging of HTTP requests and events using [Tokio Tracing][Tracing]
       - Graceful handling of 404 and 500 HTTP errors
       - Graceful handling of runtime application errors
@@ -242,14 +245,18 @@ possible.
 
 ### With everything being in one binary, isn't that a limiting factor?
 
-Yes. Although, it has been tested with a repository containing over 10,000
+No. If you do want to compile everything into a single distributable file then
+go for it, as it has been tested against a repository containing over 10,000
 Markdown files, which is 550MB of Markdown, and it works just fine. It is
 unlikely that many people will have a repository that large, and if they do,
 they probably have bigger problems to worry about!
 
-Still, it is a valid concern, and it is something that may be addressed in the
-future, probably with a configuration setting to control whether everything is
-built into the binary or left externally to be deployed alongside it.
+However, if you have a large repository, and you want to keep the binary size
+down, then you can do that too. You can choose what to include and what to load
+dynamically (see the [Configuration — Local loading options](#local-loading-options)
+section for more details). A recommended approach is to include Markdown files
+and HTML templates in the binary, and load static assets such as images from the
+local filesystem.
 
 
 ## Usage
@@ -262,11 +269,18 @@ built into the binary or left externally to be deployed alongside it.
 The Rustmark repository is designed so that it can be forked, and content added.
 As such, it is best to keep in line with the existing structure and intended
 usage, to make updates from the upstream repository easier to merge and apply.
+This approach provides the greatest potential for customisation.
 
-Rustmark presents its core Markdown features as a library, for use in other
-projects without using the whole application, and there are plans for it to also
-become useful in a standalone capacity as a binary without having to clone the
-full repository.
+Rustmark also presents its core Markdown features as a library, for use in other
+projects without using the whole application, in case you want to build
+something that needs to use its extended Markdown features.
+
+It is also useful in a standalone capacity as a binary, without having to clone
+the full repository. This allows for limited customisation (CSS styling, HTML
+templates, Markdown content, and static assets, but not core logic) but is
+sufficient for many use cases, and will get you up and running very quickly. If
+this is all you want to do then you can skip the rest of this section and go
+straight to the [Setup](#setup) section.
 
 ### Getting started
 
@@ -350,6 +364,8 @@ the [coding standards][] used.
 
 ## Setup
 
+[Rustmark]: https://crates.io/crates/rustmark
+
 The steps to set up this project are simple and standard. You need a
 reasonably-recent Rust environment, on a Linux machine. There are currently no
 special requirements beyond what is needed to build a standard Rust project.
@@ -359,11 +375,9 @@ will usually be in context of having created a [new Rustmark project](#getting-s
 by cloning, forking, or possibly using the Rustmark repository as a template. In
 this case these steps will apply for your new project. You can also download the
 crate using `cargo install rustmark`, which will install the latest version of
-Rustmark from crates.io, but this currently is not particularly useful beyond
-letting you poke at the default, running application without having to clone the
-repository and build it yourself, to see if you like it. See the [Getting
-started](#getting-started) section for more information on creating a project
-using based on Rustmark.
+Rustmark from [crates.io][Rustmark] as a standalone binary. This is easiest way
+to get started, and ideal if you just want to get something up and running
+quickly, and don't need to customise the core logic.
 
 ### Environment
 
@@ -506,6 +520,9 @@ content from the `markdown` and `static` directories. The `markdown` directory
 contains the Markdown files to be rendered, and the `static` directory contains
 the static files to be served.
 
+Note that if you have installed the standalone binary with `cargo install
+rustmark`, you will need to run it using `rustmark` rather than `cargo run`.
+
 ### Testing
 
 You can run the test suite using `cargo test`. This will run all unit and
@@ -534,6 +551,10 @@ You can build the project in release mode by using `cargo build --release`.
 Everything required for deployment will be contained in the single binary file
 produced. It is recommended to run [`upx`][UPX] on the executable before
 deployment, to reduce the file size.
+
+You can optionally supplement the compiled system with additional files from the
+local filesystem, as described in the [Local loading options](#local-loading-options)
+section above.
 
 The resulting binary file can then be copied to the deployment environment, and
 run directly. This will often be in a Docker or Kubernetes container, but that
