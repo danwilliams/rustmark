@@ -6,12 +6,11 @@
 Rustmark is a simple Markdown server written in [Rust][]. It is intended to be
 easy to use, easy to fork and customise, and easy to deploy.
 
-Rustmark exists as a crate on [crates.io][Rustmark] to establish presence and
-gain visibility and awareness, and because there are plans for it to become
-useful as a binary. It is not intended to be used as a library, and is not
-published as such. (See the [Usage](#usage) section for more information.) It
-may also be useful to able to run it and see it working before then using it as
-a foundation for a new project.
+Rustmark currently exists as a crate on [crates.io][Rustmark] to establish
+presence and gain visibility and awareness while its library and binary features
+mature. (See the [Usage](#usage) section for more information.) It may also be
+useful to able to run it and see it working before then using it as a foundation
+for a new project.
 
 The main sections in this README are:
 
@@ -62,13 +61,13 @@ The main high-level points of note are:
       - Support for [GitHub-flavoured Markdown (GFM)][GFM]
       - Tables, task lists, strikethrough, and autolinks (from [GFM][])
       - Superscript, footnotes, description lists, and emoji shortcodes
-      - Callouts, based on extended blockquotes
+      - Callouts and details blocks, based on extended blockquotes
   - **Display**
       - CSS foundation using the [Bulma][] CSS framework
       - Icons using [Font Awesome][]
       - Twitter emojis using [Twemoji][]
       - Code displayed using [Nerd Fonts][]
-      - Collapsible callouts for screenshots and other large images
+      - Collapsible callouts and details blocks
       - Collapsible document sections based on headings (automatic)
       - Linkable headings
       - Automatic per-page table of contents in navigation menu
@@ -264,10 +263,10 @@ The Rustmark repository is designed so that it can be forked, and content added.
 As such, it is best to keep in line with the existing structure and intended
 usage, to make updates from the upstream repository easier to merge and apply.
 
-Note that Rustmark is not designed to be used as a library, and its existence on
-[crates.io][Rustmark] is as a binary. This is to establish presence, but also
-there are plans for it to become useful in a standalone capacity without having
-to clone the full repository.
+Rustmark presents its core Markdown features as a library, for use in other
+projects without using the whole application, and there are plans for it to also
+become useful in a standalone capacity as a binary without having to clone the
+full repository.
 
 ### Getting started
 
