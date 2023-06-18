@@ -5,7 +5,7 @@ use crate::{
 	CONTENT_DIR,
 	utility::*,
 };
-use rustmark::Heading;
+use rustmark::{Heading, self};
 
 use axum::{
 	body,
@@ -15,7 +15,10 @@ use axum::{
 };
 use mime_guess::{self};
 use serde_json::{self};
-use std::sync::Arc;
+use std::{
+	fs,
+	sync::Arc,
+};
 use tera::Context;
 
 
@@ -63,22 +66,44 @@ pub async fn get_page(
 	if !path.ends_with(".md") {
 		return get_protected_static_asset(uri).await.into_response();
 	}
-	match CONTENT_DIR.get_file(path) {
+	let local_path =  state.Config.local_paths.markdown.join(path);
+	let is_local   =  match state.Config.local_loading.markdown {
+		LoadingBehavior::Deny       => false,
+		LoadingBehavior::Supplement => CONTENT_DIR.get_file(path).is_none(),
+		LoadingBehavior::Override   => local_path.exists(),
+	};
+	let text       =  if is_local {
+		local_path.exists().then(|| fs::read_to_string(local_path).ok()).flatten()
+	} else {
+		CONTENT_DIR.get_file(path).and_then(|file| file.contents_utf8().map(|text| text.to_string()))
+	};
+	match text {
 		None       => (StatusCode::NOT_FOUND).into_response(),
-		Some(file) => {
-			let (title, html)     = file.contents_utf8().unwrap().split_once('\n').unwrap();
-			let (json,  html)     = html.split_once('\n').unwrap();
-			let toc: Vec<Heading> = serde_json::from_str(json).unwrap();
-			let mut context       = Context::new();
-			let template          = if path == "index.md" { "index" } else { "page" };
-			let title             = if path == "index.md" {
+		Some(text) => {
+			let (title, toc, html)     = if is_local {
+				let (title, toc, html) = rustmark::parse(
+					&text,
+					//	Remove the title from the index page, as it will have one added showing
+					//	the application title.
+					path == "content/index.md",
+				);
+				(title, toc, html.to_string())
+			} else {
+				let (title, html)      = text.split_once('\n').unwrap();
+				let (json,  html)      = html.split_once('\n').unwrap();
+				let toc: Vec<Heading>  = serde_json::from_str(json).unwrap();
+				(title.to_owned(), toc, html.to_owned())
+			};
+			let mut context = Context::new();
+			let template    = if path == "index.md" { "index" } else { "page" };
+			let title       = if path == "index.md" {
 				state.Config.title.clone()
 			} else {
 				format!("{} - {}", title, &state.Config.title)
 			};
 			context.insert("Title",   &title);
 			context.insert("ToC",     &toc);
-			context.insert("Content", html);
+			context.insert("Content", &html);
 			(
 				StatusCode::OK,
 				Html(state.Template.render(template, &context).unwrap()),

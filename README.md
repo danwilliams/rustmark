@@ -416,6 +416,53 @@ logdir = "log"
 title  = "Rustmark"
 ```
 
+#### Local loading options
+
+By default, all resources are baked into the binary, and served from there. This
+is the most efficient way to run the application, but it is also possible to
+load resources from the local filesystem, which can be useful for development
+and testing, and when there are large content files.
+
+It is possible to supplement or override Markdown content files.
+
+It is advisable to bake Markdown files into the binary for performance reasons,
+as they will not be cached if loaded locally, so will be parsed on every
+request unless baked in. This is more important for production environments than
+development ones, where it might be desirable to re-parse each time.
+
+The following options should be specified under a `[local_loading]` heading:
+
+  - `markdown`         - The loading behaviour for Markdown content.
+
+Each of these options can be one of the following values:
+
+  - `Deny`       - Deny loading from the local filesystem. This is the default
+                   for all the options.
+  - `Supplement` - Load from the local filesystem if the baked-in resources are
+                   not present.
+  - `Override`   - Load from the local filesystem if present, and otherwise load
+                   from the baked-in resources.
+
+As shown here:
+
+```toml
+[local_loading]
+markdown         = "Supplement" # default is "Deny"
+```
+
+For those options that allow loading from the local filesystem, the following
+options can be specified under a `[local_paths]` heading:
+
+  - `markdown`         - The path to the Markdown content. Defaults to
+                         `content`.
+
+As shown here:
+
+```toml
+[local_paths]
+markdown         = "content"
+```
+
 #### User list
 
 A list of user credentials can be specified under a `[users]` heading:

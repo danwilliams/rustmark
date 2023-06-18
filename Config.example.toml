@@ -3,5 +3,11 @@ port   = 8000
 logdir = "log"
 title  = "Rustmark"
 
+[local_loading]
+markdown         = "Supplement"
+
+[local_paths]
+markdown         = "content"
+
 [users]
 #joe = "1a2b3c"
