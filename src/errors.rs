@@ -18,7 +18,11 @@ use tera::Context;
 
 //		Functions
 
-//		get_login																
+//		no_route																
+/// Handles non-existent routes.
+/// 
+/// This function is called as a fallback when a route is not found. It returns
+/// a 404 status code.
 pub async fn no_route() -> impl IntoResponse {
 	(
 		StatusCode::NOT_FOUND,
@@ -29,6 +33,22 @@ pub async fn no_route() -> impl IntoResponse {
 }
 
 //		graceful_error_layer													
+/// Handles errors gracefully.
+/// 
+/// This function is called when an error occurs. It returns a 500 status code
+/// and a page with the error message.
+/// 
+/// If the error is a 404, it returns a 404 status code and a page with a link
+/// to the login page.
+/// 
+/// # Parameters
+/// 
+/// * `state`   - The application state.
+/// * `user`    - The user, if any.
+/// * `uri`     - The URI of the request.
+/// * `request` - The request.
+/// * `next`    - The next middleware.
+/// 
 pub async fn graceful_error_layer<B>(
 	State(state):    State<Arc<AppState>>,
 	Extension(user): Extension<Option<User>>,
@@ -82,6 +102,17 @@ pub async fn graceful_error_layer<B>(
 }
 
 //		final_error_layer														
+/// Catches unhandled errors.
+/// 
+/// This function is called when an error occurs in the
+/// [`graceful_error_layer()`] handler. It returns a 500 status code and an
+/// error message.
+/// 
+/// # Parameters
+/// 
+/// * `request` - The request.
+/// * `next`    - The next middleware.
+/// 
 pub async fn final_error_layer<B>(
 	request:  Request<B>,
 	next:     Next<B>,

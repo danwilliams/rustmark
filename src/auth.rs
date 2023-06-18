@@ -27,7 +27,9 @@ use tracing::info;
 
 //		Constants
 
+/// The key used to store the session's authentication ID.
 const SESSION_AUTH_ID_KEY: &str = "_auth_id";
+/// The key used to store the session's user ID.
 const SESSION_USER_ID_KEY: &str = "_user_id";
 
 
@@ -35,22 +37,45 @@ const SESSION_USER_ID_KEY: &str = "_user_id";
 //		Structs
 
 //		PostLogin																
+/// The data sent by the login form.
+/// 
+/// This is consumed by the [`post_login()`] handler.
 #[derive(Debug, Deserialize)]
 pub struct PostLogin {
+	/// The username.
 	username: String,
+	/// The password.
 	password: String,
+	/// The URL to redirect to after logging in.
 	uri:      String,
 }
 
 //		User																	
+/// User data functionality.
+/// 
+/// This struct contains the user fields used for authentication, and methods
+/// for retrieving user data.
 #[derive(Clone, Debug, Serialize)]
 pub struct User {
+	/// The username.
 	username: String,
+	/// The password.
 	password: String,
 }
 
 impl User {
 	//		find																
+	/// Finds a user by username and password.
+	/// 
+	/// Returns `Some(User)` if the user exists and the password is correct,
+	/// otherwise returns `None`.
+	/// 
+	/// # Parameters
+	/// 
+	/// * `state`    - The application state.
+	/// * `username` - The username to search for.
+	/// * `password` - The password to match.
+	/// 
 	pub async fn find(state: Arc<AppState>, username: &String, password: &String) -> Option<Self> {
 		if state.Config.users.contains_key(username) {
 			let pass = state.Config.users.get(username).unwrap();
@@ -65,6 +90,15 @@ impl User {
 	}
 	
 	//		find_by_id															
+	/// Finds a user by username.
+	/// 
+	/// Returns `Some(User)` if the user exists, otherwise returns `None`.
+	/// 
+	/// # Parameters
+	/// 
+	/// * `state`    - The application state.
+	/// * `username` - The username to search for.
+	/// 
 	pub async fn find_by_id(state: Arc<AppState>, id: &String) -> Option<Self> {
 		if state.Config.users.contains_key(id) {
 			let password = state.Config.users.get(id).unwrap();
@@ -77,21 +111,36 @@ impl User {
 	}
 	
 	//		get_password_hash													
+	/// Hashes the user's password.
 	pub fn get_password_hash(&self) -> SecretVec<u8> {
 		SecretVec::new(self.password.clone().into())
 	}
 }
 
 //		AuthContext																
+/// The authentication context.
+/// 
+/// This struct contains the current user and session data, to persist the
+/// context of an authentication session.
 #[derive(Clone)]
 pub struct AuthContext {
+	/// The current user.
 	pub current_user: Option<User>,
+	/// The session handle.
 	session_handle:   SessionHandle,
+	/// The HMAC key.
 	key:              hmac::Key,
 }
 
 impl AuthContext {
 	//		new																	
+	/// Creates a new authentication context.
+	/// 
+	/// # Parameters
+	/// 
+	/// * `session_handle` - The session handle.
+	/// * `key`            - The HMAC key.
+	/// 
 	pub fn new(session_handle: SessionHandle, key: hmac::Key) -> Self {
 		Self {
 			current_user: None,
@@ -101,12 +150,27 @@ impl AuthContext {
 	}
 	
 	//		get_session_auth_id													
+	/// Gets the session's authentication ID.
+	/// 
+	/// # Parameters
+	/// 
+	/// * `password_hash` - The user's password hash.
+	/// 
 	fn get_session_auth_id(&self, password_hash: &[u8]) -> String {
 		let tag = hmac::sign(&self.key, password_hash);
 		BASE64.encode(tag.as_ref())
 	}
 	
 	//		get_user															
+	/// Gets the current user.
+	/// 
+	/// Retrieves the current user id from the session, obtains the user's data
+	/// from the data store, and verifies the session's authentication ID.
+	/// 
+	/// # Parameters
+	/// 
+	/// * `appstate` - The application state.
+	/// 
 	pub async fn get_user(&mut self, appstate: Arc<AppState>) -> Option<User> {
 		let session                 = self.session_handle.read().await;
 		if let Some(user_id)        = session.get::<String>(SESSION_USER_ID_KEY) {
@@ -130,6 +194,15 @@ impl AuthContext {
 	}
 	
 	//		login																
+	/// Logs in a user.
+	/// 
+	/// Logs the user in by setting the session's authentication ID and user ID.
+	/// It assumes that the user's credentials have already been verified.
+	/// 
+	/// # Parameters
+	/// 
+	/// * `user` - The user to log in.
+	/// 
 	pub async fn login(&mut self, user: &User) {
 		let auth_id       = self.get_session_auth_id(user.get_password_hash().expose_secret());
 		let user_id       = &user.username;
@@ -140,6 +213,9 @@ impl AuthContext {
 	}
 	
 	//		logout																
+	/// Logs out the current user.
+	/// 
+	/// Logs the current user out by destroying the session.
 	pub async fn logout(&mut self) {
 		let mut session = self.session_handle.write().await;
 		session.destroy();
@@ -152,6 +228,13 @@ where State: Send + Sync {
 	type Rejection = std::convert::Infallible;
 	
 	//		from_request_parts													
+	/// Creates an authentication context from the request parts.
+	/// 
+	/// # Parameters
+	/// 
+	/// * `parts` - The request parts.
+	/// * `state` - The application state.
+	/// 
 	async fn from_request_parts(parts: &mut Parts, state: &State) -> Result<Self, Self::Rejection> {
 		let Extension(auth_cx): Extension<AuthContext> =
 			Extension::from_request_parts(parts, state)
@@ -167,6 +250,19 @@ where State: Send + Sync {
 //		Functions
 
 //		auth_layer																
+/// Prepare the authentication context.
+/// 
+/// This layer is a middleware that is used to set up the authentication
+/// context. It retrieves the current user from the session, and stores it in
+/// the request's extensions, so that it can be used by the route handlers.
+/// 
+/// # Parameters
+/// 
+/// * `appstate`       - The application state.
+/// * `session_handle` - The session handle.
+/// * `request`        - The request.
+/// * `next`           - The next middleware.
+/// 
 pub async fn auth_layer<B>(
 	State(appstate):           State<Arc<AppState>>,
 	Extension(session_handle): Extension<SessionHandle>,
@@ -187,6 +283,20 @@ pub async fn auth_layer<B>(
 }
 
 //		protect																	
+/// Protects a route from unauthorised access.
+/// 
+/// This middleware is used to protect routes from unauthorised access. It
+/// retrieves the current user from the request's extensions, and if it is
+/// present, it calls the next middleware. Otherwise, it returns a 401 response.
+/// 
+/// # Parameters
+/// 
+/// * `appstate` - The application state.
+/// * `user`     - The current user.
+/// * `uri`      - The request URI.
+/// * `request`  - The request.
+/// * `next`     - The next middleware.
+/// 
 pub async fn protect<B>(
 	State(appstate): State<Arc<AppState>>,
 	Extension(user): Extension<Option<User>>,
@@ -210,6 +320,15 @@ pub async fn protect<B>(
 }
 
 //		get_login																
+/// Shows the login page.
+/// 
+/// Renders the login template.
+/// 
+/// # Parameters
+/// 
+/// * `state` - The application state.
+/// * `uri`   - The request URI.
+/// 
 pub async fn get_login(
 	State(state): State<Arc<AppState>>,
 	mut uri:      Uri,
@@ -229,6 +348,18 @@ pub async fn get_login(
 }
 
 //		post_login																
+/// Processes the login form.
+/// 
+/// Logs the user in if the credentials are valid, and redirects to the
+/// requested page. Otherwise, it redirects back to the login page with a
+/// `failed` parameter.
+/// 
+/// # Parameters
+/// 
+/// * `state` - The application state.
+/// * `auth`  - The authentication context.
+/// * `login` - The login form.
+/// 
 pub async fn post_login(
 	State(state): State<Arc<AppState>>,
 	mut auth:     AuthContext,
@@ -248,6 +379,14 @@ pub async fn post_login(
 }
 
 //		get_logout																
+/// Logs the user out.
+/// 
+/// Logs the user out, and redirects to the home page.
+/// 
+/// # Parameters
+/// 
+/// * `auth` - The authentication context.
+/// 
 pub async fn get_logout(
 	mut auth: AuthContext,
 ) -> Redirect {

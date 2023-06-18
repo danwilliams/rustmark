@@ -34,6 +34,12 @@ pub enum BaseDir {
 //		Functions
 
 //		get_index																
+/// Shows the index page.
+/// 
+/// # Parameters
+/// 
+/// * `state` - The application state.
+/// 
 pub async fn get_index(State(state): State<Arc<AppState>>) -> impl IntoResponse {
 	get_page(State(state), Uri::from_static("/index.md")).await
 }
@@ -82,6 +88,12 @@ pub async fn get_public_static_asset(uri: Uri) -> impl IntoResponse {
 }
 
 //		get_static_asset														
+/// Serves static assets.
+/// 
+/// # Parameters
+/// 
+/// * `uri` - The URI of the asset.
+/// 
 async fn get_static_asset(uri: Uri, basedir: BaseDir) -> impl IntoResponse {
 	let path       =  uri.path().trim_start_matches('/');
 	let mime_type  =  mime_guess::from_path(path).first_or_text_plain();
