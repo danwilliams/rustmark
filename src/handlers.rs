@@ -8,7 +8,7 @@ use crate::{
 use rustmark::{Heading, self};
 
 use axum::{
-	body,
+	body::StreamBody,
 	extract::State,
 	http::{HeaderValue, StatusCode, Uri, header},
 	response::{IntoResponse, Response},
@@ -20,6 +20,8 @@ use std::{
 	sync::Arc,
 };
 use tera::Context;
+use tokio::fs::File;
+use tokio_util::io::ReaderStream;
 
 
 
@@ -175,26 +177,33 @@ async fn get_static_asset(
 		LoadingBehavior::Supplement => basedir.get_file(path).is_none(),
 		LoadingBehavior::Override   => local_path.exists(),
 	};
-	let contents   =  if is_local {
-		local_path.exists().then(|| fs::read(local_path).ok()).flatten()
+	let file       =  if is_local {
+		if local_path.exists() {
+			File::open(local_path).await.ok()
+		} else {
+			None
+		}
 	} else {
-		basedir.get_file(path).map(|file| file.contents().to_vec())
+		match basedir.get_file(path) {
+			Some(file) => File::open(file.path()).await.ok(),
+			None       => None,
+		}
 	};
-	match contents {
-		None       => Response::builder()
-			.status(StatusCode::NOT_FOUND)
-			.body(body::boxed(body::Empty::new()))
-			.unwrap()
-		,
-		Some(file) => Response::builder()
-			.status(StatusCode::OK)
-			.header(
-				header::CONTENT_TYPE,
-				HeaderValue::from_str(mime_type.as_ref()).unwrap(),
+	match file {
+		None           => Err((StatusCode::NOT_FOUND, "")),
+		Some(file)     => {
+			let stream =  ReaderStream::new(file);
+			let body   =  StreamBody::new(stream);
+			Ok(Response::builder()
+				.status(StatusCode::OK)
+				.header(
+					header::CONTENT_TYPE,
+					HeaderValue::from_str(mime_type.as_ref()).unwrap(),
+				)
+				.body(body)
+				.unwrap()
 			)
-			.body(body::boxed(body::Full::from(file)))
-			.unwrap()
-		,
+		},
 	}
 }
 
