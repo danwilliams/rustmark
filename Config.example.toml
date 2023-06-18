@@ -5,9 +5,13 @@ title  = "Rustmark"
 
 [local_loading]
 markdown         = "Supplement"
+protected_assets = "Override"
+public_assets    = "Override"
 
 [local_paths]
 markdown         = "content"
+protected_assets = "content"
+public_assets    = "static"
 
 [users]
 #joe = "1a2b3c"

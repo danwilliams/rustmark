@@ -67,6 +67,12 @@ pub struct LocalLoading {
 	/// The loading behaviour for Markdown content.
 	#[default(LoadingBehavior::Deny)]
 	pub markdown:         LoadingBehavior,
+	/// The loading behaviour for protected static assets.
+	#[default(LoadingBehavior::Deny)]
+	pub protected_assets: LoadingBehavior,
+	/// The loading behaviour for public static assets.
+	#[default(LoadingBehavior::Deny)]
+	pub public_assets:    LoadingBehavior,
 }
 
 //		LocalPaths																
@@ -76,6 +82,12 @@ pub struct LocalPaths {
 	/// The path to the Markdown content.
 	#[default = "content"]
 	pub markdown:         PathBuf,
+	/// The path to the protected static assets.
+	#[default = "content"]
+	pub protected_assets: PathBuf,
+	/// The path to the public static assets.
+	#[default = "static"]
+	pub public_assets:    PathBuf,
 }
 
 //		AppState																

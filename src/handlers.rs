@@ -60,11 +60,11 @@ pub async fn get_index(State(state): State<Arc<AppState>>) -> impl IntoResponse 
 /// 
 pub async fn get_page(
 	State(state): State<Arc<AppState>>,
-	uri: Uri,
+	uri:          Uri,
 ) -> impl IntoResponse {
 	let path       =  uri.path().trim_start_matches('/');
 	if !path.ends_with(".md") {
-		return get_protected_static_asset(uri).await.into_response();
+		return get_protected_static_asset(State(state), uri).await.into_response();
 	}
 	let local_path =  state.Config.local_paths.markdown.join(path);
 	let is_local   =  match state.Config.local_loading.markdown {
@@ -117,10 +117,14 @@ pub async fn get_page(
 /// 
 /// # Parameters
 /// 
+/// * `state` - The application state.
 /// * `uri` - The URI of the asset.
 /// 
-pub async fn get_protected_static_asset(uri: Uri) -> impl IntoResponse {
-	get_static_asset(uri, AssetContext::Protected).await
+pub async fn get_protected_static_asset(
+	State(state): State<Arc<AppState>>,
+	uri:          Uri,
+) -> impl IntoResponse {
+	get_static_asset(state, uri, AssetContext::Protected).await
 }
 
 //		get_public_static_asset													
@@ -128,10 +132,14 @@ pub async fn get_protected_static_asset(uri: Uri) -> impl IntoResponse {
 /// 
 /// # Parameters
 /// 
+/// * `state` - The application state.
 /// * `uri` - The URI of the asset.
 /// 
-pub async fn get_public_static_asset(uri: Uri) -> impl IntoResponse {
-	get_static_asset(uri, AssetContext::Public).await
+pub async fn get_public_static_asset(
+	State(state): State<Arc<AppState>>,
+	uri:   Uri,
+) -> impl IntoResponse {
+	get_static_asset(state, uri, AssetContext::Public).await
 }
 
 //		get_static_asset														
@@ -139,17 +147,40 @@ pub async fn get_public_static_asset(uri: Uri) -> impl IntoResponse {
 /// 
 /// # Parameters
 /// 
+/// * `state` - The application state.
 /// * `uri`     - The URI of the asset.
 /// * `context` - The protection context of the asset to serve.
 /// 
-async fn get_static_asset(uri: Uri, context: AssetContext) -> impl IntoResponse {
+async fn get_static_asset(
+	state:   Arc<AppState>,
+	uri:     Uri,
+	context: AssetContext
+) -> impl IntoResponse {
 	let path       =  uri.path().trim_start_matches('/');
 	let mime_type  =  mime_guess::from_path(path).first_or_text_plain();
-	let basedir    =  match context {
-		AssetContext::Public    => &ASSETS_DIR,
-		AssetContext::Protected => &CONTENT_DIR,
+	let (basedir, local_path, behavior) = match context {
+		AssetContext::Public    => (
+			&ASSETS_DIR,
+			state.Config.local_paths.public_assets.join(path),
+			&state.Config.local_loading.public_assets
+		),
+		AssetContext::Protected => (
+			&CONTENT_DIR,
+			state.Config.local_paths.protected_assets.join(path),
+			&state.Config.local_loading.protected_assets
+		),
 	};
-	match basedir.get_file(path) {
+	let is_local   =  match behavior {
+		LoadingBehavior::Deny       => false,
+		LoadingBehavior::Supplement => basedir.get_file(path).is_none(),
+		LoadingBehavior::Override   => local_path.exists(),
+	};
+	let contents   =  if is_local {
+		local_path.exists().then(|| fs::read(local_path).ok()).flatten()
+	} else {
+		basedir.get_file(path).map(|file| file.contents().to_vec())
+	};
+	match contents {
 		None       => Response::builder()
 			.status(StatusCode::NOT_FOUND)
 			.body(body::boxed(body::Empty::new()))
@@ -161,7 +192,7 @@ async fn get_static_asset(uri: Uri, context: AssetContext) -> impl IntoResponse 
 				header::CONTENT_TYPE,
 				HeaderValue::from_str(mime_type.as_ref()).unwrap(),
 			)
-			.body(body::boxed(body::Full::from(file.contents())))
+			.body(body::boxed(body::Full::from(file)))
 			.unwrap()
 		,
 	}
