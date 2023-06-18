@@ -23,9 +23,12 @@ use tera::Context;
 //		Enums
 
 //		BaseDir																	
+/// The base directory type for static assets.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum BaseDir {
+	/// Public files.
 	Assets,
+	/// Protected files.
 	Content,
 }
 
@@ -45,6 +48,13 @@ pub async fn get_index(State(state): State<Arc<AppState>>) -> impl IntoResponse 
 }
 
 //		get_page																
+/// Shows a rendered Markdown page.
+/// 
+/// # Parameters
+/// 
+/// * `state` - The application state.
+/// * `uri`   - The URI of the page to show.
+/// 
 pub async fn get_page(
 	State(state): State<Arc<AppState>>,
 	uri: Uri,
@@ -78,11 +88,23 @@ pub async fn get_page(
 }
 
 //		get_protected_static_asset												
+/// Serves protected static assets.
+/// 
+/// # Parameters
+/// 
+/// * `uri` - The URI of the asset.
+/// 
 pub async fn get_protected_static_asset(uri: Uri) -> impl IntoResponse {
 	get_static_asset(uri, BaseDir::Content).await
 }
 
 //		get_public_static_asset													
+/// Serves public static assets.
+/// 
+/// # Parameters
+/// 
+/// * `uri` - The URI of the asset.
+/// 
 pub async fn get_public_static_asset(uri: Uri) -> impl IntoResponse {
 	get_static_asset(uri, BaseDir::Assets).await
 }
@@ -92,7 +114,8 @@ pub async fn get_public_static_asset(uri: Uri) -> impl IntoResponse {
 /// 
 /// # Parameters
 /// 
-/// * `uri` - The URI of the asset.
+/// * `uri`     - The URI of the asset.
+/// * `basedir` - The type of asset to serve.
 /// 
 async fn get_static_asset(uri: Uri, basedir: BaseDir) -> impl IntoResponse {
 	let path       =  uri.path().trim_start_matches('/');

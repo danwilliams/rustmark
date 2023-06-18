@@ -116,6 +116,13 @@ async fn main() {
 }
 
 //		copy																	
+/// Copies a file from the input directory to the output directory.
+/// 
+/// # Parameters
+/// 
+/// * `input_path`  - The path to the input file.
+/// * `output_path` - The path to the output file.
+/// 
 async fn copy(input_path: &Path, output_path: &Path) {
 	//	We ideally want to use hardlinks here in order to save space, but when
 	//	they were used, problems were found whereby the input files were getting
@@ -125,6 +132,13 @@ async fn copy(input_path: &Path, output_path: &Path) {
 }
 
 //		parse																	
+/// Parses a Markdown file and writes the output to a file.
+/// 
+/// # Parameters
+/// 
+/// * `input_path`  - The path to the input file.
+/// * `output_path` - The path to the output file.
+/// 
 async fn parse(input_path: &Path, output_path: &Path) {
 	println!("Parsing file: {}", input_path.display());
 	let (title, toc, html) = rustmark::parse(

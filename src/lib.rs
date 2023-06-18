@@ -19,10 +19,14 @@ use tendril::StrTendril;
 //		Structs
 
 //		Heading																	
+/// A heading extracted from Markdown.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Heading {
+	/// The level of the heading. This can be 1-6.
 	level: u8,
+	/// The HTML id attribute of the heading.
 	id:    String,
+	/// The text of the heading.
 	text:  String,
 }
 
@@ -31,7 +35,7 @@ pub struct Heading {
 //		Functions
 
 //		parse																	
-/// Parse Markdown into HTML, extract metadata, and return the result.
+/// Parses Markdown into HTML, extract metadata, and return the result.
 /// 
 /// # Parameters
 /// 
@@ -94,7 +98,7 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<Heading>, StrTe
 }
 
 //		find_title																
-/// Find the title of the page, and remove it from the document if requested.
+/// Finds the title of the page, and remove it from the document if requested.
 /// 
 /// The page title is the first `h1` element, but only if the first H1 is the
 /// first element in the document. If any other content comes before it, it is
@@ -119,7 +123,7 @@ pub fn find_title(document: &Document, remove_title: bool) -> String {
 }
 
 //		find_headings															
-/// Find all the headings in the document.
+/// Finds all the headings in the document.
 /// 
 /// To make a table of contents, we need to find all the headings in order, and
 /// then construct a hierarchy from them. That hierarchy can then be used to
@@ -149,7 +153,7 @@ pub fn find_headings(document: &Document) -> Vec<Heading> {
 }
 
 //		process_details															
-/// Process all the details blocks in a selection of blockquotes.
+/// Processes all the details blocks in a selection of blockquotes.
 /// 
 /// The details blocks are used to create collapsible sections in the document.
 /// They are created by using a blockquote with a paragraph that starts with
@@ -211,7 +215,7 @@ pub fn process_details(blockquotes: &Selection) {
 }
 
 //		process_callouts														
-/// Process all the callouts in a selection of blockquotes.
+/// Processes all the callouts in a selection of blockquotes.
 /// 
 /// The callouts are used to create attention-grabbing sections. They are
 /// created by using a blockquote where the first paragraph contains a single
@@ -284,7 +288,7 @@ pub fn process_callouts(blockquotes: &Selection) {
 }
 
 //		process_headings														
-/// Process all the headings in the document and make them collapsible.
+/// Processes all the headings in the document and make them collapsible.
 /// 
 /// Two things are assumed: first, that all headings are top-level elements in
 /// the HTML generated from the Markdown; and second, that there is only one H1
