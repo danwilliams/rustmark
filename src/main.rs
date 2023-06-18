@@ -85,7 +85,7 @@ async fn main() {
 		)
 		.init()
 	;
-	let addr          = SocketAddr::from(([127, 0, 0, 1], config.port));
+	let addr          = SocketAddr::from((config.host, config.port));
 	let mut templates = vec![];
 	for file in TEMPLATE_DIR.find("**/*.tera.html").expect("Failed to read glob pattern") {
 		templates.push((

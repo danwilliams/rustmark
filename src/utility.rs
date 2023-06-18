@@ -4,9 +4,12 @@
 
 use axum::http::Uri;
 use ring::hmac;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use smart_default::SmartDefault;
+use std::{
+	collections::HashMap,
+	net::IpAddr,
+};
 use tera::Tera;
 use url::form_urlencoded;
 
@@ -18,6 +21,9 @@ use url::form_urlencoded;
 /// The main configuration options for the application.
 #[derive(Deserialize, Serialize, SmartDefault)]
 pub struct Config {
+	/// The host to listen on.
+	#[default(IpAddr::from([127, 0, 0, 1]))]
+	pub host:   IpAddr,
 	/// The port to listen on.
 	#[default = 8000]
 	pub port:   u16,
