@@ -77,7 +77,7 @@ pub async fn graceful_error_layer<B>(
 			context.insert("Title", &state.Config.title);
 			(
 				parts,
-				Html(state.Template.render("404-notfound", &context).unwrap()),
+				render(state, "404-notfound", context),
 			).into_response()
 		},
 		//	500
@@ -89,7 +89,7 @@ pub async fn graceful_error_layer<B>(
 			parts.headers.insert("error-handled", "gracefully".parse().unwrap());
 			(
 				parts,
-				Html(state.Template.render("500-error", &context).unwrap()),
+				render(state, "500-error", context),
 			).into_response()
 		},
 		_                                 => {

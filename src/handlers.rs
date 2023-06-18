@@ -11,7 +11,7 @@ use axum::{
 	body,
 	extract::State,
 	http::{HeaderValue, StatusCode, Uri, header},
-	response::{Html, IntoResponse, Response},
+	response::{IntoResponse, Response},
 };
 use mime_guess::{self};
 use serde_json::{self};
@@ -106,7 +106,7 @@ pub async fn get_page(
 			context.insert("Content", &html);
 			(
 				StatusCode::OK,
-				Html(state.Template.render(template, &context).unwrap()),
+				render(state, template, context),
 			).into_response()
 		},
 	}

@@ -4,11 +4,13 @@ logdir = "log"
 title  = "Rustmark"
 
 [local_loading]
+html             = "Deny"
 markdown         = "Supplement"
 protected_assets = "Override"
 public_assets    = "Override"
 
 [local_paths]
+html             = "html"
 markdown         = "content"
 protected_assets = "content"
 public_assets    = "static"

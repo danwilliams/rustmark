@@ -423,8 +423,8 @@ is the most efficient way to run the application, but it is also possible to
 load resources from the local filesystem, which can be useful for development
 and testing, and when there are large content files.
 
-It is possible to supplement or override Markdown content files and static
-assets. Static assets are subdivided into protected and public.
+It is possible to supplement or override Markdown content files, HTML templates,
+and static assets. Static assets are subdivided into protected and public.
 
 It is advisable to bake Markdown files into the binary for performance reasons,
 as they will not be cached if loaded locally, so will be parsed on every
@@ -433,6 +433,7 @@ development ones, where it might be desirable to re-parse each time.
 
 The following options should be specified under a `[local_loading]` heading:
 
+  - `html`             - The loading behaviour for HTML templates.
   - `markdown`         - The loading behaviour for Markdown content.
   - `protected_assets` - The loading behaviour for protected static assets.
   - `public_assets`    - The loading behaviour for public static assets.
@@ -450,6 +451,7 @@ As shown here:
 
 ```toml
 [local_loading]
+html             = "Deny"
 markdown         = "Supplement" # default is "Deny"
 protected_assets = "Override"   # default is "Deny"
 public_assets    = "Override"   # default is "Deny"
@@ -458,6 +460,7 @@ public_assets    = "Override"   # default is "Deny"
 For those options that allow loading from the local filesystem, the following
 options can be specified under a `[local_paths]` heading:
 
+  - `html`             - The path to the HTML templates. Defaults to `html`.
   - `markdown`         - The path to the Markdown content. Defaults to
                          `content`.
   - `protected_assets` - The path to the protected static assets. Defaults to
@@ -469,6 +472,7 @@ As shown here:
 
 ```toml
 [local_paths]
+html             = "html"
 markdown         = "content"
 protected_assets = "content"
 public_assets    = "static"

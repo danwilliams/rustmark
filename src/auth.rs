@@ -344,7 +344,7 @@ pub async fn get_login(
 	context.insert("Title",   &state.Config.title);
 	context.insert("PageURL", &uri.path_and_query().unwrap().to_string());
 	context.insert("Failed",  &failed);
-	Html(state.Template.render("login", &context).unwrap())
+	render(state, "login", context)
 }
 
 //		post_login																
