@@ -1,15 +1,17 @@
 # Rustmark
 
-Rustmark is a simple Markdown server written in [Rust](https://www.rust-lang.org/).
-It is intended to be easy to use, easy to fork and customise, and easy to
-deploy.
+[Rust]:     https://www.rust-lang.org/
+[Rustmark]: https://crates.io/crates/rustmark
 
-Rustmark exists as a crate on [crates.io](https://crates.io/crates/rustmark) to
-establish presence and gain visibility and awareness, and because there are
-plans for it to become useful as a binary. It is not intended to be used as a
-library, and is not published as such. (See the [Usage](#usage) section for more
-information.) It may also be useful to able to run it and see it working before
-then using it as a foundation for a new project.
+Rustmark is a simple Markdown server written in [Rust][]. It is intended to be
+easy to use, easy to fork and customise, and easy to deploy.
+
+Rustmark exists as a crate on [crates.io][Rustmark] to establish presence and
+gain visibility and awareness, and because there are plans for it to become
+useful as a binary. It is not intended to be used as a library, and is not
+published as such. (See the [Usage](#usage) section for more information.) It
+may also be useful to able to run it and see it working before then using it as
+a foundation for a new project.
 
 The main sections in this README are:
 
@@ -35,21 +37,37 @@ for use.
 
 ## Features
 
+[Axum]:            https://crates.io/crates/axum
+[Bulma]:           https://bulma.io/
+[CommonMark]:      https://commonmark.org/
+[CommonMark 0.30]: https://spec.commonmark.org/0.30/
+[Comrak]:          https://crates.io/crates/comrak
+[Figment]:         https://crates.io/crates/figment
+[Font Awesome]:    https://fontawesome.com/
+[GFM]:             https://github.github.com/gfm/
+[Hyper]:           https://crates.io/crates/hyper
+[Nerd Fonts]:      https://www.nerdfonts.com/
+[Syntect]:         https://crates.io/crates/syntect
+[Tera]:            https://crates.io/crates/tera
+[Terracotta]:      https://crates.io/crates/terracotta
+[Tracing]:         https://crates.io/crates/tracing
+[Twemoji]:         https://twemoji.twitter.com/
+
 The main high-level points of note are:
 
   - **Markdown**
-      - Rendering of Markdown files using [Comrak](https://crates.io/crates/comrak)
-      - Syntax highlighting using [Syntect](https://crates.io/crates/syntect)
-      - Full compliance with [CommonMark](https://commonmark.org/) [0.30](https://spec.commonmark.org/0.30/)
-      - Support for [GitHub-flavoured Markdown](https://github.github.com/gfm/)
-      - Tables, task lists, strikethrough, and autolinks (from [GFM](https://github.github.com/gfm/))
+      - Rendering of Markdown files using [Comrak][]
+      - Syntax highlighting using [Syntect][]
+      - Full compliance with [CommonMark][] [0.30][CommonMark 0.30]
+      - Support for [GitHub-flavoured Markdown (GFM)][GFM]
+      - Tables, task lists, strikethrough, and autolinks (from [GFM][])
       - Superscript, footnotes, description lists, and emoji shortcodes
       - Callouts, based on extended blockquotes
   - **Display**
-      - CSS foundation using the [Bulma](https://bulma.io/) CSS framework
-      - Icons using [Font Awesome](https://fontawesome.com/)
-      - Twitter emojis using [Twemoji](https://twemoji.twitter.com/)
-      - Code displayed using [Nerd Fonts](https://www.nerdfonts.com/)
+      - CSS foundation using the [Bulma][] CSS framework
+      - Icons using [Font Awesome][]
+      - Twitter emojis using [Twemoji][]
+      - Code displayed using [Nerd Fonts][]
       - Collapsible callouts for screenshots and other large images
       - Collapsible document sections based on headings (automatic)
       - Linkable headings
@@ -60,9 +78,9 @@ The main high-level points of note are:
       - Efficient rebuild process regenerating only changed files
   - **Customisation**
       - Custom JS and CSS files for customisation overrides
-      - Templates implemented using the [Tera](https://crates.io/crates/tera)
+      - Templates implemented using the [Tera][]
         template engine
-      - Configuration from config file and env vars using [Figment](https://crates.io/crates/figment)
+      - Configuration from config file and env vars using [Figment][]
       - Simple codebase layout
       - Easy to extend and build upon
   - **Security**
@@ -70,14 +88,14 @@ The main high-level points of note are:
       - Login page, public and protected routes, logout ability
       - Protected static content files for use alongside Markdown content
   - **Performance**
-      - High-performance asynchronous HTTP server using [Tokio Hyper](https://crates.io/crates/hyper)
-      - Based on the robust and ergonomic web framework [Axum](https://crates.io/crates/axum)
+      - High-performance asynchronous HTTP server using [Tokio Hyper][Hyper]
+      - Based on the robust and ergonomic web framework [Axum][]
   - **Other**
       - Compatibility with browsing the content on a Git server such as GitHub
         or Gitea
       - Static file handling
       - Single-file deployment — all assets baked in
-      - Logging of HTTP requests and events using [Tokio Tracing](https://crates.io/crates/tracing)
+      - Logging of HTTP requests and events using [Tokio Tracing][Tracing]
       - Graceful handling of 404 and 500 HTTP errors
       - Graceful handling of runtime application errors
 
@@ -86,13 +104,13 @@ along with examples.
 
 ### Authentication
 
-Rustmark features [Terracotta](https://crates.io/crates/terracotta)'s
-custom-rolled authentication system, providing a basic session-based setup.
-However, it is highly recommended to store the user credentials securely in a
-database. That is currently outside the scope of this project, for a number of
-reasons, primarily the ambition to provide a simple system that can be extended
-to use any database required. You will probably also want to store the sessions
-in a database instead of in memory.
+Rustmark features [Terracotta][]'s custom-rolled authentication system,
+providing a basic session-based setup. However, it is highly recommended to
+store the user credentials securely in a database. That is currently outside the
+scope of this project, for a number of reasons, primarily the ambition to
+provide a simple system that can be extended to use any database required. You
+will probably also want to store the sessions in a database instead of in
+memory.
 
 The authentication system is set up to make it easy to configure routes as
 either public or protected, and is fully-implemented including a login page,
@@ -109,16 +127,25 @@ simple addition to make.
 
 ## Why Rustmark?
 
+[Coda]:         https://coda.io/
+[Confluence]:   https://www.atlassian.com/software/confluence
+[Gatsby]:       https://www.gatsbyjs.com/
+[GitHub Pages]: https://pages.github.com/
+[Hugo]:         https://gohugo.io/
+[Jekyll]:       https://jekyllrb.com/
+[Jira]:         https://www.atlassian.com/software/jira
+[Notion]:       https://notion.so/
+[mdBook]:       https://rust-lang.github.io/mdBook
+
 The intention is to provide a simple system that is easy to maintain, and
 focused on developer documentation — or at least, documentation written by
 people who are comfortable working in Markdown with text editors, and committing
 their changes to a Git repository.
 
 There are many tools available to provide wiki-style functionality in very
-friendly ways, the leading product (arguably) being [Notion](https://notion.so).
-[Coda](https://coda.io) also deserves an honourable mention, but
-[Confluence](https://www.atlassian.com/software/confluence), although widely
-used due to the popularity of Jira, lags a long way behind.
+friendly ways, the leading product (arguably) being [Notion][]. [Coda][] also
+deserves an honourable mention, but [Confluence][], although widely used due to
+the popularity of [Jira][], lags a long way behind.
 
 ### So why not just use Notion?
 
@@ -158,23 +185,22 @@ and presentation, customisation, and hosting.
 
 ### What about GitHub Pages?
 
-[GitHub Pages](https://pages.github.com) is a great way to host static content,
+[GitHub Pages][] is a great way to host static content,
 and it is very easy to use. However, not everyone uses or wants to use GitHub,
 and there are constraints on the free accounts that may not make it the ideal
 choice for some people. There are also limitations on the amount of
 customisation that can be performed, and it is not possible to do anything
-dynamic, as ultimately it is based on [Jekyll](https://jekyllrb.com).
+dynamic, as ultimately it is based on [Jekyll][].
 
 ### Why not Jekyll, or Hugo, or one of the other static site generators?
 
 There are many, many static site generators available, and each has their pros
-and cons. [Jekyll](https://jekyllrb.com), being written in Ruby, is not very
-performant. [Hugo](https://gohugo.io) is written in Go, and is very fast, but it
-is not the easiest to customise. [Gatsby](https://www.gatsbyjs.com) is written
-in JavaScript, and is very customisable, but it is also very complex, heavily
-dependent upon React, and requires a lot of dependencies. They are just some of
-the most popular and widely-known systems. [mdBook](https://rust-lang.github.io/mdBook)
-is perhaps a close contender, and Rust-based, but it still has critical
+and cons. [Jekyll][], being written in Ruby, is not very performant. [Hugo][] is
+written in Go, and is very fast, but it is not the easiest to customise.
+[Gatsby][] is written in JavaScript, and is very customisable, but it is also
+very complex, heavily dependent upon React, and requires a lot of dependencies.
+They are just some of the most popular and widely-known systems. [mdBook][] is
+perhaps a close contender, and Rust-based, but it still has critical
 differences.
 
 Each system has had key decisions made about it which differentiate it from the
@@ -229,14 +255,19 @@ built into the binary or left externally to be deployed alongside it.
 
 ## Usage
 
+[Coding standards]:          https://github.com/danwilliams/terracotta#coding-standards
+[Commits to forks]:          https://github.com/orgs/community/discussions/45474
+[Create repo from template]: https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template
+[Terracotta structure]:      https://github.com/danwilliams/terracotta#structure
+
 The Rustmark repository is designed so that it can be forked, and content added.
 As such, it is best to keep in line with the existing structure and intended
 usage, to make updates from the upstream repository easier to merge and apply.
 
-Note that Rustmark is not designed to be used as a library, and its existence
-on [crates.io](https://crates.io/crates/rustmark) is as a binary. This is to
-establish presence, but also there are plans for it to become useful in a
-standalone capacity without having to clone the full repository.
+Note that Rustmark is not designed to be used as a library, and its existence on
+[crates.io][Rustmark] is as a binary. This is to establish presence, but also
+there are plans for it to become useful in a standalone capacity without having
+to clone the full repository.
 
 ### Getting started
 
@@ -252,11 +283,10 @@ updates, but do not want to contribute back to the upstream repository.
 Alternatively, you can use the repository as a template, and create a new
 repository based on it. The Rustmark repository is set up as a template
 repository on GitHub, so that you can easily [click the "Use this template"
-button to create a new repository based on
-it](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template).
-You can then clone your new repository and start working on it. This will give
-you a starting point where you have all the project files, but none of the
-commit history. This is beneficial if you want to make extensive changes to the
+button to create a new repository based on it][Create repo from template]. You
+can then clone your new repository and start working on it. This will give you a
+starting point where you have all the project files, but none of the commit
+history. This is beneficial if you want to make extensive changes to the
 project, and are not bothered about being able to merge in Rustmark updates.
 
 Regarding forking and cloning, you should be aware of the following points:
@@ -278,7 +308,7 @@ Regarding forking and cloning, you should be aware of the following points:
     able to pull in updates for it.
   - Forks on GitHub are treated as subsidiaries of the original repository, and
     not first-class repositories in their own right. For this reason, [commits
-    made to forks don't count as contributions in user profiles](https://github.com/orgs/community/discussions/45474),
+    made to forks don't count as contributions in user profiles][Commits to forks],
     which is not a desirable situation if you are starting a new project and not
     intending to contribute changes back to the upstream repository. This is the
     main reason why cloning is recommended over forking.
@@ -289,10 +319,10 @@ use cases.
 
 ### Structure
 
-Rustmark is based on [Terracotta](https://crates.io/crates/terracotta), which is
-a web application template. This document focuses on Rustmark, but if you want
-to know more about the underlying application structure, you should refer to the
-[Terracotta structure documentation](https://github.com/danwilliams/terracotta#structure).
+Rustmark is based on [Terracotta][], which is a web application template. This
+document focuses on Rustmark, but if you want to know more about the underlying
+application structure, you should refer to the [Terracotta structure
+documentation][Terracotta structure].
 
 Markdown files should be placed in the `content` directory, along with any
 images and other files that need to be protected by the same authentication as
@@ -315,9 +345,8 @@ once logged in, and not in the general system pages such as the login page. The
 
 This document focuses on how to use and customise Rustmark, but if you are
 wanting to make more extensive changes, you should refer to the [Terracotta
-documentation](https://github.com/danwilliams/terracotta#structure). You can
-also find information there about the [coding standards](https://github.com/danwilliams/terracotta#coding-standards)
-used.
+documentation][Terracotta structure]. You can also find information there about
+the [coding standards][] used.
 
 
 ## Setup
@@ -339,6 +368,8 @@ using based on Rustmark.
 
 ### Environment
 
+[Rustup]: https://rustup.rs/
+
 There are some key points to note about the environment you choose:
 
   - Debian and Ubuntu are the Linux distros of choice, although other distros
@@ -349,8 +380,8 @@ There are some key points to note about the environment you choose:
   - Running natively on MacOS is untested, although there is no known technical
     reason why it would not work.
 
-Typically, you will set up Rust using [`rustup`](https://rustup.rs/), which is
-the recommended way to install Rust. The `stable` toolchain is targeted, as the
+Typically, you will set up Rust using [`rustup`][Rustup], which is the
+recommended way to install Rust. The `stable` toolchain is targeted, as the
 focus is on stability and correctness, rather than bleeding-edge features.
 
 Once you have Rust installed, you can build the project using `cargo build`.
@@ -398,10 +429,12 @@ links to the source code.
 
 ## Deployment
 
+[UPX]: https://upx.github.io/
+
 You can build the project in release mode by using `cargo build --release`.
 Everything required for deployment will be contained in the single binary file
-produced. It is recommended to run [`upx`](https://upx.github.io/) on the
-executable before deployment, to reduce the file size.
+produced. It is recommended to run [`upx`][UPX] on the executable before
+deployment, to reduce the file size.
 
 The resulting binary file can then be copied to the deployment environment, and
 run directly. This will often be in a Docker or Kubernetes container, but that
@@ -418,40 +451,45 @@ scp target/release/rustmark you@yourserver:/path/to/deployment/directory
 
 ## Legal
 
+[Bulma license]:        https://github.com/jgthms/bulma/blob/master/LICENSE
+[CC-BY license]:        https://creativecommons.org/licenses/by/4.0/
+[Font Awesome license]: https://fontawesome.com/license/free
+[MIT license]:          http://opensource.org/licenses/MIT
+[Public Domain]:        https://creativecommons.org/publicdomain/zero/1.0/
+[Rust logo use]:        https://github.com/rust-lang/rust/issues/11562#issuecomment-50833809
+[Rust logo]:            https://github.com/rust-lang/rust/issues/11562#issuecomment-32700278
+[Rustacean]:            https://rustacean.net/
+[SIL OFL license]:      https://scripts.sil.org/OFL
+[Twemoji license]:      https://github.com/twitter/twemoji#attribution-requirements
+
 ### Disclaimer
 
 The name "Rustmark" is a combination of the words "Rust" and "Markdown". There
 is no affiliation with the Rust project or the Rust Foundation, nor any intent
 to imply any.
 
-
 ### Attributions
 
-This project uses the [Rust logo](https://github.com/rust-lang/rust/issues/11562#issuecomment-32700278)
-as a default, due to being written in Rust. The logo is
-[freely usable](https://github.com/rust-lang/rust/issues/11562#issuecomment-50833809)
-under the [CC-BY (Creative Commons Attribution) license](https://creativecommons.org/licenses/by/4.0/).
+This project uses the [Rust logo][] as a default, due to being written in Rust.
+The logo is [freely usable][Rust logo use] under the [CC-BY (Creative Commons
+Attribution) license][CC-BY license].
 
 An image of Ferris the crab (the Rust mascot) is used to illustrate the Markdown
-content examples. This image is sourced from [rustacean.net](https://rustacean.net/)
-and is in the [Public Domain](https://creativecommons.org/publicdomain/zero/1.0/),
-so can be freely used.
+content examples. This image is sourced from [rustacean.net][Rustacean] and is
+in the [Public Domain][], so can be freely used.
 
-This project uses the [Bulma CSS framework](https://bulma.io/), which is
-[published](https://github.com/jgthms/bulma/blob/master/LICENSE) under the
-[MIT license](http://opensource.org/licenses/MIT) and free to use without
-restriction.
+This project uses the [Bulma CSS framework][Bulma], which is [published][Bulma license]
+under the [MIT license][] and free to use without restriction.
 
-The [Font Awesome](https://fontawesome.com/) icons are [published](https://fontawesome.com/license/free)
-under the [CC-BY (Creative Commons Attribution) license](https://creativecommons.org/licenses/by/4.0/),
-and the webfonts under the [SIL OFL (Open Font License)](https://scripts.sil.org/OFL).
-They are freely usable, along with the CSS code used to display them, which is
-released under the [MIT license](http://opensource.org/licenses/MIT).
+The [Font Awesome][] icons are [published][Font Awesome license] under the
+[CC-BY (Creative Commons Attribution) license][CC-BY license], and the webfonts
+under the [SIL OFL (Open Font License)][SIL OFL license]. They are freely
+usable, along with the CSS code used to display them, which is released under
+the [MIT license][].
 
-The [Twemoji](https://twemoji.twitter.com/) graphics used to stylise Unicode
-emojis are [published by Twitter](https://github.com/twitter/twemoji#attribution-requirements)
-under the [CC-BY (Creative Commons Attribution) license](https://creativecommons.org/licenses/by/4.0/),
-and are freely usable, along with the Twitter JavaScript code used to transform
-them, which is released under the [MIT license](http://opensource.org/licenses/MIT).
+The [Twemoji][] graphics used to stylise Unicode emojis are [published by
+Twitter][Twemoji license] under the [CC-BY (Creative Commons Attribution)
+license][CC-BY license], and are freely usable, along with the Twitter
+JavaScript code used to transform them, which is released under the [MIT license][].
 
 

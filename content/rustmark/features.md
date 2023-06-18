@@ -6,25 +6,35 @@ features available, and how to use them.
 
 ## Standards and compatibility
 
-The Markdown files added to this repository will be rendered in full compliance
-with [CommonMark](https://commonmark.org/) [0.30](https://spec.commonmark.org/0.30/)
-as a bare minimum. Some extras such as [tables](#tables), [task lists](#task-lists),
-[strikethrough](#strikethrough), and [autolinks](#links) are not supported by
-CommonMark, and are instead rendered using the
-[GitHub-flavoured Markdown specification](https://github.github.com/gfm/).
+[CommonMark]:      https://commonmark.org/
+[CommonMark 0.30]: https://spec.commonmark.org/0.30/
+[Comrak]:          https://crates.io/crates/comrak
+[GFM]:             https://github.github.com/gfm/
 
-For reference, the Markdown parser used is [Comrak](https://github.com/kivikakk/comrak#extensions),
-which implements [superscript](#superscript), [header IDs](#headings),
-[footnotes](#footnotes), [description lists](#description-lists), and
-[shortcodes](#emoji-shortcodes) in addition to the features standardised in the
-GitHub-flavoured Markdown specification. These are enabled, but may not work
-elsewhere if other Markdown parsers are used.
+The Markdown files added to this repository will be rendered in full compliance
+with [CommonMark][] [0.30][CommonMark 0.30] as a bare minimum. Some extras such
+as [tables](#tables), [task lists](#task-lists), [strikethrough](#strikethrough),
+and [autolinks](#links) are not supported by CommonMark, and are instead
+rendered using the [GitHub-flavoured Markdown specification][GFM].
+
+For reference, the Markdown parser used is [Comrak][], which implements
+[superscript](#superscript), [header IDs](#headings), [footnotes](#footnotes),
+[description lists](#description-lists), and [shortcodes](#emoji-shortcodes) in
+addition to the features standardised in the GitHub-flavoured Markdown
+specification. These are enabled, but may not work elsewhere if other Markdown
+parsers are used.
 
 In addition, [callouts](#callouts) have been implemented using an extension to
 the [blockquotes](#blockquotes) syntax.
 
 
 ## Syntax
+
+[Details element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/details
+[Ferris]:          images/rustacean-flat-happy.png
+[Public Domain]:   https://creativecommons.org/publicdomain/zero/1.0/
+[Rustacean]:       https://rustacean.net/
+[Summary element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/summary
 
 ### Headings
 
@@ -260,7 +270,7 @@ in the example below.
 
 ![Ferris](images/rustacean-flat-happy.png)
 
-Source: [rustacean.net](https://rustacean.net/) *(Public Domain)*
+Source: [rustacean.net][Rustacean] *([Public Domain][])*
 
 ### Links
 
@@ -325,11 +335,10 @@ As Albert Einstein said:
 
 *Quick reference:* `>-> details` + `> summary`
 
-HTML provides a [`<details>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/details)
-for creating a disclosure widget from a block of text, and a
-[`<summary>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/summary)
-for the title of the disclosure widget. Information within the `<details>`
-element is hidden by default.
+HTML provides a [`<details>` element][Details element] for creating a disclosure
+widget from a block of text, and a [`<summary>` element][Summary element] for
+the title of the disclosure widget. Information within the `<details>` element
+is hidden by default.
 
 Standard Markdown does not provide a syntax for these elements, but they can be
 added to Markdown documents using raw HTML.
@@ -500,11 +509,11 @@ Here are the callouts in action:
 > **Image**: Friendly Ferris
 >
 > This is collapsible, and will be collapsed by default.
-> ![Ferris](images/rustacean-flat-happy.png)
+> ![Ferris][]
 
 > **Screenshot**
 > This is also collapsible, and will also be collapsed by default.
-> ![Ferris](images/rustacean-flat-happy.png)
+> ![Ferris][]
 
 They can contain multiple paragraphs, and other Markdown elements:
 
@@ -537,7 +546,7 @@ Titles can contain formatting and other Markdown elements:
 
 > **Image**: Even *more* Ferris
 >
-> ![Ferris](images/rustacean-flat-happy.png)
+> ![Ferris][]
 > 
 > > **Info**
 > > This is a nested callout.
