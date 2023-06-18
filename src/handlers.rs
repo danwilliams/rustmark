@@ -22,14 +22,14 @@ use tera::Context;
 
 //		Enums
 
-//		BaseDir																	
-/// The base directory type for static assets.
+//		AssetContext															
+/// The protection contexts for static assets.
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum BaseDir {
+pub enum AssetContext {
 	/// Public files.
-	Assets,
+	Public,
 	/// Protected files.
-	Content,
+	Protected,
 }
 
 
@@ -95,7 +95,7 @@ pub async fn get_page(
 /// * `uri` - The URI of the asset.
 /// 
 pub async fn get_protected_static_asset(uri: Uri) -> impl IntoResponse {
-	get_static_asset(uri, BaseDir::Content).await
+	get_static_asset(uri, AssetContext::Protected).await
 }
 
 //		get_public_static_asset													
@@ -106,7 +106,7 @@ pub async fn get_protected_static_asset(uri: Uri) -> impl IntoResponse {
 /// * `uri` - The URI of the asset.
 /// 
 pub async fn get_public_static_asset(uri: Uri) -> impl IntoResponse {
-	get_static_asset(uri, BaseDir::Assets).await
+	get_static_asset(uri, AssetContext::Public).await
 }
 
 //		get_static_asset														
@@ -115,14 +115,14 @@ pub async fn get_public_static_asset(uri: Uri) -> impl IntoResponse {
 /// # Parameters
 /// 
 /// * `uri`     - The URI of the asset.
-/// * `basedir` - The type of asset to serve.
+/// * `context` - The protection context of the asset to serve.
 /// 
-async fn get_static_asset(uri: Uri, basedir: BaseDir) -> impl IntoResponse {
+async fn get_static_asset(uri: Uri, context: AssetContext) -> impl IntoResponse {
 	let path       =  uri.path().trim_start_matches('/');
 	let mime_type  =  mime_guess::from_path(path).first_or_text_plain();
-	let basedir    =  match basedir {
-		BaseDir::Assets  => &ASSETS_DIR,
-		BaseDir::Content => &CONTENT_DIR,
+	let basedir    =  match context {
+		AssetContext::Public    => &ASSETS_DIR,
+		AssetContext::Protected => &CONTENT_DIR,
 	};
 	match basedir.get_file(path) {
 		None       => Response::builder()
