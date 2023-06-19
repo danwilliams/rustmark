@@ -13,6 +13,21 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Semantic Versioning][].
 
 
+## 0.4.0 (19 June 2023)
+
+### Added
+
+  - Added loading of Markdown files, HTML templates, and static assets from the
+    local filesystem at runtime (configurable)
+  - Implemented streaming of large static assets (configurable)
+  - Added host option to config
+  - Added Rustdoc source code documentation
+
+### Changed
+
+  - Improved README documentation
+
+
 ## 0.3.0 (18 June 2023)
 
 ### Added
