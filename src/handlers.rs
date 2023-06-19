@@ -180,42 +180,36 @@ async fn get_static_asset(
 		LoadingBehavior::Supplement => basedir.get_file(path).is_none(),
 		LoadingBehavior::Override   => local_path.exists(),
 	};
-	let file       =  if is_local {
-		if local_path.exists() {
-			File::open(local_path).await.ok()
+	if !(
+			( is_local && local_path.exists())
+		||	(!is_local && basedir.get_file(path).is_some())
+	) {
+		return Err((StatusCode::NOT_FOUND, ""));
+	}
+	let body = if is_local {
+		let mut file   = File::open(local_path).await.ok().unwrap();
+		let config     =  &state.Config.static_files;
+		if file.metadata().await.unwrap().len() as usize > 1024 * config.stream_threshold {
+			let reader = BufReader::with_capacity(1024 * config.read_buffer, file);
+			let stream = ReaderStream::with_capacity(reader, 1024 * config.stream_buffer);
+			Body::wrap_stream(stream)
 		} else {
-			None
+			let mut contents = vec![];
+			file.read_to_end(&mut contents).await.unwrap();
+			Body::from(contents)
 		}
 	} else {
-		match basedir.get_file(path) {
-			Some(file) => File::open(file.path()).await.ok(),
-			None       => None,
-		}
+		Body::from(basedir.get_file(path).unwrap().contents())
 	};
-	match file {
-		None           => Err((StatusCode::NOT_FOUND, "")),
-		Some(mut file) => {
-			let config =  &state.Config.static_files;
-			let body   =  if file.metadata().await.unwrap().len() as usize > 1024 * config.stream_threshold {
-				let reader = BufReader::with_capacity(1024 * config.read_buffer, file);
-				let stream = ReaderStream::with_capacity(reader, 1024 * config.stream_buffer);
-				Body::wrap_stream(stream)
-			} else {
-				let mut contents = vec![];
-				file.read_to_end(&mut contents).await.unwrap();
-				Body::from(contents)
-			};
-			Ok(Response::builder()
-				.status(StatusCode::OK)
-				.header(
-					header::CONTENT_TYPE,
-					HeaderValue::from_str(mime_type.as_ref()).unwrap(),
-				)
-				.body(body)
-				.unwrap()
-			)
-		},
-	}
+	Ok(Response::builder()
+		.status(StatusCode::OK)
+		.header(
+			header::CONTENT_TYPE,
+			HeaderValue::from_str(mime_type.as_ref()).unwrap(),
+		)
+		.body(body)
+		.unwrap()
+	)
 }
 
 
