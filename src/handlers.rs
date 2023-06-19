@@ -197,7 +197,7 @@ async fn get_static_asset(
 		Some(mut file) => {
 			let body   =  if file.metadata().await.unwrap().len() > 1024 * 1000 {
 				let reader = BufReader::with_capacity(1024 * 128, file);
-				let stream = ReaderStream::new(reader);
+				let stream = ReaderStream::with_capacity(reader, 1024 * 256);
 				Body::wrap_stream(stream)
 			} else {
 				let mut contents = vec![];
