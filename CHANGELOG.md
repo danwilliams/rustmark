@@ -13,6 +13,14 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Semantic Versioning][].
 
 
+## 0.4.1 (19 June 2023)
+
+### Fixed
+
+  - Corrected logic so that baked-in static files are always served whole, and
+    not streamed
+  - Fixed issue where some baked-in static files were not being served
+
 ## 0.4.0 (19 June 2023)
 
 ### Added
