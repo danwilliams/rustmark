@@ -491,6 +491,47 @@ protected_assets = "content"
 public_assets    = "static"
 ```
 
+#### Static file options
+
+When static files are requested, the method by which they are served depends
+upon their source and size. All files baked into the binary are served directly
+from memory, and so these options do not apply to them. Files loaded from the
+local filesystem are loaded into memory and served all once if they are small
+enough, but past a certain (configurable) size they are streamed to the client.
+
+The sizes of the stream buffer and read buffer are hugely important to
+performance, with smaller buffers greatly impacting download speeds. The default
+values have been carefully chosen based on extensive testing, and should not
+generally need to be changed. However, on a system with lots of users and very
+few large files it *may* be worth decreasing the buffer sizes to reduce memory
+usage when those files are requested, and on a system with very few users and
+lots of large files it *may* be worth increasing the buffer sizes to improve
+throughput. However, the chosen values are already within 5-10% of the very best
+possible speeds, so any increase should be made with caution. It is more likely
+that they would need to be decreased a little on a very busy system with a lot
+of large files, where the memory usage could become a problem and the raw speed
+of each download becomes a secondary concern.
+
+The following options should be specified under a `[static_files]` heading:
+
+  - `stream_threshold` - The size of the file, in KB, above which it will be
+                         streamed to the client. Defaults to `1000` (1MiB).
+  - `stream_buffer`    - The size of the stream buffer to use when streaming
+                         files, in KB. Defaults to `256` (256KB).
+  - `read_buffer`      - The size of the read buffer to use when streaming
+                         files, in KB. Defaults to `128` (128KB).
+
+Each of these options accepts an integer value.
+
+As shown here:
+
+```toml
+[static_files]
+stream_threshold = 1000 # 1MiB — files above this size will be streamed
+stream_buffer    = 256  # 256KB
+read_buffer      = 128  # 128KB
+```
+
 #### User list
 
 A list of user credentials can be specified under a `[users]` heading:

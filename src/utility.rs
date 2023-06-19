@@ -60,6 +60,8 @@ pub struct Config {
 	pub local_loading: LocalLoading,
 	/// The paths for local, non-baked-in resources.
 	pub local_paths:   LocalPaths,
+	/// The configuration options for serving static files.
+	pub static_files:  StaticFiles,
 	/// A list of users and their passwords.
 	#[default(HashMap::new())]
 	pub users:         HashMap<String, String>,
@@ -99,6 +101,22 @@ pub struct LocalPaths {
 	/// The path to the public static assets.
 	#[default = "static"]
 	pub public_assets:    PathBuf,
+}
+
+//		StaticFiles																
+#[derive(Deserialize, Serialize, SmartDefault)]
+/// The configuration options for serving static files.
+pub struct StaticFiles {
+	/// The file size at which to start streaming, in KB. Below this size, the
+	/// file will be read into memory and served all at once.
+	#[default = 1000]
+	pub stream_threshold: usize,
+	/// The size of the stream buffer to use when streaming files, in KB.
+	#[default = 256]
+	pub stream_buffer:    usize,
+	/// The size of the read buffer to use when streaming files, in KB.
+	#[default = 128]
+	pub read_buffer:      usize,
 }
 
 //		AppState																

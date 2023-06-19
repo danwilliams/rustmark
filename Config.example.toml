@@ -15,5 +15,10 @@ markdown         = "content"
 protected_assets = "content"
 public_assets    = "static"
 
+[static_files]
+stream_threshold = 1000
+stream_buffer    = 256
+read_buffer      = 128
+
 [users]
 #joe = "1a2b3c"
