@@ -4,9 +4,36 @@
 
 FROM rust:1.70 as builder
 
+# Install required packages
+RUN <<EOF
+    set -e
+    apt-get update
+    apt-get install -y \
+        clang
+EOF
+
+# Install build dependencies
+WORKDIR /usr/src
+RUN <<EOF
+    set -e
+    mkdir mold
+    curl -SL https://github.com/rui314/mold/releases/download/v1.11.0/mold-1.11.0-x86_64-linux.tar.gz \
+        | tar --strip-components=1 -xzC mold
+    mv mold/bin/mold /usr/local/bin/
+    rm -rf mold
+EOF
+
 # Prepare build location
 WORKDIR /usr/src
-RUN mkdir rustmark
+RUN <<EOF
+    set -e
+    mkdir -p rustmark/.cargo
+    printf '
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/mold"]' \
+        > rustmark/.cargo/config
+EOF
 
 # Initial non-project build to cache dependencies
 WORKDIR /usr/src/rustmark
