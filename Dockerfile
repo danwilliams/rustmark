@@ -2,14 +2,16 @@
 
 # BUILDER
 
-FROM rust:1.70 as builder
+FROM rust:latest as builder
 
 # Install required packages
 RUN <<EOF
     set -e
     apt-get update
     apt-get install -y \
-        clang
+        clang \
+        musl-tools
+    rustup target add x86_64-unknown-linux-musl
 EOF
 
 # Install build dependencies
@@ -34,7 +36,7 @@ RUN <<EOF
     set -e
     mkdir -p rustmark/.cargo
     printf '
-[target.x86_64-unknown-linux-gnu]
+[target.x86_64-unknown-linux-musl]
 linker = "clang"
 rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/mold"]' \
         > rustmark/.cargo/config
@@ -48,7 +50,7 @@ RUN <<EOF
     mkdir src
     echo "fn main() {}" > src/main.rs
     cp src/main.rs build.rs
-    cargo build --release
+    cargo build --release --target=x86_64-unknown-linux-musl
     rm build.rs
     rm src/main.rs
     rmdir src
@@ -63,7 +65,7 @@ RUN <<EOF
     mkdir content
     echo "fn main() {}" > build.rs
     touch src/main.rs
-    cargo build --release
+    cargo build --release --target=x86_64-unknown-linux-musl
     rm build.rs
     rmdir content
 EOF
@@ -74,17 +76,17 @@ COPY content content
 RUN <<EOF
     set -e
     touch build.rs
-    cargo build --release
-    upx --best target/release/rustmark
+    cargo build --release --target=x86_64-unknown-linux-musl
+    upx --best target/x86_64-unknown-linux-musl/release/rustmark
 EOF
 
 
 # RUNNER
 
-FROM gcr.io/distroless/cc
+FROM alpine
 
 WORKDIR /usr/src
-COPY --from=builder /usr/src/rustmark/target/release/rustmark ./
+COPY --from=builder /usr/src/rustmark/target/x86_64-unknown-linux-musl/release/rustmark ./
 COPY Config.toml ./
 
 EXPOSE 8000
