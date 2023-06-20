@@ -1,30 +1,49 @@
+# syntax=docker/dockerfile:1.4
+
 # BUILDER
 
 FROM rust:1.70 as builder
 
 # Prepare build location
 WORKDIR /usr/src
-RUN cargo new --bin rustmark
+RUN mkdir rustmark
 
 # Initial non-project build to cache dependencies
 WORKDIR /usr/src/rustmark
 COPY Cargo.toml Cargo.lock ./
-RUN cp src/main.rs build.rs
-RUN cargo build --release
-RUN rm src/*.rs build.rs
+RUN <<EOF
+    set -e
+    mkdir src
+    echo "fn main() {}" > src/main.rs
+    cp src/main.rs build.rs
+    cargo build --release
+    rm build.rs
+    rm src/main.rs
+    rmdir src
+EOF
 
-# Copy source and content files
-COPY build.rs Config.toml ./
+# Copy source files and build project codebase, minus content
 COPY src src
-COPY static static
 COPY html html
-COPY content content
-RUN touch src/main.rs
-RUN touch build.rs
+COPY static static
+RUN <<EOF
+    set -e
+    mkdir content
+    echo "fn main() {}" > build.rs
+    touch src/main.rs
+    cargo build --release
+    rm build.rs
+    rmdir content
+EOF
 
-# Build project
-RUN rm target/release/deps/rustmark*
-RUN cargo build --release
+# Copy content files and build full project, including content
+COPY build.rs ./
+COPY content content
+RUN <<EOF
+    set -e
+    touch build.rs
+    cargo build --release
+EOF
 
 
 # RUNNER
@@ -33,7 +52,7 @@ FROM gcr.io/distroless/cc
 
 WORKDIR /usr/src
 COPY --from=builder /usr/src/rustmark/target/release/rustmark ./
-COPY --from=builder /usr/src/rustmark/Config.toml ./
+COPY Config.toml ./
 
 EXPOSE 8000
 
