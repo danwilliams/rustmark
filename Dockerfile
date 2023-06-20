@@ -21,6 +21,11 @@ RUN <<EOF
         | tar --strip-components=1 -xzC mold
     mv mold/bin/mold /usr/local/bin/
     rm -rf mold
+    mkdir upx
+    curl -SL https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-amd64_linux.tar.xz \
+        | tar --strip-components=1 -xJC upx
+    mv upx/upx /usr/local/bin/
+    rm -rf upx
 EOF
 
 # Prepare build location
@@ -70,6 +75,7 @@ RUN <<EOF
     set -e
     touch build.rs
     cargo build --release
+    upx --best target/release/rustmark
 EOF
 
 
