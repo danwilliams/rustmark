@@ -9,8 +9,9 @@ RUN cargo new --bin rustmark
 # Initial non-project build to cache dependencies
 WORKDIR /usr/src/rustmark
 COPY Cargo.toml Cargo.lock ./
+RUN cp src/main.rs build.rs
 RUN cargo build --release
-RUN rm src/*.rs
+RUN rm src/*.rs build.rs
 
 # Copy source and content files
 COPY build.rs Config.toml ./
@@ -19,6 +20,7 @@ COPY static static
 COPY html html
 COPY content content
 RUN touch src/main.rs
+RUN touch build.rs
 
 # Build project
 RUN rm target/release/deps/rustmark*
