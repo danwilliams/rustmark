@@ -42,6 +42,12 @@ rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/mold"]' \
         > rustmark/.cargo/config
 EOF
 
+# The "cargo_opts" argument allows for passing additional options to cargo. This
+# can be useful to override settings in the Cargo.toml file. For example, to
+# change the optimisation level to 3 (the maximum), you can pass the following
+# argument: --build-arg cargo_opts="--config opt-level=3"
+ARG cargo_opts=""
+
 # Initial non-project build to cache dependencies
 WORKDIR /usr/src/rustmark
 COPY Cargo.toml Cargo.lock ./
@@ -50,7 +56,7 @@ RUN <<EOF
     mkdir src
     echo "fn main() {}" > src/main.rs
     cp src/main.rs build.rs
-    cargo build --release --target=x86_64-unknown-linux-musl
+    cargo build --release --target=x86_64-unknown-linux-musl $cargo_opts
     rm build.rs
     rm src/main.rs
     rmdir src
@@ -65,7 +71,7 @@ RUN <<EOF
     mkdir content
     echo "fn main() {}" > build.rs
     touch src/main.rs
-    cargo build --release --target=x86_64-unknown-linux-musl
+    cargo build --release --target=x86_64-unknown-linux-musl $cargo_opts
     rm build.rs
     rmdir content
 EOF
@@ -76,8 +82,19 @@ COPY content content
 RUN <<EOF
     set -e
     touch build.rs
-    cargo build --release --target=x86_64-unknown-linux-musl
-    upx --best target/x86_64-unknown-linux-musl/release/rustmark
+    cargo build --release --target=x86_64-unknown-linux-musl $cargo_opts
+EOF
+
+# The "upx" argument can be set to 1 or 0 to enable or disable compression of
+# the binary, which increases the build time but results in a smaller image.
+ARG upx=1
+
+# Compress binary executable
+RUN <<EOF
+    set -e
+    if [ "$upx" = "1" ]; then
+        upx --best target/x86_64-unknown-linux-musl/release/rustmark
+    fi
 EOF
 
 
