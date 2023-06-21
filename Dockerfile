@@ -42,6 +42,11 @@ rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/mold"]' \
         > rustmark/.cargo/config
 EOF
 
+# By default, this Dockerfile builds in release mode. To build for local dev,
+# set the "profile" argument to "dev". This will be passed to cargo. The dev
+# profile enables debug symbols and disables optimisations.
+ARG profile=release
+
 # The "cargo_opts" argument allows for passing additional options to cargo. This
 # can be useful to override settings in the Cargo.toml file. For example, to
 # change the optimisation level to 3 (the maximum), you can pass the following
@@ -56,10 +61,12 @@ RUN <<EOF
     mkdir src
     echo "fn main() {}" > src/main.rs
     cp src/main.rs build.rs
-    cargo build --release --target=x86_64-unknown-linux-musl $cargo_opts
+    cargo build --profile=$profile --target=x86_64-unknown-linux-musl $cargo_opts
     rm build.rs
     rm src/main.rs
     rmdir src
+    target_path=/usr/src/rustmark/target/x86_64-unknown-linux-musl
+    ln -s $target_path/debug $target_path/dev
 EOF
 
 # Copy source files and build project codebase, minus content
@@ -71,7 +78,7 @@ RUN <<EOF
     mkdir content
     echo "fn main() {}" > build.rs
     touch src/main.rs
-    cargo build --release --target=x86_64-unknown-linux-musl $cargo_opts
+    cargo build --profile=$profile --target=x86_64-unknown-linux-musl $cargo_opts
     rm build.rs
     rmdir content
 EOF
@@ -82,18 +89,20 @@ COPY content content
 RUN <<EOF
     set -e
     touch build.rs
-    cargo build --release --target=x86_64-unknown-linux-musl $cargo_opts
+    cargo build --profile=$profile --target=x86_64-unknown-linux-musl $cargo_opts
 EOF
 
 # The "upx" argument can be set to 1 or 0 to enable or disable compression of
-# the binary, which increases the build time but results in a smaller image.
+# the binary, which increases the build time but results in a smaller image. If
+# the "dev" argument is enabled, then this argument is ignored, as compressing
+# the binary would not make sense on a development build.
 ARG upx=1
 
 # Compress binary executable
 RUN <<EOF
     set -e
-    if [ "$upx" = "1" ]; then
-        upx --best target/x86_64-unknown-linux-musl/release/rustmark
+    if [ "$upx" = "1" ] && [ "$profile" != "dev" ]; then
+        upx --best target/x86_64-unknown-linux-musl/$profile/rustmark
     fi
 EOF
 
@@ -102,8 +111,10 @@ EOF
 
 FROM alpine
 
+ARG profile=release
+
 WORKDIR /usr/src
-COPY --from=builder /usr/src/rustmark/target/x86_64-unknown-linux-musl/release/rustmark ./
+COPY --from=builder /usr/src/rustmark/target/x86_64-unknown-linux-musl/$profile/rustmark ./
 COPY Config.toml ./
 
 EXPOSE 8000
