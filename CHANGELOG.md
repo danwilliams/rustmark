@@ -1,5 +1,6 @@
 # Changelog
 
+[Docker]:              https://www.docker.com/
 [Font Awesome]:        https://fontawesome.com/
 [Keep a Changelog]:    https://keepachangelog.com/en/1.0.0/
 [Nerd Font]:           https://www.nerdfonts.com/
@@ -13,6 +14,18 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Semantic Versioning][].
 
 
+## 0.4.2 (24 September 2023)
+
+### Added
+
+  - Added `Dockerfile` for building and running the application in a [Docker][]
+    container
+
+### Changed
+
+  - Updated crate dependencies
+
+
 ## 0.4.1 (19 June 2023)
 
 ### Fixed
@@ -20,6 +33,7 @@ The format is based on [Keep a Changelog][], and this project adheres to
   - Corrected logic so that baked-in static files are always served whole, and
     not streamed
   - Fixed issue where some baked-in static files were not being served
+
 
 ## 0.4.0 (19 June 2023)
 
