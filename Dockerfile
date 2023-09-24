@@ -106,6 +106,7 @@ ARG profile=release
 WORKDIR /usr/src
 COPY --from=builder /usr/src/rustmark/target/x86_64-unknown-linux-musl/$profile/rustmark ./
 COPY Config.toml ./
+RUN mkdir content html static
 
 EXPOSE 8000
 
