@@ -585,7 +585,11 @@ links to the source code.
 
 ## Deployment
 
-[UPX]: https://upx.github.io/
+[Alpine]: https://alpinelinux.org/
+[Docker]: https://www.docker.com/
+[UPX]:    https://upx.github.io/
+
+### Building
 
 You can build the project in release mode by using `cargo build --release`.
 Everything required for deployment will be contained in the single binary file
@@ -597,8 +601,9 @@ local filesystem, as described in the [Local loading options](#local-loading-opt
 section above.
 
 The resulting binary file can then be copied to the deployment environment, and
-run directly. This will often be in a Docker or Kubernetes container, but that
-is outside the scope of this document.
+run directly. This will often be in a [Docker][] or Kubernetes container.
+
+### Examples
 
 A typical build script might look like this:
 
@@ -606,6 +611,144 @@ A typical build script might look like this:
 cargo build --release
 upx --best target/release/rustmark
 scp target/release/rustmark you@yourserver:/path/to/deployment/directory
+```
+
+### Docker
+
+A common deployment scenario is to use [Docker][]. The Rustmark repository
+includes a `Dockerfile`, which can be used to build a Docker image. This image
+is based on [Alpine][], and so is very small. It is also built using
+multi-stage builds, so the final image is even smaller.
+
+It is worth noting that the Alpine build uses the `musl` C library, which is
+not compatible with the `glibc` C library used by most other Linux distributions
+and Docker images. The advantage of using Alpine is that the resulting image is
+very small, and everything is compiled statically. If you have any compatibility
+problems then you may want to use the `distroless` build instead, which is based
+on `glibc`.
+
+The Docker image can be built using the following command:
+
+```sh
+docker build -t rustmark .
+```
+
+By default, this will build a release image, and compress the binary using
+[`upx`][UPX]. The setup is optimised for executable speed, build speed, and
+image size.
+
+#### Profiles
+
+You can specific the dev profile by passing the `--build-arg profile=dev` option
+to the `docker build` command. This will build an image that is not compressed,
+and is optimised for build speed but not image size.
+
+#### Build arguments
+
+Additionally, there are two other build arguments that can be passed in:
+
+  - `upx`        - Whether to compress the binary using [`upx`][UPX]. Defaults
+                   to `1`. Specify `0` to disable compression.
+  - `cargo-opts` - Additional options to pass to `cargo build`, for instance
+                   `--build-arg cargo_opts="--config opt-level=z"`.
+
+#### Running
+
+It's worth noting that the host IP to serve on needs to be set to `0.0.0.0` to
+allow outside traffic to connect. In other words, the `host` entry in the
+`Config.toml` file should be set to `"0.0.0.0"` for a Docker setup:
+
+```toml
+host   = "0.0.0.0"
+port   = 8000
+```
+
+By default, Rustmark will run on port `8000`, and this is expected by the
+`Dockerfile`. It is therefore advisable to keep this configured as such in the
+`Config.toml` file (or omitted), and instead use port mapping to map the
+container port to a host port. This can be achieved by specifying the `-p`
+option when calling the `docker run` command, for instance:
+
+```sh
+docker run -p 8000:8000 rustmark
+```
+
+This will make the Rustmark server available on port `8000` on the host machine,
+so that, on that machine, you will be able to visit it at http://localhost:8000
+or http://127.0.0.1:8000 in your browser.
+
+If you run Rustmark on a different port, you will need to specify that port in
+the `Dockerfile`.
+
+#### Volumes
+
+It is possible to mount volumes into the Docker container, to provide access to
+local files. This can be useful for development, and also for providing
+additional content and static assets. The following volumes are available:
+
+  - `/usr/src/html`    - HTML templates.
+  - `/usr/src/content` - Markdown content and protected static assets.
+  - `/usr/src/static`  - Public static assets.
+
+These paths, and the options controlling them, can be overridden using the
+[local loading options](#local-loading-options) described above.
+
+To mount a volume, use the `-v` option when calling the `docker run` command,
+for instance:
+
+```sh
+docker run -v /path/to/markdown:/usr/src/content:ro rustmark
+```
+
+It is advisable to specify the `ro` (read-only) option, as shown above, as there
+is no reason for Rustmark to need to write to the content files.
+
+#### Examples
+
+Default build, generating a compressed release image:
+
+```sh
+docker build -t rustmark .
+```
+
+Default build, generating an uncompressed release image:
+
+```sh
+docker build -t rustmark --build-arg upx=0 .
+```
+
+Dev build, generating an uncompressed dev image:
+
+```sh
+docker build -t rustmark --build-arg profile=dev .
+```
+
+Adjusting the `opt-level` for the release build:
+
+```sh
+docker build -t rustmark --build-arg cargo_opts="--config opt-level=z" .
+```
+
+Running the image:
+
+```sh
+docker run rustmark
+```
+
+Running the image and exposing the default port:
+
+```sh
+docker run -p 8000:8000 rustmark
+```
+
+Mounting volumes:
+
+```sh
+docker run \
+  -v /path/to/markdown:/usr/src/content:ro \
+  -v /path/to/templates:/usr/src/html:ro \
+  -v /path/to/assets:/usr/src/static:ro \
+  rustmark
 ```
 
 
