@@ -17,6 +17,7 @@ use axum::{
 use axum_sessions::SessionHandle;
 use base64::engine::{Engine as _, general_purpose::STANDARD as BASE64};
 use ring::hmac;
+use rubedo::sugar::s;
 use secrecy::{ExposeSecret, SecretVec};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -271,7 +272,7 @@ pub async fn auth_layer<B>(
 ) -> Response {
 	let mut auth_cx      = AuthContext::new(session_handle, appstate.Key.clone());
 	let user             = auth_cx.get_user(Arc::clone(&appstate)).await;
-	let mut username     = "none".to_owned();
+	let mut username     = s!("none");
 	if user.is_some() {
 		username         = user.as_ref().unwrap().username.clone();
 	}
@@ -372,7 +373,7 @@ pub async fn post_login(
 		info!("Logging in user: {}", user.as_ref().unwrap().username);
 		auth.login(user.as_ref().unwrap()).await;
 	} else {
-		params.insert("failed".to_owned(), "".to_owned());
+		params.insert(s!("failed"), s!(""));
 		info!("Failed login attempt for user: {}", &login.username);
 	}
 	Redirect::to(build_uri(uri.path().to_string(), params).path_and_query().unwrap().to_string().as_str())

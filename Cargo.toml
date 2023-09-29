@@ -29,6 +29,7 @@ mime_guess = "2.0.4"
 nipper = "0.1.9"
 rand = { version = "0.8.5", features = ["min_const_gen"] }
 ring = "0.16.20"
+rubedo = "0.1.1"
 secrecy = "0.8.0"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = { version = "1.0.107", features = ["preserve_order"] }
@@ -46,6 +47,7 @@ url = "2.4.1"
 [build-dependencies]
 comrak = { version = "0.18.0", features = ["emojis", "shortcodes"] }
 nipper = "0.1.9"
+rubedo = "0.1.1"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = { version = "1.0.107", features = ["preserve_order"] }
 tendril = "0.4.3"

@@ -11,6 +11,7 @@ use comrak::{
 	plugins::syntect::SyntectAdapter,
 };
 use nipper::{Document, Selection};
+use rubedo::sugar::s;
 use serde::{Deserialize, Serialize};
 use tendril::StrTendril;
 
@@ -63,15 +64,15 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<Heading>, StrTe
 				autolink:                  true,
 				tasklist:                  true,
 				superscript:               true,
-				header_ids:                Some("".to_owned()),
+				header_ids:                Some(s!("")),
 				footnotes:                 true,
 				description_lists:         true,
-				front_matter_delimiter:    Some("---".to_owned()),
+				front_matter_delimiter:    Some(s!("---")),
 				shortcodes:                true,
 			},
 			parse:                         ComrakParseOptions {
 				smart:                     true,
-				default_info_string:       Some("".to_owned()),
+				default_info_string:       Some(s!("")),
 				relaxed_tasklist_matching: true,
 			},
 			render:                        ComrakRenderOptions {
@@ -114,7 +115,7 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<Heading>, StrTe
 pub fn find_title(document: &Document, remove_title: bool) -> String {
 	let mut title = document.select("h1:first-child").text().to_string();
 	if title.is_empty() {
-		title     = "Untitled".to_owned();
+		title     = s!("Untitled");
 	}
 	if remove_title {
 		document.select("h1:first-child").remove();
@@ -191,7 +192,7 @@ pub fn process_details(blockquotes: &Selection) {
 					},
 					None                 => {
 						summary.push(para_html.strip_prefix("-&gt;").unwrap().trim().to_owned());
-						para_html        =  "".to_owned();
+						para_html        =  s!("");
 					},
 				}
 			}
@@ -318,12 +319,12 @@ pub fn process_headings(document: &Document) {
 		while let Some((_, mut element)) = elements.next() {
 			let next_element = elements.peek().cloned();
 			let next_tag     = match &next_element {
-				None               => "".to_owned(),
+				None               => s!(""),
 				Some((_, element)) => match element.get(0) {
-					None           => "".to_owned(),
+					None           => s!(""),
 					Some(node)     => {
 						if node.node_name().is_none() {
-							"".to_owned()
+							s!("")
 						} else {
 							node.node_name().unwrap().to_string().to_lowercase()
 						}
