@@ -25,8 +25,10 @@ use tendril::StrTendril;
 pub struct Heading {
 	/// The level of the heading. This can be 1-6.
 	level: u8,
+	
 	/// The HTML id attribute of the heading.
 	id:    String,
+	
 	/// The text of the heading.
 	text:  String,
 }

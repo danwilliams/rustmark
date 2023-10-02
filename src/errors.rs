@@ -23,6 +23,7 @@ use tera::Context;
 /// 
 /// This function is called as a fallback when a route is not found. It returns
 /// a 404 status code.
+/// 
 pub async fn no_route() -> impl IntoResponse {
 	(
 		StatusCode::NOT_FOUND,

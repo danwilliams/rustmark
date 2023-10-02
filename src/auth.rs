@@ -30,6 +30,7 @@ use tracing::info;
 
 /// The key used to store the session's authentication ID.
 const SESSION_AUTH_ID_KEY: &str = "_auth_id";
+
 /// The key used to store the session's user ID.
 const SESSION_USER_ID_KEY: &str = "_user_id";
 
@@ -41,12 +42,16 @@ const SESSION_USER_ID_KEY: &str = "_user_id";
 /// The data sent by the login form.
 /// 
 /// This is consumed by the [`post_login()`] handler.
+/// 
 #[derive(Debug, Deserialize)]
 pub struct PostLogin {
+	//		Private properties													
 	/// The username.
 	username: String,
+	
 	/// The password.
 	password: String,
+	
 	/// The URL to redirect to after logging in.
 	uri:      String,
 }
@@ -56,10 +61,13 @@ pub struct PostLogin {
 /// 
 /// This struct contains the user fields used for authentication, and methods
 /// for retrieving user data.
+/// 
 #[derive(Clone, Debug, Serialize)]
 pub struct User {
+	//		Private properties													
 	/// The username.
 	username: String,
+	
 	/// The password.
 	password: String,
 }
@@ -68,8 +76,8 @@ impl User {
 	//		find																
 	/// Finds a user by username and password.
 	/// 
-	/// Returns `Some(User)` if the user exists and the password is correct,
-	/// otherwise returns `None`.
+	/// Returns [`Some(User)`](Some) if the user exists and the password is
+	/// correct, otherwise returns [`None`].
 	/// 
 	/// # Parameters
 	/// 
@@ -93,7 +101,8 @@ impl User {
 	//		find_by_id															
 	/// Finds a user by username.
 	/// 
-	/// Returns `Some(User)` if the user exists, otherwise returns `None`.
+	/// Returns [`Some(User)`](Some) if the user exists, otherwise returns
+	/// [`None`].
 	/// 
 	/// # Parameters
 	/// 
@@ -123,12 +132,17 @@ impl User {
 /// 
 /// This struct contains the current user and session data, to persist the
 /// context of an authentication session.
+/// 
 #[derive(Clone)]
 pub struct AuthContext {
+	//		Public properties													
 	/// The current user.
 	pub current_user: Option<User>,
+	
+	//		Private properties													
 	/// The session handle.
 	session_handle:   SessionHandle,
+	
 	/// The HMAC key.
 	key:              hmac::Key,
 }
@@ -217,6 +231,7 @@ impl AuthContext {
 	/// Logs out the current user.
 	/// 
 	/// Logs the current user out by destroying the session.
+	/// 
 	pub async fn logout(&mut self) {
 		let mut session = self.session_handle.write().await;
 		session.destroy();
