@@ -104,6 +104,7 @@ The main high-level points of note are:
       - Logging of HTTP requests and events using [Tokio Tracing][Tracing]
       - Graceful handling of 404 and 500 HTTP errors
       - Graceful handling of runtime application errors
+      - Full OpenAPI documentation
 
 More details are available about the [supported Markdown features](content/rustmark/features.md),
 along with examples.

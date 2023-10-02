@@ -18,6 +18,7 @@ use std::{
 };
 use tera::{Context, Tera};
 use url::form_urlencoded;
+use utoipa::OpenApi;
 
 
 
@@ -161,6 +162,19 @@ pub struct AppState {
 	/// The Tera template engine.
 	pub Template: Tera,
 }
+
+//		ApiDoc																	
+/// The OpenAPI documentation for the API.
+#[derive(OpenApi)]
+#[openapi(
+	paths(
+	),
+	components(
+	),
+	tags(
+	)
+)]
+pub struct ApiDoc;
 
 
 

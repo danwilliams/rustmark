@@ -43,6 +43,10 @@ tracing = "0.1.37"
 tracing-appender = "0.2.2"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 url = "2.4.1"
+utoipa = { version = "3.5.0", features = ["axum_extras", "chrono", "preserve_order"] }
+utoipa-rapidoc = { version = "0.1.0", features = ["axum"] }
+utoipa-redoc = { version = "0.1.0", features = ["axum"] }
+utoipa-swagger-ui = { version = "3.1.5", features = ["axum"] }
 
 [build-dependencies]
 comrak = { version = "0.18.0", features = ["emojis", "shortcodes"] }

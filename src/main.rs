@@ -45,6 +45,10 @@ use tracing_subscriber::{
 	layer::SubscriberExt,
 	util::SubscriberInitExt,
 };
+use utoipa::OpenApi;
+use utoipa_rapidoc::RapiDoc;
+use utoipa_redoc::{Redoc, Servable};
+use utoipa_swagger_ui::SwaggerUi;
 
 
 
@@ -122,6 +126,9 @@ async fn main() {
 				.route("/js/*path",       get(get_public_static_asset))
 				.route("/webfonts/*path", get(get_public_static_asset))
 		)
+		.merge(SwaggerUi::new("/api-docs/swagger").url("/api-docs/openapi.json", ApiDoc::openapi()))
+		.merge(Redoc::with_url("/api-docs/redoc", ApiDoc::openapi()))
+		.merge(RapiDoc::new("/api-docs/openapi.json").path("/api-docs/rapidoc"))
 		.fallback(no_route)
 		.layer(CatchPanicLayer::new())
 		.layer(middleware::from_fn_with_state(Arc::clone(&shared_state), graceful_error_layer))

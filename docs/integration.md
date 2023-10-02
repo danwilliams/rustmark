@@ -19,6 +19,13 @@ At present there are no machine-consumable endpoints.
 
 ## User-facing endpoints
 
+[OpenAPI]: https://www.openapis.org/
+[Swagger]: https://swagger.io/
+[Redoc]:   https://redoc.ly/
+[RapiDoc]: https://mrin9.github.io/RapiDoc/
+
+### Web application
+
 As Rustmark's primary purpose is to serve Markdown files as HTML to a browser,
 it comes with a number of pre-configured endpoints that are intended for
 consumption by humans using a browser. These are:
@@ -32,6 +39,18 @@ consumption by humans using a browser. These are:
   - **Public**
       - `/login`: Login page
       - `/logout`: Logout endpoint
+
+### Documentation
+
+[OpenAPI][] documentation is available at the following endpoints:
+
+  - `/api-docs/swagger` - [Swagger][] UI
+  - `/api-docs/redoc`   - [Redoc][] UI
+  - `/api-docs/rapidoc` - [RapiDoc][] UI
+
+Although Swagger is the typical choice, all three of these UIs are made
+available to allow for personal preference. They all allow browsing of the API
+functionality according to the OpenAPI schema generated from the code.
 
 
 ## Asset-serving endpoints
