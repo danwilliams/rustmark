@@ -22,6 +22,11 @@ The main sections in this README are:
   - [Deployment](#deployment)
   - [Legal](#legal)
 
+Additional documentation of note includes:
+
+  - [API integration documentation](docs/integration.md)
+  - [Developer documentation](docs/developer.md)
+
 
 ## Content
 
