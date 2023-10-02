@@ -265,10 +265,8 @@ local filesystem.
 
 ## Usage
 
-[Coding standards]:          https://github.com/danwilliams/terracotta#coding-standards
-[Commits to forks]:          https://github.com/orgs/community/discussions/45474
-[Create repo from template]: https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template
-[Terracotta structure]:      https://github.com/danwilliams/terracotta#structure
+[Dev getting started](docs/developer.md#getting-started)
+[Dev structure](docs/developer.md#codebase-structure)
 
 The Rustmark repository is designed so that it can be forked, and content added.
 As such, it is best to keep in line with the existing structure and intended
@@ -283,63 +281,16 @@ It is also useful in a standalone capacity as a binary, without having to clone
 the full repository. This allows for limited customisation (CSS styling, HTML
 templates, Markdown content, and static assets, but not core logic) but is
 sufficient for many use cases, and will get you up and running very quickly. If
-this is all you want to do then you can skip the rest of this section and go
-straight to the [Setup](#setup) section.
-
-### Getting started
-
-The Rustmark repository is intended to be forked, although you may not want to
-do so in an explicit manner (i.e. by clicking the "Fork" button on GitHub).
-Instead, the recommended approach is to clone the repository, and then push it
-to a new location. This will give you a clone with all the commit history, but
-without the link to the upstream repository, so it will not be counted as a fork
-by GitHub. This is ideal if you want to add content and customise the
-application for your own use, and also want to be able to merge in Rustmark
-updates, but do not want to contribute back to the upstream repository.
-
-Alternatively, you can use the repository as a template, and create a new
-repository based on it. The Rustmark repository is set up as a template
-repository on GitHub, so that you can easily [click the "Use this template"
-button to create a new repository based on it][Create repo from template]. You
-can then clone your new repository and start working on it. This will give you a
-starting point where you have all the project files, but none of the commit
-history. This is beneficial if you want to make extensive changes to the
-project, and are not bothered about being able to merge in Rustmark updates.
-
-Regarding forking and cloning, you should be aware of the following points:
-
-  - You will have the full commit history when you fork or clone, which will
-    likely be useful, but it is specifically relevant to Rustmark, and so
-    mention of e.g. release versions will be in that context. This is fine if
-    your project will just add content and customisations, and keep up with
-    Rustmark versions, but for more extensive changes you should rename your
-    clone and implement your own, independent versioning scheme, in which case
-    neither forking nor cloning is recommended, and the repository template
-    route will be best.
-  - You will also have the various release version tags created on the Rustmark
-    repository, which will be fine if you are following the Rustmark release
-    cycle, but will otherwise likely conflict with your own tags if you are not.
-  - There is a significant advantage in maintaining a Git tree association with
-    Rustmark as an upstream repository, and as adding content and performing
-    typical customisation will not lead to conflicts, you are best off being
-    able to pull in updates for it.
-  - Forks on GitHub are treated as subsidiaries of the original repository, and
-    not first-class repositories in their own right. For this reason, [commits
-    made to forks don't count as contributions in user profiles][Commits to forks],
-    which is not a desirable situation if you are starting a new project and not
-    intending to contribute changes back to the upstream repository. This is the
-    main reason why cloning is recommended over forking.
-
-For these reasons, forking in the GitHub-recognised sense is not recommended,
-and cloning and pushing to a new repository is the preferred route for standard
-use cases.
+this is all you want to do then you will find all you need in this document, and
+can get running by following the [Setup](#setup) section. However, if you want
+to customise the core logic, or extend it, then you should refer to the
+[Developer documentation][Dev getting started].
 
 ### Structure
 
 Rustmark is based on [Terracotta][], which is a web application template. This
 document focuses on Rustmark, but if you want to know more about the underlying
-application structure, you should refer to the [Terracotta structure
-documentation][Terracotta structure].
+application structure, you should refer to the [Developer documentation][Dev structure].
 
 Markdown files should be placed in the `content` directory, along with any
 images and other files that need to be protected by the same authentication as
@@ -361,13 +312,13 @@ once logged in, and not in the general system pages such as the login page. The
 `custom.css` file is included in all pages.
 
 This document focuses on how to use and customise Rustmark, but if you are
-wanting to make more extensive changes, you should refer to the [Terracotta
-documentation][Terracotta structure]. You can also find information there about
-the [coding standards][] used.
+wanting to make more extensive changes, you should refer to the [Developer
+documentation](docs/developer.md).
 
 
 ## Setup
 
+[Dev getting started](docs/developer.md#getting-started)
 [Rustmark]: https://crates.io/crates/rustmark
 
 The steps to set up this project are simple and standard. You need a
@@ -375,7 +326,7 @@ reasonably-recent Rust environment, on a Linux machine. There are currently no
 special requirements beyond what is needed to build a standard Rust project.
 
 Note that these instructions are for building the application yourself, which
-will usually be in context of having created a [new Rustmark project](#getting-started)
+will usually be in context of having created a [new Rustmark project][Dev getting started]
 by cloning, forking, or possibly using the Rustmark repository as a template. In
 this case these steps will apply for your new project. You can also download the
 crate using `cargo install rustmark`, which will install the latest version of
