@@ -16,12 +16,15 @@ use crate::{
 use rustmark::{Heading, self};
 
 use axum::{
+	Json,
 	body::Body,
 	extract::State,
 	http::{HeaderValue, StatusCode, Uri, header},
 	response::{IntoResponse, Response},
 };
+use chrono::{NaiveDateTime, Utc};
 use mime_guess::{self};
+use serde::Serialize;
 use serde_json::{self};
 use std::{
 	fs,
@@ -33,6 +36,7 @@ use tokio::{
 	io::{AsyncReadExt, BufReader},
 };
 use tokio_util::io::ReaderStream;
+use utoipa::ToSchema;
 
 
 
@@ -47,6 +51,22 @@ pub enum AssetContext {
 	
 	/// Protected files.
 	Protected,
+}
+
+
+
+//		Structs
+
+//		StatsResponse															
+/// The application statistics returned by the `/api/stats` endpoint.
+#[derive(Serialize, ToSchema)]
+pub struct StatsResponse {
+	//		Public properties													
+	/// The date and time the application was started.
+	pub started_at: NaiveDateTime,
+	
+	/// The amount of time the application has been running.
+	pub uptime:     u64,
 }
 
 
@@ -236,5 +256,34 @@ async fn get_static_asset(
 	)
 )]
 pub async fn get_ping() {}
+
+//		get_stats																
+/// Produces various statistics about the service.
+/// 
+/// This endpoint returns a JSON object containing the following information:
+/// 
+///   - `started_at` - The date and time the application was started, in ISO
+///                    8601 format.
+///   - `uptime`     - The amount of time the application has been running, in
+///                    seconds.
+/// 
+/// # Parameters
+/// 
+/// * `state` - The application state.
+/// 
+#[utoipa::path(
+	get,
+	path = "/api/stats",
+	tag  = "health",
+	responses(
+		(status = 200, description = "Application statistics", body = StatsResponse)
+	)
+)]
+pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse> {
+	Json(StatsResponse {
+		started_at: state.Stats.started_at,
+		uptime:     (Utc::now().naive_utc() - state.Stats.started_at).num_seconds() as u64,
+	})
+}
 
 

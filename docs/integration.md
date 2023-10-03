@@ -18,12 +18,16 @@ The main sections in this document are:
 
 There is a simple availability check endpoint at `/api/ping`. This endpoint is
 intended to be used by monitoring systems to check that the application is
-available.
+available. Statistics are available at `/api/stats`.
 
   - **`GET /api/ping`**
     Returns a `200 OK` response with an empty body.
 
-The health check endpoint is not authenticated, and not versioned.
+  - **`GET /api/stats`**
+    Returns a `200 OK` response with a JSON body containing various statistics
+    about the API service.
+
+The health check endpoints are not authenticated, and not versioned.
 
 
 ## User-facing endpoints

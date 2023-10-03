@@ -24,13 +24,14 @@ use axum_sessions::{
 	SessionLayer,
 	async_session::MemoryStore as SessionMemoryStore,
 };
+use chrono::Utc;
 use figment::{
 	Figment,
 	providers::{Env, Format, Serialized, Toml},
 };
 use include_dir::{Dir, include_dir};
 use rand::Rng;
-use ring::hmac::{self, HMAC_SHA512};
+use ring::hmac::{HMAC_SHA512, self};
 use std::{
 	net::SocketAddr,
 	sync::Arc,
@@ -107,6 +108,10 @@ async fn main() {
 	let session_store = SessionMemoryStore::new();
 	let shared_state  = Arc::new(AppState {
 		Config:         config,
+		Stats:          AppStats {
+			started_at: Utc::now().naive_utc(),
+			..Default::default()
+		},
 		Secret:         secret,
 		Key:            hmac::Key::new(HMAC_SHA512, &secret),
 		Template:       tera,
@@ -120,6 +125,7 @@ async fn main() {
 			//	Public routes
 			Router::new()
 				.route("/api/ping",       get(get_ping))
+				.route("/api/stats",      get(get_stats))
 				.route("/login",          post(post_login))
 				.route("/logout",         get(get_logout))
 				.route("/css/*path",      get(get_public_static_asset))
