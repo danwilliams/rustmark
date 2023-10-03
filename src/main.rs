@@ -119,6 +119,7 @@ async fn main() {
 		.merge(
 			//	Public routes
 			Router::new()
+				.route("/api/ping",       get(get_ping))
 				.route("/login",          post(post_login))
 				.route("/logout",         get(get_logout))
 				.route("/css/*path",      get(get_public_static_asset))

@@ -14,7 +14,16 @@ The main sections in this document are:
 
 ## Machine-consumable endpoints
 
-At present there are no machine-consumable endpoints.
+### Health check
+
+There is a simple availability check endpoint at `/api/ping`. This endpoint is
+intended to be used by monitoring systems to check that the application is
+available.
+
+  - **`GET /api/ping`**
+    Returns a `200 OK` response with an empty body.
+
+The health check endpoint is not authenticated, and not versioned.
 
 
 ## User-facing endpoints
