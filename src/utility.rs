@@ -16,7 +16,7 @@ use std::{
 	fs,
 	net::IpAddr,
 	path::PathBuf,
-	sync::Arc,
+	sync::{Arc, atomic::AtomicUsize},
 };
 use tera::{Context, Tera};
 use url::form_urlencoded;
@@ -175,6 +175,9 @@ pub struct AppStats {
 	//		Public properties													
 	/// The date and time the application was started.
 	pub started_at: NaiveDateTime,
+	
+	/// The number of requests that have been handled.
+	pub requests:   AtomicUsize,
 }
 
 //		ApiDoc																	

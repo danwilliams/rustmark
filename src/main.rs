@@ -3,6 +3,7 @@
 mod auth;
 mod errors;
 mod handlers;
+mod middlewares;
 mod utility;
 
 
@@ -13,6 +14,7 @@ use crate::{
 	auth::*,
 	errors::*,
 	handlers::*,
+	middlewares::*,
 	utility::*,
 };
 use axum::{
@@ -141,6 +143,7 @@ async fn main() {
 		.layer(middleware::from_fn_with_state(Arc::clone(&shared_state), graceful_error_layer))
 		.layer(middleware::from_fn_with_state(Arc::clone(&shared_state), auth_layer))
 		.layer(SessionLayer::new(session_store, &secret).with_secure(false))
+		.layer(middleware::from_fn_with_state(Arc::clone(&shared_state), stats_layer))
 		.with_state(shared_state)
 		.layer(tower_http::trace::TraceLayer::new_for_http()
 			.on_request(

@@ -17,6 +17,7 @@ mod healthcheck {
 		http::{ResponseExt, UnpackedResponse, UnpackedResponseBody, UnpackedResponseHeader},
 		sugar::s,
 	};
+	use std::sync::atomic::AtomicUsize;
 	use serde_json::json;
 	use tera::Tera;
 	
@@ -43,6 +44,7 @@ mod healthcheck {
 			Config:           Figment::from(Serialized::defaults(Config::default())).extract().unwrap(),
 			Stats:            AppStats {
 				started_at:   start,
+				requests:     AtomicUsize::new(10),
 				..Default::default()
 			},
 			Secret:           secret,
@@ -62,6 +64,7 @@ mod healthcheck {
 			body:             UnpackedResponseBody::new(json!({
 				"started_at": start,
 				"uptime":     99,
+				"requests":   10,
 			})),
 		};
 		assert_json_eq!(unpacked, crafted);
