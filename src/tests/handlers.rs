@@ -17,7 +17,10 @@ mod healthcheck {
 		http::{ResponseExt, UnpackedResponse, UnpackedResponseBody, UnpackedResponseHeader},
 		sugar::s,
 	};
-	use std::sync::atomic::AtomicUsize;
+	use std::{
+		sync::{Mutex, atomic::AtomicUsize},
+		time::Instant,
+	};
 	use serde_json::json;
 	use tera::Tera;
 	use velcro::hash_map;
@@ -46,25 +49,29 @@ mod healthcheck {
 			Stats:            AppStats {
 				started_at:   start,
 				requests:     AtomicUsize::new(10),
-				responses:    AppStatsResponses {
+				responses:    Mutex::new(AppStatsResponses {
 					counts:   AppStatsResponseCounts {
-						total:     AtomicUsize::new(15),
+						total:     15,
 						codes:     hash_map!{
-							StatusCode::OK:                    AtomicUsize::new(5),
-							StatusCode::UNAUTHORIZED:          AtomicUsize::new(4),
-							StatusCode::NOT_FOUND:             AtomicUsize::new(3),
-							StatusCode::INTERNAL_SERVER_ERROR: AtomicUsize::new(2),
+							StatusCode::OK:                    5,
+							StatusCode::UNAUTHORIZED:          4,
+							StatusCode::NOT_FOUND:             3,
+							StatusCode::INTERNAL_SERVER_ERROR: 2,
 						},
-						untracked: AtomicUsize::new(1),
+						untracked: 1,
 					},
-				},
+					times:    Default::default(),
+				}),
 				..Default::default()
 			},
 			Secret:           secret,
 			Key:              hmac::Key::new(HMAC_SHA512, &secret),
 			Template:         Tera::default(),
 		});
-		let unpacked        = get_stats(State(state)).await.into_response().unpack().unwrap();
+		let stats_cx        = StatsContext {
+			started_at:       Instant::now(),
+		};
+		let unpacked        = get_stats(State(state), Extension(stats_cx)).await.into_response().unpack().unwrap();
 		let crafted         = UnpackedResponse {
 			status:           StatusCode::OK,
 			headers:          vec![
@@ -88,6 +95,12 @@ mod healthcheck {
 							"500 Internal Server Error": 2,
 						},
 						"untracked":                     1,
+					},
+					"times":  {
+						"current":     0,
+						"average":     0.0,
+						"maximum":     0,
+						"minimum":     0,
 					},
 				},
 			})),

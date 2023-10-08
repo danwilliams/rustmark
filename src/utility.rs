@@ -16,7 +16,7 @@ use std::{
 	fs,
 	net::IpAddr,
 	path::PathBuf,
-	sync::{Arc, atomic::AtomicUsize},
+	sync::{Arc, Mutex, atomic::AtomicUsize},
 };
 use tera::{Context, Tera};
 use url::form_urlencoded;
@@ -180,18 +180,26 @@ pub struct AppStats {
 	/// The number of requests that have been handled.
 	pub requests:   AtomicUsize,
 	
-	/// The number of responses that have been handled.
-	pub responses:  AppStatsResponses,
+	/// The number of responses that have been handled, along with the average,
+	/// maximum, and minimum response times by time period. This data is grouped
+	/// together inside a [`Mutex`] because it is important to update the count,
+	/// use that exact count to calculate the average, and then store that
+	/// average all in one atomic operation while blocking any other process
+	/// from using the data.
+	pub responses:  Mutex<AppStatsResponses>,
 }
 
 //		AppStatsResponses														
-/// Counts of response status codes.
+/// Counts and times of responses.
 #[derive(SmartDefault)]
 pub struct AppStatsResponses {
 	//		Public properties													
 	/// The counts of responses.
 	#[default(AppStatsResponseCounts::new())]
 	pub counts: AppStatsResponseCounts,
+	
+	/// The times of responses.
+	pub times:  AppStatsResponseTimes,
 }
 
 //		AppStatsResponseCounts													
@@ -200,14 +208,14 @@ pub struct AppStatsResponses {
 pub struct AppStatsResponseCounts {
 	//		Public properties													
 	/// The total number of responses that have been handled.
-	pub total:     AtomicUsize,
+	pub total:     u64,
 	
 	/// The number of responses that have been handled, by status code.
-	pub codes:     HashMap<StatusCode, AtomicUsize>,
+	pub codes:     HashMap<StatusCode, u64>,
 	
 	/// The number of untracked responses that have been handled, i.e. where the
 	/// code does not match any of the ones in this struct.
-	pub untracked: AtomicUsize,
+	pub untracked: u64,
 }
 
 impl AppStatsResponseCounts {
@@ -215,16 +223,31 @@ impl AppStatsResponseCounts {
 	/// Creates a new instance of the struct.
 	pub fn new() -> Self {
 		Self {
-			total:     AtomicUsize::new(0),
+			total:     0,
 			codes:     hash_map!{
-				StatusCode::OK:                    AtomicUsize::new(0),
-				StatusCode::UNAUTHORIZED:          AtomicUsize::new(0),
-				StatusCode::NOT_FOUND:             AtomicUsize::new(0),
-				StatusCode::INTERNAL_SERVER_ERROR: AtomicUsize::new(0),
+				StatusCode::OK:                    0,
+				StatusCode::UNAUTHORIZED:          0,
+				StatusCode::NOT_FOUND:             0,
+				StatusCode::INTERNAL_SERVER_ERROR: 0,
 			},
-			untracked: AtomicUsize::new(0),
+			untracked: 0,
 		}
 	}
+}
+
+//		AppStatsResponseTimes													
+/// Response times in microseconds.
+#[derive(SmartDefault)]
+pub struct AppStatsResponseTimes {
+	//		Public properties													
+	/// Average since the application started.
+	pub average: f64,
+	
+	/// Maximum since the application started.
+	pub maximum: u64,
+	
+	/// Minimum since the application started.
+	pub minimum: u64,
 }
 
 //		ApiDoc																	

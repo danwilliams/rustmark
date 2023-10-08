@@ -11,11 +11,13 @@ mod tests;
 use crate::{
 	ASSETS_DIR,
 	CONTENT_DIR,
+	middlewares::StatsContext,
 	utility::*,
 };
 use rustmark::{Heading, self};
 
 use axum::{
+	Extension,
 	Json,
 	body::Body,
 	extract::State,
@@ -72,17 +74,21 @@ pub struct StatsResponse {
 	/// The number of requests that have been handled.
 	pub requests:   u64,
 	
-	/// The number of responses that have been handled.
+	/// The number of responses that have been handled, along with the average,
+	/// maximum, and minimum response times by time period.
 	pub responses:  StatsResponseResponses,
 }
 
 //		StatsResponseResponses													
-/// Counts of response status codes.
+/// Counts and times of responses.
 #[derive(Serialize, ToSchema)]
 pub struct StatsResponseResponses {
 	//		Public properties													
 	/// The counts of responses.
 	pub counts: StatsResponseResponseCounts,
+	
+	/// The times of responses.
+	pub times:  StatsResponseResponseTimes,
 }
 
 //		StatsResponseResponseCounts												
@@ -100,6 +106,24 @@ pub struct StatsResponseResponseCounts {
 	/// The number of untracked responses that have been handled, i.e. where the
 	/// code does not match any of the ones in this struct.
 	pub untracked: u64,
+}
+
+//		StatsResponseResponseTimes												
+/// Response times in microseconds.
+#[derive(Serialize, ToSchema)]
+pub struct StatsResponseResponseTimes {
+	//		Public properties													
+	/// The response time of the current request.
+	pub current: u64,
+	
+	/// Average since the application started.
+	pub average: f64,
+	
+	/// Maximum since the application started.
+	pub maximum: u64,
+	
+	/// Minimum since the application started.
+	pub minimum: u64,
 }
 
 
@@ -300,13 +324,16 @@ pub async fn get_ping() {}
 ///   - `uptime`     - The amount of time the application has been running, in
 ///                    seconds.
 ///   - `requests`   - The number of requests that have been handled.
-///   - `responses`  - The number of responses that have been handled. This
-///                    should match the number of requests, but is broken down
-///                    by status code.
+///   - `responses`  - The counts and times of responses that have been handled.
+///                    The total should match the number of requests, but is
+///                    broken down by status code. The times are the average,
+///                    maximum, and minimum response times since the application
+///                    last started.
 /// 
 /// # Parameters
 /// 
-/// * `state` - The application state.
+/// * `state`    - The application state.
+/// * `stats_cx` - The statistics context.
 /// 
 #[utoipa::path(
 	get,
@@ -316,21 +343,33 @@ pub async fn get_ping() {}
 		(status = 200, description = "Application statistics", body = StatsResponse)
 	)
 )]
-pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse> {
-	Json(StatsResponse {
+pub async fn get_stats(
+	State(state):        State<Arc<AppState>>,
+	Extension(stats_cx): Extension<StatsContext>,
+) -> Json<StatsResponse> {
+	//	Lock source data
+	let lock      = state.Stats.responses.lock().expect("Failed to lock response stats");
+	let response  = Json(StatsResponse {
 		started_at: state.Stats.started_at,
 		uptime:     (Utc::now().naive_utc() - state.Stats.started_at).num_seconds() as u64,
 		requests:   state.Stats.requests.load(Ordering::Relaxed) as u64,
 		responses:  StatsResponseResponses {
 			counts: StatsResponseResponseCounts {
-				total:     state.Stats.responses.counts.total.load(Ordering::Relaxed) as u64,
-				codes:     state.Stats.responses.counts.codes.iter().map(|(k, v)|
-					(*k, v.load(Ordering::Relaxed) as u64)
-				).collect(),
-				untracked: state.Stats.responses.counts.untracked.load(Ordering::Relaxed) as u64,
+				total:       lock.counts.total,
+				codes:       lock.counts.codes.clone(),
+				untracked:   lock.counts.untracked,
+			},
+			times:  StatsResponseResponseTimes {
+				current:     stats_cx.started_at.elapsed().as_micros() as u64,
+				average:     lock.times.average,
+				maximum:     lock.times.maximum,
+				minimum:     lock.times.minimum,
 			},
 		},
-	})
+	});
+	//	Unlock source data
+	drop(lock);
+	response
 }
 
 
