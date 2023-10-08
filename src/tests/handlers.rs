@@ -6,7 +6,7 @@
 #[cfg(test)]
 mod healthcheck {
 	use super::super::*;
-	use crate::utility::{AppStats, Config};
+	use crate::utility::{AppStats, AppStatsResponses, Config};
 	use assert_json_diff::assert_json_eq;
 	use axum::http::StatusCode;
 	use chrono::Duration;
@@ -45,6 +45,14 @@ mod healthcheck {
 			Stats:            AppStats {
 				started_at:   start,
 				requests:     AtomicUsize::new(10),
+				responses:    AppStatsResponses {
+					total:                 AtomicUsize::new(15),
+					OK:                    AtomicUsize::new(5),
+					UNAUTHORIZED:          AtomicUsize::new(4),
+					NOT_FOUND:             AtomicUsize::new(3),
+					INTERNAL_SERVER_ERROR: AtomicUsize::new(2),
+					untracked:             AtomicUsize::new(1),
+				},
 				..Default::default()
 			},
 			Secret:           secret,
@@ -65,6 +73,14 @@ mod healthcheck {
 				"started_at": start,
 				"uptime":     99,
 				"requests":   10,
+				"responses":  {
+					"total":                 15,
+					"OK":                    5,
+					"UNAUTHORIZED":          4,
+					"NOT_FOUND":             3,
+					"INTERNAL_SERVER_ERROR": 2,
+					"untracked":             1,
+				},
 			})),
 		};
 		assert_json_eq!(unpacked, crafted);

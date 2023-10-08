@@ -178,6 +178,34 @@ pub struct AppStats {
 	
 	/// The number of requests that have been handled.
 	pub requests:   AtomicUsize,
+	
+	/// The number of responses that have been handled.
+	pub responses:  AppStatsResponses,
+}
+
+//		AppStatsResponses														
+/// Counts of response status codes.
+#[derive(SmartDefault)]
+pub struct AppStatsResponses {
+	//		Public properties													
+	/// The total number of responses that have been handled.
+	pub total:                 AtomicUsize,
+	
+	/// The number of 200 responses that have been handled.
+	pub OK:                    AtomicUsize,
+	
+	/// The number of 401 responses that have been handled.
+	pub UNAUTHORIZED:          AtomicUsize,
+	
+	/// The number of 404 responses that have been handled.
+	pub NOT_FOUND:             AtomicUsize,
+	
+	/// The number of 500 responses that have been handled.
+	pub INTERNAL_SERVER_ERROR: AtomicUsize,
+	
+	/// The number of untracked responses that have been handled, i.e. where the
+	/// code does not match any of the ones in this struct.
+	pub untracked:             AtomicUsize,
 }
 
 //		ApiDoc																	

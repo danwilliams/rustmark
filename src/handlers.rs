@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 //		Modules
 
 #[cfg(test)]
@@ -70,6 +72,34 @@ pub struct StatsResponse {
 	
 	/// The number of requests that have been handled.
 	pub requests:   u64,
+	
+	/// The number of responses that have been handled.
+	pub responses:  StatsResponseResponses,
+}
+
+//		StatsResponseResponses													
+/// Counts of response status codes.
+#[derive(Serialize, ToSchema)]
+pub struct StatsResponseResponses {
+	//		Public properties													
+	/// The total number of responses that have been handled.
+	pub total:                 u64,
+	
+	/// The number of 200 responses that have been handled.
+	pub OK:                    u64,
+	
+	/// The number of 404 responses that have been handled.
+	pub UNAUTHORIZED:          u64,
+	
+	/// The number of 404 responses that have been handled.
+	pub NOT_FOUND:             u64,
+	
+	/// The number of 500 responses that have been handled.
+	pub INTERNAL_SERVER_ERROR: u64,
+	
+	/// The number of untracked responses that have been handled, i.e. where the
+	/// code does not match any of the ones in this struct.
+	pub untracked:             u64,
 }
 
 
@@ -270,6 +300,9 @@ pub async fn get_ping() {}
 ///   - `uptime`     - The amount of time the application has been running, in
 ///                    seconds.
 ///   - `requests`   - The number of requests that have been handled.
+///   - `responses`  - The number of responses that have been handled. This
+///                    should match the number of requests, but is broken down
+///                    by status code.
 /// 
 /// # Parameters
 /// 
@@ -288,6 +321,14 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 		started_at: state.Stats.started_at,
 		uptime:     (Utc::now().naive_utc() - state.Stats.started_at).num_seconds() as u64,
 		requests:   state.Stats.requests.load(Ordering::Relaxed) as u64,
+		responses:  StatsResponseResponses {
+			total:                 state.Stats.responses.total.load(Ordering::Relaxed) as u64,
+			OK:                    state.Stats.responses.OK.load(Ordering::Relaxed) as u64,
+			UNAUTHORIZED:          state.Stats.responses.UNAUTHORIZED.load(Ordering::Relaxed) as u64,
+			NOT_FOUND:             state.Stats.responses.NOT_FOUND.load(Ordering::Relaxed) as u64,
+			INTERNAL_SERVER_ERROR: state.Stats.responses.INTERNAL_SERVER_ERROR.load(Ordering::Relaxed) as u64,
+			untracked:             state.Stats.responses.untracked.load(Ordering::Relaxed) as u64,
+		},
 	})
 }
 
