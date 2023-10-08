@@ -1,5 +1,3 @@
-#![allow(non_snake_case)]
-
 //		Modules
 
 #[cfg(test)]
@@ -29,6 +27,7 @@ use mime_guess::{self};
 use serde::Serialize;
 use serde_json::{self};
 use std::{
+	collections::HashMap,
 	fs,
 	sync::{Arc, atomic::Ordering},
 };
@@ -82,24 +81,25 @@ pub struct StatsResponse {
 #[derive(Serialize, ToSchema)]
 pub struct StatsResponseResponses {
 	//		Public properties													
+	/// The counts of responses.
+	pub counts: StatsResponseResponseCounts,
+}
+
+//		StatsResponseResponseCounts												
+/// Counts of response status codes.
+#[derive(Serialize, ToSchema)]
+pub struct StatsResponseResponseCounts {
+	//		Public properties													
 	/// The total number of responses that have been handled.
-	pub total:                 u64,
+	pub total:     u64,
 	
-	/// The number of 200 responses that have been handled.
-	pub OK:                    u64,
-	
-	/// The number of 404 responses that have been handled.
-	pub UNAUTHORIZED:          u64,
-	
-	/// The number of 404 responses that have been handled.
-	pub NOT_FOUND:             u64,
-	
-	/// The number of 500 responses that have been handled.
-	pub INTERNAL_SERVER_ERROR: u64,
+	/// The number of responses that have been handled, by status code.
+	#[serde(serialize_with = "serialize_status_codes")]
+	pub codes:     HashMap<StatusCode, u64>,
 	
 	/// The number of untracked responses that have been handled, i.e. where the
 	/// code does not match any of the ones in this struct.
-	pub untracked:             u64,
+	pub untracked: u64,
 }
 
 
@@ -322,12 +322,13 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 		uptime:     (Utc::now().naive_utc() - state.Stats.started_at).num_seconds() as u64,
 		requests:   state.Stats.requests.load(Ordering::Relaxed) as u64,
 		responses:  StatsResponseResponses {
-			total:                 state.Stats.responses.total.load(Ordering::Relaxed) as u64,
-			OK:                    state.Stats.responses.OK.load(Ordering::Relaxed) as u64,
-			UNAUTHORIZED:          state.Stats.responses.UNAUTHORIZED.load(Ordering::Relaxed) as u64,
-			NOT_FOUND:             state.Stats.responses.NOT_FOUND.load(Ordering::Relaxed) as u64,
-			INTERNAL_SERVER_ERROR: state.Stats.responses.INTERNAL_SERVER_ERROR.load(Ordering::Relaxed) as u64,
-			untracked:             state.Stats.responses.untracked.load(Ordering::Relaxed) as u64,
+			counts: StatsResponseResponseCounts {
+				total:     state.Stats.responses.counts.total.load(Ordering::Relaxed) as u64,
+				codes:     state.Stats.responses.counts.codes.iter().map(|(k, v)|
+					(*k, v.load(Ordering::Relaxed) as u64)
+				).collect(),
+				untracked: state.Stats.responses.counts.untracked.load(Ordering::Relaxed) as u64,
+			},
 		},
 	})
 }

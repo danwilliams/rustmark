@@ -4,15 +4,15 @@
 
 use crate::handlers;
 use axum::{
-	http::Uri,
+	http::{StatusCode, Uri},
 	response::Html,
 };
 use chrono::NaiveDateTime;
 use ring::hmac;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use smart_default::SmartDefault;
 use std::{
-	collections::HashMap,
+	collections::{BTreeMap, HashMap},
 	fs,
 	net::IpAddr,
 	path::PathBuf,
@@ -21,6 +21,7 @@ use std::{
 use tera::{Context, Tera};
 use url::form_urlencoded;
 use utoipa::OpenApi;
+use velcro::hash_map;
 
 
 
@@ -188,24 +189,42 @@ pub struct AppStats {
 #[derive(SmartDefault)]
 pub struct AppStatsResponses {
 	//		Public properties													
+	/// The counts of responses.
+	#[default(AppStatsResponseCounts::new())]
+	pub counts: AppStatsResponseCounts,
+}
+
+//		AppStatsResponseCounts													
+/// Counts of response status codes.
+#[derive(SmartDefault)]
+pub struct AppStatsResponseCounts {
+	//		Public properties													
 	/// The total number of responses that have been handled.
-	pub total:                 AtomicUsize,
+	pub total:     AtomicUsize,
 	
-	/// The number of 200 responses that have been handled.
-	pub OK:                    AtomicUsize,
-	
-	/// The number of 401 responses that have been handled.
-	pub UNAUTHORIZED:          AtomicUsize,
-	
-	/// The number of 404 responses that have been handled.
-	pub NOT_FOUND:             AtomicUsize,
-	
-	/// The number of 500 responses that have been handled.
-	pub INTERNAL_SERVER_ERROR: AtomicUsize,
+	/// The number of responses that have been handled, by status code.
+	pub codes:     HashMap<StatusCode, AtomicUsize>,
 	
 	/// The number of untracked responses that have been handled, i.e. where the
 	/// code does not match any of the ones in this struct.
-	pub untracked:             AtomicUsize,
+	pub untracked: AtomicUsize,
+}
+
+impl AppStatsResponseCounts {
+	//		new																	
+	/// Creates a new instance of the struct.
+	pub fn new() -> Self {
+		Self {
+			total:     AtomicUsize::new(0),
+			codes:     hash_map!{
+				StatusCode::OK:                    AtomicUsize::new(0),
+				StatusCode::UNAUTHORIZED:          AtomicUsize::new(0),
+				StatusCode::NOT_FOUND:             AtomicUsize::new(0),
+				StatusCode::INTERNAL_SERVER_ERROR: AtomicUsize::new(0),
+			},
+			untracked: AtomicUsize::new(0),
+		}
+	}
 }
 
 //		ApiDoc																	
@@ -303,6 +322,29 @@ pub fn render(
 		};
 	};
 	Html(tera.render(template, &context).unwrap())
+}
+
+//		serialize_status_codes													
+/// Returns a list of serialised status code entries and their values.
+/// 
+/// This function is used by [`serde`] to serialise a list of status codes and
+/// their associated values. It returns the list sorted by status code.
+/// 
+/// # Parameters
+/// 
+/// * `status_codes` - The status codes to serialise, as keys, against values.
+/// * `serializer`   - The serialiser to use.
+/// 
+pub fn serialize_status_codes<S>(status_codes: &HashMap<StatusCode, u64>, serializer: S) -> Result<S::Ok, S::Error>
+where
+	S: Serializer,
+{
+	let codes: BTreeMap<String, u64> = status_codes
+		.iter()
+		.map(|(key, value)| (key.to_string(), *value))
+		.collect()
+	;
+	codes.serialize(serializer)
 }
 
 

@@ -6,7 +6,7 @@
 #[cfg(test)]
 mod healthcheck {
 	use super::super::*;
-	use crate::utility::{AppStats, AppStatsResponses, Config};
+	use crate::utility::{AppStats, AppStatsResponses, AppStatsResponseCounts, Config};
 	use assert_json_diff::assert_json_eq;
 	use axum::http::StatusCode;
 	use chrono::Duration;
@@ -20,6 +20,7 @@ mod healthcheck {
 	use std::sync::atomic::AtomicUsize;
 	use serde_json::json;
 	use tera::Tera;
+	use velcro::hash_map;
 	
 	//		ping																
 	#[tokio::test]
@@ -46,12 +47,16 @@ mod healthcheck {
 				started_at:   start,
 				requests:     AtomicUsize::new(10),
 				responses:    AppStatsResponses {
-					total:                 AtomicUsize::new(15),
-					OK:                    AtomicUsize::new(5),
-					UNAUTHORIZED:          AtomicUsize::new(4),
-					NOT_FOUND:             AtomicUsize::new(3),
-					INTERNAL_SERVER_ERROR: AtomicUsize::new(2),
-					untracked:             AtomicUsize::new(1),
+					counts:   AppStatsResponseCounts {
+						total:     AtomicUsize::new(15),
+						codes:     hash_map!{
+							StatusCode::OK:                    AtomicUsize::new(5),
+							StatusCode::UNAUTHORIZED:          AtomicUsize::new(4),
+							StatusCode::NOT_FOUND:             AtomicUsize::new(3),
+							StatusCode::INTERNAL_SERVER_ERROR: AtomicUsize::new(2),
+						},
+						untracked: AtomicUsize::new(1),
+					},
 				},
 				..Default::default()
 			},
@@ -74,12 +79,16 @@ mod healthcheck {
 				"uptime":     99,
 				"requests":   10,
 				"responses":  {
-					"total":                 15,
-					"OK":                    5,
-					"UNAUTHORIZED":          4,
-					"NOT_FOUND":             3,
-					"INTERNAL_SERVER_ERROR": 2,
-					"untracked":             1,
+					"counts": {
+						"total":                         15,
+						"codes":                         {
+							"200 OK":                    5,
+							"401 Unauthorized":          4,
+							"404 Not Found":             3,
+							"500 Internal Server Error": 2,
+						},
+						"untracked":                     1,
+					},
 				},
 			})),
 		};
