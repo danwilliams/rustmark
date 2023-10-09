@@ -17,6 +17,7 @@ use std::{
 	net::IpAddr,
 	path::PathBuf,
 	sync::{Arc, Mutex, atomic::AtomicUsize},
+	time::Instant,
 };
 use tera::{Context, Tera};
 use url::form_urlencoded;
@@ -240,14 +241,37 @@ impl AppStatsResponseCounts {
 #[derive(SmartDefault)]
 pub struct AppStatsResponseTimes {
 	//		Public properties													
-	/// Average since the application started.
-	pub average: f64,
+	/// The average, maximum, and minimum response times for the past minute.
+	pub minute: AppStatsForPeriod,
 	
-	/// Maximum since the application started.
-	pub maximum: u64,
+	/// The average, maximum, and minimum response times for the past hour.
+	pub hour:   AppStatsForPeriod,
 	
-	/// Minimum since the application started.
-	pub minimum: u64,
+	/// The average, maximum, and minimum response times for the past day.
+	pub day:    AppStatsForPeriod,
+	
+	/// The average, maximum, and minimum response times since the application
+	/// last started.
+	pub all:    AppStatsForPeriod,
+}
+
+//		AppStatsForPeriod														
+/// Average, maximum, and minimum values for a period of time.
+#[derive(SmartDefault)]
+pub struct AppStatsForPeriod {
+	//		Public properties													
+	/// The date and time the period started.
+	#[default(Instant::now())]
+	pub started_at: Instant,
+	
+	/// Average response time in microseconds.
+	pub average:    f64,
+	
+	/// Maximum response time in microseconds.
+	pub maximum:    u64,
+	
+	/// Minimum response time in microseconds.
+	pub minimum:    u64,
 }
 
 //		ApiDoc																	

@@ -116,13 +116,32 @@ pub struct StatsResponseResponseTimes {
 	/// The response time of the current request.
 	pub current: u64,
 	
-	/// Average since the application started.
+	/// The average, maximum, and minimum response times for the past minute.
+	pub minute:  StatsResponseForPeriod,
+	
+	/// The average, maximum, and minimum response times for the past hour.
+	pub hour:    StatsResponseForPeriod,
+	
+	/// The average, maximum, and minimum response times for the past day.
+	pub day:     StatsResponseForPeriod,
+	
+	/// The average, maximum, and minimum response times since the application
+	/// last started.
+	pub all:     StatsResponseForPeriod,
+}
+
+//		StatsResponseForPeriod													
+/// Average, maximum, and minimum values for a period of time.
+#[derive(Serialize, ToSchema)]
+pub struct StatsResponseForPeriod {
+	//		Public properties													
+	/// Average response time in microseconds.
 	pub average: f64,
 	
-	/// Maximum since the application started.
+	/// Maximum response time in microseconds.
 	pub maximum: u64,
 	
-	/// Minimum since the application started.
+	/// Minimum response time in microseconds.
 	pub minimum: u64,
 }
 
@@ -327,8 +346,8 @@ pub async fn get_ping() {}
 ///   - `responses`  - The counts and times of responses that have been handled.
 ///                    The total should match the number of requests, but is
 ///                    broken down by status code. The times are the average,
-///                    maximum, and minimum response times since the application
-///                    last started.
+///                    maximum, and minimum response times for the past minute,
+///                    hour, day, and since the application last started.
 /// 
 /// # Parameters
 /// 
@@ -361,9 +380,26 @@ pub async fn get_stats(
 			},
 			times:  StatsResponseResponseTimes {
 				current:     stats_cx.started_at.elapsed().as_micros() as u64,
-				average:     lock.times.average,
-				maximum:     lock.times.maximum,
-				minimum:     lock.times.minimum,
+				minute:      StatsResponseForPeriod {
+					average: lock.times.minute.average,
+					maximum: lock.times.minute.maximum,
+					minimum: lock.times.minute.minimum,
+				},
+				hour:        StatsResponseForPeriod {
+					average: lock.times.hour.average,
+					maximum: lock.times.hour.maximum,
+					minimum: lock.times.hour.minimum,
+				},
+				day:         StatsResponseForPeriod {
+					average: lock.times.day.average,
+					maximum: lock.times.day.maximum,
+					minimum: lock.times.day.minimum,
+				},
+				all:         StatsResponseForPeriod {
+					average: lock.times.all.average,
+					maximum: lock.times.all.maximum,
+					minimum: lock.times.all.minimum,
+				},
 			},
 		},
 	});

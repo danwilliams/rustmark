@@ -98,9 +98,26 @@ mod healthcheck {
 					},
 					"times":  {
 						"current":     0,
-						"average":     0.0,
-						"maximum":     0,
-						"minimum":     0,
+						"minute":      {
+							"average": 0.0,
+							"maximum": 0,
+							"minimum": 0,
+						},
+						"hour":        {
+							"average": 0.0,
+							"maximum": 0,
+							"minimum": 0,
+						},
+						"day":         {
+							"average": 0.0,
+							"maximum": 0,
+							"minimum": 0,
+						},
+						"all":         {
+							"average": 0.0,
+							"maximum": 0,
+							"minimum": 0,
+						},
 					},
 				},
 			})),

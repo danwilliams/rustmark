@@ -102,14 +102,14 @@ pub async fn stats_layer<B>(
 	lock.counts.total         += 1;
 	
 	//	Update response time stats
-	let elapsed                = stats_cx.started_at.elapsed().as_micros() as u64;
+	let time_taken             = stats_cx.started_at.elapsed().as_micros() as u64;
 	let alpha                  = 1.0 / lock.counts.total as f64;
-	lock.times.average         = lock.times.average * (1.0 - alpha) + elapsed as f64 * alpha;
-	if elapsed > lock.times.maximum {
-		lock.times.maximum     = elapsed;
+	lock.times.all.average     = lock.times.all.average * (1.0 - alpha) + time_taken as f64 * alpha;
+	if time_taken > lock.times.all.maximum {
+		lock.times.all.maximum = time_taken;
 	}
-	if elapsed < lock.times.minimum {
-		lock.times.minimum     = elapsed;
+	if time_taken < lock.times.all.minimum {
+		lock.times.all.minimum = time_taken;
 	}
 	
 	//	Unlock response data
