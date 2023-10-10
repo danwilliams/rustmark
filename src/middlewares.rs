@@ -9,10 +9,8 @@ use axum::{
 	middleware::Next,
 	response::Response,
 };
-use std::{
-	sync::{Arc, atomic::Ordering},
-	time::Instant,
-};
+use chrono::{NaiveDateTime, Utc};
+use std::sync::{Arc, atomic::Ordering};
 
 
 
@@ -27,7 +25,7 @@ use std::{
 pub struct StatsContext {
 	//		Public properties													
 	/// The date and time the request processing started.
-	pub started_at: Instant,
+	pub started_at: NaiveDateTime,
 }
 
 #[async_trait]
@@ -79,7 +77,7 @@ pub async fn stats_layer<B>(
 	appstate.Stats.requests.fetch_add(1, Ordering::Relaxed);
 	
 	//	Note start time
-	let started_at             = Instant::now();
+	let started_at             = Utc::now().naive_utc();
 	
 	//	Create statistics context
 	let stats_cx               = StatsContext {
@@ -105,14 +103,16 @@ pub async fn stats_layer<B>(
 	lock.counts.total         += 1;
 	
 	//	Update response time stats
-	let time_taken             = stats_cx.started_at.elapsed().as_micros() as u64;
+	let finished_at            = Utc::now().naive_utc();
+	let time_taken             = (finished_at - stats_cx.started_at).num_microseconds().unwrap() as u64;
 	let alpha                  = 1.0 / lock.counts.total as f64;
-	lock.times.all.average     = lock.times.all.average * (1.0 - alpha) + time_taken as f64 * alpha;
-	if time_taken > lock.times.all.maximum {
-		lock.times.all.maximum = time_taken;
+	lock.times.average         = lock.times.average * (1.0 - alpha) + time_taken as f64 * alpha;
+	lock.times.count          += 1;
+	if time_taken < lock.times.minimum || lock.times.count == 1 {
+		lock.times.minimum     = time_taken;
 	}
-	if time_taken < lock.times.all.minimum {
-		lock.times.all.minimum = time_taken;
+	if time_taken > lock.times.maximum {
+		lock.times.maximum     = time_taken;
 	}
 	
 	//	Unlock response data

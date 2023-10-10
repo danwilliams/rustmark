@@ -19,10 +19,7 @@ mod healthcheck {
 		http::{ResponseExt, UnpackedResponse, UnpackedResponseBody, UnpackedResponseHeader},
 		sugar::s,
 	};
-	use std::{
-		sync::atomic::AtomicUsize,
-		time::Instant,
-	};
+	use std::sync::atomic::AtomicUsize;
 	use serde_json::json;
 	use tera::Tera;
 	use velcro::hash_map;
@@ -73,7 +70,7 @@ mod healthcheck {
 			Template:         Tera::default(),
 		});
 		let stats_cx        = StatsContext {
-			started_at:       Instant::now(),
+			started_at:       Utc::now().naive_utc(),
 		};
 		let unpacked        = get_stats(State(state), Extension(stats_cx)).await.into_response().unpack().unwrap();
 		let crafted         = UnpackedResponse {
@@ -106,21 +103,25 @@ mod healthcheck {
 							"average": 0.0,
 							"maximum": 0,
 							"minimum": 0,
+							"count":   0,
 						},
 						"hour":        {
 							"average": 0.0,
 							"maximum": 0,
 							"minimum": 0,
+							"count":   0,
 						},
 						"day":         {
 							"average": 0.0,
 							"maximum": 0,
 							"minimum": 0,
+							"count":   0,
 						},
 						"all":         {
 							"average": 0.0,
 							"maximum": 0,
 							"minimum": 0,
+							"count":   0,
 						},
 					},
 				},

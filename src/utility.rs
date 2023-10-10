@@ -7,23 +7,21 @@ use axum::{
 	http::{StatusCode, Uri},
 	response::Html,
 };
-use chrono::NaiveDateTime;
+use chrono::{Duration, NaiveDateTime, Timelike, Utc};
 use flume::{Receiver, Sender};
-use parking_lot::Mutex;
+use parking_lot::{Mutex, RwLock};
 use ring::hmac;
 use serde::{Deserialize, Serialize, Serializer};
 use smart_default::SmartDefault;
 use std::{
-	collections::{BTreeMap, HashMap},
+	collections::{BTreeMap, HashMap, VecDeque},
 	fs,
 	net::IpAddr,
 	path::PathBuf,
 	sync::{Arc, atomic::AtomicUsize},
 	thread::spawn,
-	time::Instant,
 };
 use tera::{Context, Tera};
-use tracing::info;
 use url::form_urlencoded;
 use utoipa::OpenApi;
 use velcro::hash_map;
@@ -204,6 +202,13 @@ pub struct AppStats {
 	/// contended situations, but the main advantage is that it is infallible,
 	/// and it does not have mutex poisoning.
 	pub responses:  Mutex<AppStatsResponses>,
+	
+	/// A circular buffer of response time stats per second for the past day.
+	/// The buffer is stored inside a [`RwLock`] because it is only ever written
+	/// to a maximum of once per second. A [`parking_lot::RwLock`] is used
+	/// instead of a [`std::sync::RwLock`] because it is theoretically faster in
+	/// highly contended situations.
+	pub buffer:     RwLock<VecDeque<AppStatsForPeriod>>,
 }
 
 //		AppStatsResponses														
@@ -215,8 +220,9 @@ pub struct AppStatsResponses {
 	#[default(AppStatsResponseCounts::new())]
 	pub counts: AppStatsResponseCounts,
 	
-	/// The times of responses.
-	pub times:  AppStatsResponseTimes,
+	/// The average, maximum, and minimum response times since the application
+	/// last started.
+	pub times:  AppStatsForPeriod,
 }
 
 //		AppStatsResponseCounts													
@@ -252,33 +258,14 @@ impl AppStatsResponseCounts {
 	}
 }
 
-//		AppStatsResponseTimes													
-/// Response times in microseconds.
-#[derive(SmartDefault)]
-pub struct AppStatsResponseTimes {
-	//		Public properties													
-	/// The average, maximum, and minimum response times for the past minute.
-	pub minute: AppStatsForPeriod,
-	
-	/// The average, maximum, and minimum response times for the past hour.
-	pub hour:   AppStatsForPeriod,
-	
-	/// The average, maximum, and minimum response times for the past day.
-	pub day:    AppStatsForPeriod,
-	
-	/// The average, maximum, and minimum response times since the application
-	/// last started.
-	pub all:    AppStatsForPeriod,
-}
-
 //		AppStatsForPeriod														
 /// Average, maximum, and minimum values for a period of time.
 #[derive(SmartDefault)]
 pub struct AppStatsForPeriod {
 	//		Public properties													
 	/// The date and time the period started.
-	#[default(Instant::now())]
-	pub started_at: Instant,
+	#[default(Utc::now().naive_utc())]
+	pub started_at: NaiveDateTime,
 	
 	/// Average response time in microseconds.
 	pub average:    f64,
@@ -288,6 +275,35 @@ pub struct AppStatsForPeriod {
 	
 	/// Minimum response time in microseconds.
 	pub minimum:    u64,
+	
+	/// The total number of responses that have been handled.
+	pub count:      u64,
+	
+	/// Sum of response times in milliseconds.
+	pub sum:        u64,
+}
+
+impl AppStatsForPeriod {
+	//		update																
+	/// Updates the stats with new data.
+	/// 
+	/// # Parameters
+	/// 
+	/// * `stats` - The stats to update with.
+	/// 
+	pub fn update(&mut self, stats: &AppStatsForPeriod) {
+		if (stats.minimum < self.minimum && stats.count > 0) || self.count == 0 {
+			self.minimum = stats.minimum;
+		}
+		if stats.maximum > self.maximum {
+			self.maximum = stats.maximum;
+		}
+		self.count      += stats.count;
+		self.sum        += stats.sum;
+		if self.count > 0 {
+			self.average = self.sum as f64 / self.count as f64;
+		}
+	}
 }
 
 //		ResponseTime															
@@ -299,8 +315,8 @@ pub struct AppStatsForPeriod {
 pub struct ResponseTime {
 	//		Public properties													
 	/// The date and time the request started.
-	#[default(Instant::now())]
-	pub started_at: Instant,
+	#[default(Utc::now().naive_utc())]
+	pub started_at: NaiveDateTime,
 	
 	/// The time the response took to be generated.
 	pub time_taken: u64,
@@ -441,14 +457,28 @@ where
 /// # Parameters
 /// 
 /// * `receiver` - The receiving end of the queue.
+/// * `appstate` - The application state.
 /// 
-pub fn start_stats_processor(receiver: Receiver<ResponseTime>) {
+pub fn start_stats_processor(receiver: Receiver<ResponseTime>, appstate: Arc<AppState>) {
+	//	Fixed time period of the current second
+	let mut current_second = Utc::now().naive_utc().with_nanosecond(0).unwrap();
+	//	Cumulative stats for the current second
+	let mut stats          = AppStatsForPeriod::default();
+	//	Initialise circular buffer
+	{
+		let mut buffer     = appstate.Stats.buffer.write();
+		buffer.reserve(86_400);  //  One day: 60 * 60 * 24
+	}
+	
 	//	Queue processing loop
 	spawn(move || loop {
 		//	Wait for message - this is a blocking call
 		match receiver.recv() {
 			Ok(response_time) => {
-				info!("Response time: {}µs", response_time.time_taken);
+				//	Process response time
+				(stats, current_second) = stats_processor(
+					Arc::clone(&appstate), response_time, stats, current_second
+				);
 			},
 			Err(_)            => {
 				eprintln!("Channel has been disconnected, exiting thread.");
@@ -456,6 +486,65 @@ pub fn start_stats_processor(receiver: Receiver<ResponseTime>) {
 			},
 		}
 	});
+}
+
+//		stats_processor															
+/// Processes a single response time.
+/// 
+/// This function processes a single response time, updating the statistics
+/// accordingly.
+/// 
+/// # Parameters
+/// 
+/// * `appstate`       - The application state.
+/// * `response_time`  - The response time to process, received from the
+///                      statistics queue in [`AppState.Queue`].
+/// * `stats`          - The cumulative stats for the current second.
+/// * `current_second` - The current second.
+/// 
+fn stats_processor(
+	appstate:           Arc<AppState>,
+	response_time:      ResponseTime,
+	mut stats:          AppStatsForPeriod,
+	mut current_second: NaiveDateTime
+) -> (AppStatsForPeriod, NaiveDateTime) {
+	//		Check time period													
+	let new_second     = response_time.started_at.with_nanosecond(0).unwrap();
+	
+	//	Check to see if we've moved into a new time period. We want to increment
+	//	the request count and total response time until it "ticks" over into
+	//	another second. At this point it will calculate an average and add this
+	//	data (average, min, max) to a fixed-length circular buffer of seconds.
+	//	This way, the last period's data can be calculated by looking through
+	//	the circular buffer of seconds.
+	if new_second > current_second {
+		let elapsed    = (new_second - current_second).num_seconds();
+		let mut buffer = appstate.Stats.buffer.write();
+		for i in 0..elapsed {
+			if buffer.len() == 86_400 {
+				buffer.pop_back();
+			}
+			if stats.count > 0 {
+				stats.average = stats.sum as f64 / stats.count as f64
+			}
+			stats.started_at  = current_second + Duration::seconds(i);
+			buffer.push_front(stats);
+			stats      = AppStatsForPeriod::default();
+		}
+		current_second = new_second;
+	}
+	
+	//		Increment cumulative stats											
+	if response_time.time_taken < stats.minimum || stats.count == 0 {
+		stats.minimum = response_time.time_taken;
+	}
+	if response_time.time_taken > stats.maximum {
+		stats.maximum = response_time.time_taken;
+	}
+	stats.count += 1;
+	stats.sum   += response_time.time_taken;
+	
+	(stats, current_second)
 }
 
 

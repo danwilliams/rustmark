@@ -87,7 +87,7 @@ pub struct StatsResponseResponses {
 	/// The counts of responses.
 	pub counts: StatsResponseResponseCounts,
 	
-	/// The times of responses.
+	/// The average, maximum, and minimum response times by time period.
 	pub times:  StatsResponseResponseTimes,
 }
 
@@ -143,6 +143,9 @@ pub struct StatsResponseForPeriod {
 	
 	/// Minimum response time in microseconds.
 	pub minimum: u64,
+	
+	/// The total number of responses that have been handled.
+	pub count:   u64,
 }
 
 
@@ -366,11 +369,34 @@ pub async fn get_stats(
 	State(state):        State<Arc<AppState>>,
 	Extension(stats_cx): Extension<StatsContext>,
 ) -> Json<StatsResponse> {
+	//		Process stats														
+	//	Create pots for each period
+	let mut stats_minute = AppStatsForPeriod { ..Default::default() };
+	let mut stats_hour   = AppStatsForPeriod { ..Default::default() };
+	let mut stats_day    = AppStatsForPeriod { ..Default::default() };
+	
+	//	Loop through the circular buffer and calculate the stats
+	let buffer           = state.Stats.buffer.read();
+	for (i, stats) in buffer.iter().enumerate() {
+		//	Last minute
+		if i < 60 {
+			stats_minute.update(stats);
+		}
+		//	Last hour
+		if i < 360 {
+			stats_hour.update(stats);
+		}
+		//	Last day
+		stats_day.update(stats);
+	}
+	
+	//		Build response data													
 	//	Lock source data
 	let lock      = state.Stats.responses.lock();
+	let now       = Utc::now().naive_utc();
 	let response  = Json(StatsResponse {
 		started_at: state.Stats.started_at,
-		uptime:     (Utc::now().naive_utc() - state.Stats.started_at).num_seconds() as u64,
+		uptime:     (now - state.Stats.started_at).num_seconds() as u64,
 		requests:   state.Stats.requests.load(Ordering::Relaxed) as u64,
 		responses:  StatsResponseResponses {
 			counts: StatsResponseResponseCounts {
@@ -379,32 +405,38 @@ pub async fn get_stats(
 				untracked:   lock.counts.untracked,
 			},
 			times:  StatsResponseResponseTimes {
-				current:     stats_cx.started_at.elapsed().as_micros() as u64,
+				current:     (now - stats_cx.started_at).num_microseconds().unwrap() as u64,
 				minute:      StatsResponseForPeriod {
-					average: lock.times.minute.average,
-					maximum: lock.times.minute.maximum,
-					minimum: lock.times.minute.minimum,
+					average: stats_minute.average,
+					maximum: stats_minute.maximum,
+					minimum: stats_minute.minimum,
+					count:   stats_minute.count,
 				},
 				hour:        StatsResponseForPeriod {
-					average: lock.times.hour.average,
-					maximum: lock.times.hour.maximum,
-					minimum: lock.times.hour.minimum,
+					average: stats_hour.average,
+					maximum: stats_hour.maximum,
+					minimum: stats_hour.minimum,
+					count:   stats_hour.count,
 				},
 				day:         StatsResponseForPeriod {
-					average: lock.times.day.average,
-					maximum: lock.times.day.maximum,
-					minimum: lock.times.day.minimum,
+					average: stats_day.average,
+					maximum: stats_day.maximum,
+					minimum: stats_day.minimum,
+					count:   stats_day.count,
 				},
 				all:         StatsResponseForPeriod {
-					average: lock.times.all.average,
-					maximum: lock.times.all.maximum,
-					minimum: lock.times.all.minimum,
+					average: lock.times.average,
+					maximum: lock.times.maximum,
+					minimum: lock.times.minimum,
+					count:   lock.times.count,
 				},
 			},
 		},
 	});
 	//	Unlock source data
 	drop(lock);
+	
+	//		Response															
 	response
 }
 

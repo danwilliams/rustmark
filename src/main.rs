@@ -121,7 +121,7 @@ async fn main() {
 		Key:            hmac::Key::new(HMAC_SHA512, &secret),
 		Template:       tera,
 	});
-	start_stats_processor(rec);
+	start_stats_processor(rec, Arc::clone(&shared_state));
 	//	Protected routes
 	let app           = Router::new()
 		.route("/",      get(get_index))
