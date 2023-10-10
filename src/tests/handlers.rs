@@ -11,6 +11,7 @@ mod healthcheck {
 	use axum::http::StatusCode;
 	use chrono::Duration;
 	use figment::{Figment, providers::Serialized};
+	use flume::{self};
 	use parking_lot::Mutex;
 	use rand::Rng;
 	use ring::hmac::{HMAC_SHA512, self};
@@ -44,6 +45,7 @@ mod healthcheck {
 		//	There is a very small possibility that this test will fail if the
 		//	test is run at the exact moment that the date changes.
 		let start           = Utc::now().naive_utc() - Duration::seconds(99);
+		let (sender, _)     = flume::unbounded();
 		let secret          = rand::thread_rng().gen::<[u8; 64]>();
 		let state           = Arc::new(AppState {
 			Config:           Figment::from(Serialized::defaults(Config::default())).extract().unwrap(),
@@ -65,6 +67,7 @@ mod healthcheck {
 				}),
 				..Default::default()
 			},
+			Queue:            sender,
 			Secret:           secret,
 			Key:              hmac::Key::new(HMAC_SHA512, &secret),
 			Template:         Tera::default(),

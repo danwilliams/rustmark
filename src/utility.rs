@@ -8,6 +8,7 @@ use axum::{
 	response::Html,
 };
 use chrono::NaiveDateTime;
+use flume::{Receiver, Sender};
 use parking_lot::Mutex;
 use ring::hmac;
 use serde::{Deserialize, Serialize, Serializer};
@@ -18,9 +19,11 @@ use std::{
 	net::IpAddr,
 	path::PathBuf,
 	sync::{Arc, atomic::AtomicUsize},
+	thread::spawn,
 	time::Instant,
 };
 use tera::{Context, Tera};
+use tracing::info;
 use url::form_urlencoded;
 use utoipa::OpenApi;
 use velcro::hash_map;
@@ -161,6 +164,15 @@ pub struct AppState {
 	/// The application statistics.
 	pub Stats:    AppStats,
 	
+	/// The statistics queue that response times are added to. This is the
+	/// sender side only. A queue is used so that each request-handling thread's
+	/// stats middleware can send its metrics into the queue instead of updating
+	/// a central, locked data structure. This avoids the need for locking and
+	/// incineration routines, as the stats-handling thread can constantly
+	/// process the queue and there will theoretically never be a large build-up
+	/// of data in memory that has to be dealt with all at once.
+	pub Queue:    Sender<ResponseTime>,
+	
 	/// The application secret.
 	pub Secret:   [u8; 64],
 	
@@ -276,6 +288,22 @@ pub struct AppStatsForPeriod {
 	
 	/// Minimum response time in microseconds.
 	pub minimum:    u64,
+}
+
+//		ResponseTime															
+/// Metrics for a single response.
+/// 
+/// This is used by the statistics queue in [`AppState.Queue`].
+/// 
+#[derive(SmartDefault)]
+pub struct ResponseTime {
+	//		Public properties													
+	/// The date and time the request started.
+	#[default(Instant::now())]
+	pub started_at: Instant,
+	
+	/// The time the response took to be generated.
+	pub time_taken: u64,
 }
 
 //		ApiDoc																	
@@ -396,6 +424,38 @@ where
 		.collect()
 	;
 	codes.serialize(serializer)
+}
+
+//		start_stats_processor													
+/// Starts the statistics processor.
+/// 
+/// This function starts a thread that will process the statistics queue in
+/// [`AppState.Queue`]. It will run until the channel is disconnected.
+/// 
+/// The processing of the statistics is done in a separate thread so that the
+/// request-handling threads can continue to handle requests without being
+/// blocked by the statistics processing. This way, none of them are ever
+/// affected more than others. The stats-handling thread blocks on the queue, so
+/// it will only process a response time when one is available.
+/// 
+/// # Parameters
+/// 
+/// * `receiver` - The receiving end of the queue.
+/// 
+pub fn start_stats_processor(receiver: Receiver<ResponseTime>) {
+	//	Queue processing loop
+	spawn(move || loop {
+		//	Wait for message - this is a blocking call
+		match receiver.recv() {
+			Ok(response_time) => {
+				info!("Response time: {}µs", response_time.time_taken);
+			},
+			Err(_)            => {
+				eprintln!("Channel has been disconnected, exiting thread.");
+				break;
+			},
+		}
+	});
 }
 
 

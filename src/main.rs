@@ -31,6 +31,7 @@ use figment::{
 	Figment,
 	providers::{Env, Format, Serialized, Toml},
 };
+use flume::{self};
 use include_dir::{Dir, include_dir};
 use rand::Rng;
 use ring::hmac::{HMAC_SHA512, self};
@@ -106,6 +107,7 @@ async fn main() {
 	let mut tera      = Tera::default();
 	tera.add_raw_templates(templates).expect("Error parsing templates");
 	tera.autoescape_on(vec![".tera.html", ".html"]);
+	let (sender, rec) = flume::unbounded();
 	let secret        = rand::thread_rng().gen::<[u8; 64]>();
 	let session_store = SessionMemoryStore::new();
 	let shared_state  = Arc::new(AppState {
@@ -114,10 +116,12 @@ async fn main() {
 			started_at: Utc::now().naive_utc(),
 			..Default::default()
 		},
+		Queue:          sender,
 		Secret:         secret,
 		Key:            hmac::Key::new(HMAC_SHA512, &secret),
 		Template:       tera,
 	});
+	start_stats_processor(rec);
 	//	Protected routes
 	let app           = Router::new()
 		.route("/",      get(get_index))

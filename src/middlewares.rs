@@ -1,6 +1,6 @@
 //		Packages
 
-use crate::utility::AppState;
+use crate::utility::{AppState, ResponseTime};
 use axum::{
 	Extension,
 	async_trait,
@@ -78,9 +78,12 @@ pub async fn stats_layer<B>(
 	//	Update requests counter
 	appstate.Stats.requests.fetch_add(1, Ordering::Relaxed);
 	
+	//	Note start time
+	let started_at             = Instant::now();
+	
 	//	Create statistics context
 	let stats_cx               = StatsContext {
-		started_at:              Instant::now(),
+		started_at,
 	};
 	request.extensions_mut().insert(stats_cx.clone());
 	
@@ -114,6 +117,9 @@ pub async fn stats_layer<B>(
 	
 	//	Unlock response data
 	drop(lock);
+	
+	//	Add response time to the queue
+	appstate.Queue.send(ResponseTime { started_at, time_taken }).expect("Failed to send response time");
 	
 	//		Response															
 	response
