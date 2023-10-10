@@ -367,7 +367,7 @@ pub async fn get_stats(
 	Extension(stats_cx): Extension<StatsContext>,
 ) -> Json<StatsResponse> {
 	//	Lock source data
-	let lock      = state.Stats.responses.lock().expect("Failed to lock response stats");
+	let lock      = state.Stats.responses.lock();
 	let response  = Json(StatsResponse {
 		started_at: state.Stats.started_at,
 		uptime:     (Utc::now().naive_utc() - state.Stats.started_at).num_seconds() as u64,

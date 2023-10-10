@@ -90,7 +90,7 @@ pub async fn stats_layer<B>(
 	
 	//		Metrics																
 	//	Lock response data
-	let mut lock               = appstate.Stats.responses.lock().expect("Failed to lock response stats");
+	let mut lock               = appstate.Stats.responses.lock();
 	
 	//	Update responses counter
 	let status_code            = response.status();

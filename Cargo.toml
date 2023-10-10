@@ -28,6 +28,7 @@ figment = { version = "0.10.10", features = ["toml", "env"] }
 include_dir = { version = "0.7.3", features = ["glob"] }
 mime_guess = "2.0.4"
 nipper = "0.1.9"
+parking_lot = "0.12.1"
 rand = { version = "0.8.5", features = ["min_const_gen"] }
 ring = "0.16.20"
 rubedo = "0.3.4"

@@ -11,6 +11,7 @@ mod healthcheck {
 	use axum::http::StatusCode;
 	use chrono::Duration;
 	use figment::{Figment, providers::Serialized};
+	use parking_lot::Mutex;
 	use rand::Rng;
 	use ring::hmac::{HMAC_SHA512, self};
 	use rubedo::{
@@ -18,7 +19,7 @@ mod healthcheck {
 		sugar::s,
 	};
 	use std::{
-		sync::{Mutex, atomic::AtomicUsize},
+		sync::atomic::AtomicUsize,
 		time::Instant,
 	};
 	use serde_json::json;
