@@ -20,5 +20,9 @@ stream_threshold = 1000
 stream_buffer    = 256
 read_buffer      = 128
 
+[stats]
+enabled     = true
+buffer_size = 86_400 # One day: 60 * 60 * 24
+
 [users]
 #joe = "1a2b3c"

@@ -73,9 +73,6 @@ pub async fn stats_layer<B>(
 	next:            Next<B>,
 ) -> Response {
 	//		Preparation															
-	//	Update requests counter
-	appstate.Stats.requests.fetch_add(1, Ordering::Relaxed);
-	
 	//	Note start time
 	let started_at             = Utc::now().naive_utc();
 	
@@ -84,6 +81,14 @@ pub async fn stats_layer<B>(
 		started_at,
 	};
 	request.extensions_mut().insert(stats_cx.clone());
+	
+	//	Check if statistics are enabled
+	if !appstate.Config.stats.enabled {
+		return next.run(request).await;
+	}
+	
+	//	Update requests counter
+	appstate.Stats.requests.fetch_add(1, Ordering::Relaxed);
 	
 	//		Request																
 	//	Process request

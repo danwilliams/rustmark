@@ -79,6 +79,9 @@ pub struct Config {
 	/// The configuration options for serving static files.
 	pub static_files:  StaticFiles,
 	
+	/// The configuration options for gathering and processing statistics.
+	pub stats:         StatsOptions,
+	
 	/// A list of users and their passwords.
 	#[default(HashMap::new())]
 	pub users:         HashMap<String, String>,
@@ -147,6 +150,36 @@ pub struct StaticFiles {
 	pub read_buffer:      usize,
 }
 
+//		StatsOptions															
+#[derive(Deserialize, Serialize, SmartDefault)]
+/// The configuration options for gathering and processing statistics.
+pub struct StatsOptions {
+	//		Public properties													
+	/// Whether to enable statistics gathering and processing. If enabled, there
+	/// is a very small CPU overhead for each request, plus a
+	/// [configurable amount of memory](StatsOptions.buffer_size)
+	/// (default 4.8MB) used to store the response time buffer. If disabled, the
+	/// [statistics processing thread](start_stats_processor()) will not be
+	/// started, the buffer's capacity will not be reserved, and the
+	/// [statistics middleware](crate::middlewares::stats_layer()) will do
+	/// nothing. Under usual circumstances the statistics thread should easily
+	/// be able to keep up with the incoming requests, even on a system with
+	/// hundreds of CPU cores.
+	#[default = true]
+	pub enabled:          bool,
+	
+	/// The size of the buffer to use for storing response times, in seconds.
+	/// Each entry (i.e. for one second) will take up 56 bytes, so the default
+	/// of 86,400 seconds (one day) will take up around 4.8MB of memory. This
+	/// seems like a reasonable default to be useful but not consume too much
+	/// memory. Notably, the statistics output only looks at a maximum of the
+	/// last day's-worth of data, so if a longer period than this is required
+	/// the [`get_stats()`](handlers::get_stats()) code would need to be
+	/// customised.
+	#[default = 86_400]
+	pub buffer_size:      usize,
+}
+
 //		AppState																
 /// The application state.
 /// 
@@ -203,11 +236,11 @@ pub struct AppStats {
 	/// and it does not have mutex poisoning.
 	pub responses:  Mutex<AppStatsResponses>,
 	
-	/// A circular buffer of response time stats per second for the past day.
-	/// The buffer is stored inside a [`RwLock`] because it is only ever written
-	/// to a maximum of once per second. A [`parking_lot::RwLock`] is used
-	/// instead of a [`std::sync::RwLock`] because it is theoretically faster in
-	/// highly contended situations.
+	/// A circular buffer of response time stats per second for the configured
+	/// period. The buffer is stored inside a [`RwLock`] because it is only ever
+	/// written to a maximum of once per second. A [`parking_lot::RwLock`] is
+	/// used instead of a [`std::sync::RwLock`] because it is theoretically
+	/// faster in highly contended situations.
 	pub buffer:     RwLock<VecDeque<AppStatsForPeriod>>,
 }
 
@@ -464,10 +497,16 @@ pub fn start_stats_processor(receiver: Receiver<ResponseTime>, appstate: Arc<App
 	let mut current_second = Utc::now().naive_utc().with_nanosecond(0).unwrap();
 	//	Cumulative stats for the current second
 	let mut stats          = AppStatsForPeriod::default();
-	//	Initialise circular buffer
+	//	Initialise circular buffer. We reserve the capacity here right at the
+	//	start so that the application always uses exactly the same amount of
+	//	memory for the buffer, so that any memory-usage issues will be spotted
+	//	immediately. For instance, if someone set the config value high enough
+	//	to store a year's worth of data (around 1.8GB) and the system didn't
+	//	have enough memory it would fail right away, instead of gradually
+	//	building up to that point which would make it harder to diagnose.
 	{
 		let mut buffer     = appstate.Stats.buffer.write();
-		buffer.reserve(86_400);  //  One day: 60 * 60 * 24
+		buffer.reserve(appstate.Config.stats.buffer_size);
 	}
 	
 	//	Queue processing loop
@@ -521,7 +560,7 @@ fn stats_processor(
 		let elapsed    = (new_second - current_second).num_seconds();
 		let mut buffer = appstate.Stats.buffer.write();
 		for i in 0..elapsed {
-			if buffer.len() == 86_400 {
+			if buffer.len() == appstate.Config.stats.buffer_size {
 				buffer.pop_back();
 			}
 			if stats.count > 0 {
