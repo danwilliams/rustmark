@@ -11,8 +11,10 @@ use axum::{
 	middleware::Next,
 	response::{Html, IntoResponse, Response},
 };
+use rubedo::http::UnpackedResponseBody;
 use std::sync::Arc;
 use tera::Context;
+use tracing::error;
 
 
 
@@ -60,7 +62,7 @@ pub async fn graceful_error_layer<B>(
 	let response          = next.run(request).await;
 	let (mut parts, body) = response.into_parts();
 	match parts.status {
-		//	404
+		//		404: Not Found													
 		StatusCode::NOT_FOUND             => {
 			parts.headers.remove("content-length");
 			parts.headers.remove("content-type");
@@ -81,8 +83,9 @@ pub async fn graceful_error_layer<B>(
 				render(state, "404-notfound", context),
 			).into_response()
 		},
-		//	500
+		//		500: Internal Server Error										
 		StatusCode::INTERNAL_SERVER_ERROR => {
+			error!("Internal server error: {}", UnpackedResponseBody::from(body));
 			let mut context = Context::new();
 			context.insert("Title", &state.Config.title);
 			parts.headers.remove("content-length");
@@ -93,6 +96,7 @@ pub async fn graceful_error_layer<B>(
 				render(state, "500-error", context),
 			).into_response()
 		},
+		//		Everything else													
 		_                                 => {
 			(
 				parts,
