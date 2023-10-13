@@ -8,7 +8,7 @@ mod healthcheck {
 	use super::super::*;
 	use crate::utility::{AppStats, AppStatsResponses, AppStatsResponseCounts, Config};
 	use assert_json_diff::assert_json_eq;
-	use axum::http::StatusCode;
+	use axum::http::{Method, StatusCode};
 	use chrono::Duration;
 	use figment::{Figment, providers::Serialized};
 	use flume::{self};
@@ -50,7 +50,7 @@ mod healthcheck {
 				started_at:   start,
 				requests:     AtomicUsize::new(10),
 				responses:    Mutex::new(AppStatsResponses {
-					counts:   AppStatsResponseCounts {
+					counts:        AppStatsResponseCounts {
 						total:     15,
 						codes:     hash_map!{
 							StatusCode::OK:                    5,
@@ -60,7 +60,20 @@ mod healthcheck {
 						},
 						untracked: 1,
 					},
-					times:    Default::default(),
+					times:         Default::default(),
+					endpoints:     hash_map!{
+						Endpoint {
+							method:     Method::GET,
+							path:       s!("/api/stats"),
+						}:              AppStatsForPeriod {
+							started_at: start,
+							average:    500.0,
+							maximum:    1000,
+							minimum:    100,
+							count:      10,
+							sum:        5000,
+						}
+					}
 				}),
 				..Default::default()
 			},
@@ -122,6 +135,14 @@ mod healthcheck {
 							"maximum": 0,
 							"minimum": 0,
 							"count":   0,
+						},
+					},
+					"endpoints": {
+						"GET /api/stats": {
+							"average":    500.0,
+							"maximum":    1000,
+							"minimum":    100,
+							"count":      10,
 						},
 					},
 				},

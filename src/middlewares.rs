@@ -1,6 +1,6 @@
 //		Packages
 
-use crate::utility::{AppState, ResponseTime};
+use crate::utility::{AppState, AppStatsForPeriod, Endpoint, ResponseTime};
 use axum::{
 	Extension,
 	async_trait,
@@ -87,6 +87,9 @@ pub async fn stats_layer<B>(
 		return next.run(request).await;
 	}
 	
+	//	Obtain endpoint details
+	let endpoint               = Endpoint { path: request.uri().path().to_string(), method: request.method().clone() };
+	
 	//	Update requests counter
 	appstate.Stats.requests.fetch_add(1, Ordering::Relaxed);
 	
@@ -118,6 +121,27 @@ pub async fn stats_layer<B>(
 	}
 	if time_taken > lock.times.maximum {
 		lock.times.maximum     = time_taken;
+	}
+	
+	//	Update endpoint response time stats
+	if let Some(ep_stats)      = lock.endpoints.get_mut(&endpoint) {
+		let ep_alpha           = 1.0 / ep_stats.count as f64;
+		ep_stats.average       = ep_stats.average * (1.0 - ep_alpha) + time_taken as f64 * ep_alpha;
+		ep_stats.count        += 1;
+		if time_taken < ep_stats.minimum || ep_stats.count == 1 {
+			ep_stats.minimum   = time_taken;
+		}
+		if time_taken > ep_stats.maximum {
+			ep_stats.maximum   = time_taken;
+		}
+	} else {
+		lock.endpoints.insert(endpoint, AppStatsForPeriod {
+			average:             time_taken as f64,
+			maximum:             time_taken,
+			minimum:             time_taken,
+			count:               1,
+			..Default::default()
+		});
 	}
 	
 	//	Unlock response data

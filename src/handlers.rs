@@ -85,10 +85,14 @@ pub struct StatsResponse {
 pub struct StatsResponseResponses {
 	//		Public properties													
 	/// The counts of responses.
-	pub counts: StatsResponseResponseCounts,
+	pub counts:    StatsResponseResponseCounts,
 	
 	/// The average, maximum, and minimum response times by time period.
-	pub times:  StatsResponseResponseTimes,
+	pub times:     StatsResponseResponseTimes,
+	
+	/// The average, maximum, and minimum response times by endpoint since the
+	/// application last started.
+	pub endpoints: HashMap<Endpoint, StatsResponseForPeriod>,
 }
 
 //		StatsResponseResponseCounts												
@@ -146,6 +150,18 @@ pub struct StatsResponseForPeriod {
 	
 	/// The total number of responses that have been handled.
 	pub count:   u64,
+}
+
+impl From<&AppStatsForPeriod> for StatsResponseForPeriod {
+	//		from																
+	fn from(stats: &AppStatsForPeriod) -> Self {
+		Self {
+			average: stats.average,
+			maximum: stats.maximum,
+			minimum: stats.minimum,
+			count:   stats.count,
+		}
+	}
 }
 
 
@@ -406,31 +422,16 @@ pub async fn get_stats(
 			},
 			times:  StatsResponseResponseTimes {
 				current:     (now - stats_cx.started_at).num_microseconds().unwrap() as u64,
-				minute:      StatsResponseForPeriod {
-					average: stats_minute.average,
-					maximum: stats_minute.maximum,
-					minimum: stats_minute.minimum,
-					count:   stats_minute.count,
-				},
-				hour:        StatsResponseForPeriod {
-					average: stats_hour.average,
-					maximum: stats_hour.maximum,
-					minimum: stats_hour.minimum,
-					count:   stats_hour.count,
-				},
-				day:         StatsResponseForPeriod {
-					average: stats_day.average,
-					maximum: stats_day.maximum,
-					minimum: stats_day.minimum,
-					count:   stats_day.count,
-				},
-				all:         StatsResponseForPeriod {
-					average: lock.times.average,
-					maximum: lock.times.maximum,
-					minimum: lock.times.minimum,
-					count:   lock.times.count,
-				},
+				minute:      StatsResponseForPeriod::from(&stats_minute),
+				hour:        StatsResponseForPeriod::from(&stats_hour),
+				day:         StatsResponseForPeriod::from(&stats_day),
+				all:         StatsResponseForPeriod::from(&lock.times),
 			},
+			endpoints:       HashMap::from_iter(
+				lock.endpoints.clone()
+					.into_iter()
+					.map(|(key, value)| (key, StatsResponseForPeriod::from(&value)))
+			),
 		},
 	});
 	//	Unlock source data

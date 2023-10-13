@@ -4,7 +4,7 @@
 
 use crate::handlers;
 use axum::{
-	http::{StatusCode, Uri},
+	http::{StatusCode, Uri, Method},
 	response::Html,
 };
 use chrono::{Duration, NaiveDateTime, Timelike, Utc};
@@ -251,11 +251,17 @@ pub struct AppStatsResponses {
 	//		Public properties													
 	/// The counts of responses.
 	#[default(AppStatsResponseCounts::new())]
-	pub counts: AppStatsResponseCounts,
+	pub counts:    AppStatsResponseCounts,
 	
 	/// The average, maximum, and minimum response times since the application
 	/// last started.
-	pub times:  AppStatsForPeriod,
+	pub times:     AppStatsForPeriod,
+	
+	/// The average, maximum, and minimum response times by endpoint since the
+	/// application last started. These statistics are stored in a [`HashMap`]
+	/// for ease, as it doesn't seem sensible to require them all to be
+	/// registered in advance (i.e. unlike [`AppStatsResponseCounts.codes`]).
+	pub endpoints: HashMap<Endpoint, AppStatsForPeriod>,
 }
 
 //		AppStatsResponseCounts													
@@ -293,7 +299,7 @@ impl AppStatsResponseCounts {
 
 //		AppStatsForPeriod														
 /// Average, maximum, and minimum values for a period of time.
-#[derive(SmartDefault)]
+#[derive(Clone, SmartDefault)]
 pub struct AppStatsForPeriod {
 	//		Public properties													
 	/// The date and time the period started.
@@ -353,6 +359,30 @@ pub struct ResponseTime {
 	
 	/// The time the response took to be generated.
 	pub time_taken: u64,
+}
+
+//		Endpoint																
+/// A formalised definition of an endpoint for identification.
+#[derive(Clone, Eq, Hash, PartialEq, SmartDefault)]
+pub struct Endpoint {
+	//		Public properties													
+	/// The path of the endpoint, minus any query parameters. As this is just
+	/// the path, it does not contain scheme or authority (host), and hence is
+	/// not a full URI.
+	pub path:   String,
+	
+	/// The HTTP verb of the endpoint.
+	pub method: Method,
+}
+
+impl Serialize for Endpoint {
+	//		serialize															
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: Serializer,
+	{
+		serializer.serialize_str(&format!("{} {}", self.method, self.path))
+	}
 }
 
 //		ApiDoc																	
