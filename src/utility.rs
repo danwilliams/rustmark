@@ -584,6 +584,19 @@ fn stats_processor(
 	mut current_second: NaiveDateTime
 ) -> (AppStatsForPeriod, NaiveDateTime) {
 	//		Update response statistics											
+	//	Prepare new stats
+	let newstats                    = AppStatsForPeriod {
+		average:                      response_time.time_taken as f64,
+		maximum:                      response_time.time_taken,
+		minimum:                      response_time.time_taken,
+		count:                        1,
+		sum:                          response_time.time_taken,
+		..Default::default()
+	};
+	
+	//	Increment cumulative stats
+	stats.update(&newstats);
+	
 	//	Lock response data
 	let mut responses               = appstate.Stats.responses.lock();
 	
@@ -596,35 +609,17 @@ fn stats_processor(
 	responses.counts.total         += 1;
 	
 	//	Update response time stats
+	responses.times.update(&newstats);
 	let alpha                       = 1.0 / responses.counts.total as f64;
 	responses.times.average         = responses.times.average * (1.0 - alpha) + response_time.time_taken as f64 * alpha;
-	responses.times.count          += 1;
-	if response_time.time_taken < responses.times.minimum || responses.times.count == 1 {
-		responses.times.minimum     = response_time.time_taken;
-	}
-	if response_time.time_taken > responses.times.maximum {
-		responses.times.maximum     = response_time.time_taken;
-	}
 	
 	//	Update endpoint response time stats
 	if let Some(ep_stats)           = responses.endpoints.get_mut(&response_time.endpoint) {
+		ep_stats.update(&newstats);
 		let ep_alpha                = 1.0 / ep_stats.count as f64;
 		ep_stats.average            = ep_stats.average * (1.0 - ep_alpha) + response_time.time_taken as f64 * ep_alpha;
-		ep_stats.count             += 1;
-		if response_time.time_taken < ep_stats.minimum || ep_stats.count == 1 {
-			ep_stats.minimum        = response_time.time_taken;
-		}
-		if response_time.time_taken > ep_stats.maximum {
-			ep_stats.maximum        = response_time.time_taken;
-		}
 	} else {
-		responses.endpoints.insert(response_time.endpoint, AppStatsForPeriod {
-			average:                  response_time.time_taken as f64,
-			maximum:                  response_time.time_taken,
-			minimum:                  response_time.time_taken,
-			count:                    1,
-			..Default::default()
-		});
+		responses.endpoints.insert(response_time.endpoint, newstats);
 	}
 	
 	//	Unlock response data
@@ -646,25 +641,12 @@ fn stats_processor(
 			if buffer.len() == appstate.Config.stats.buffer_size {
 				buffer.pop_back();
 			}
-			if stats.count > 0 {
-				stats.average = stats.sum as f64 / stats.count as f64
-			}
 			stats.started_at  = current_second + Duration::seconds(i);
 			buffer.push_front(stats);
 			stats      = AppStatsForPeriod::default();
 		}
 		current_second = new_second;
 	}
-	
-	//		Increment cumulative stats											
-	if response_time.time_taken < stats.minimum || stats.count == 0 {
-		stats.minimum = response_time.time_taken;
-	}
-	if response_time.time_taken > stats.maximum {
-		stats.maximum = response_time.time_taken;
-	}
-	stats.count += 1;
-	stats.sum   += response_time.time_taken;
 	
 	(stats, current_second)
 }
