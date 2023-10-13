@@ -41,6 +41,7 @@ use std::{
 	time::Duration,
 };
 use tera::Tera;
+use tikv_jemallocator::Jemalloc;
 use tower_http::catch_panic::CatchPanicLayer;
 use tracing::{Level, Span, info};
 use tracing_appender::{self};
@@ -57,6 +58,9 @@ use utoipa_swagger_ui::SwaggerUi;
 
 
 //		Constants
+
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
 
 static TEMPLATE_DIR: Dir<'_> = include_dir!("html");
 static ASSETS_DIR:   Dir<'_> = include_dir!("static");
