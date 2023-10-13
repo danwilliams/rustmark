@@ -1,6 +1,6 @@
 //		Packages
 
-use crate::utility::{AppState, AppStatsForPeriod, Endpoint, ResponseTime};
+use crate::utility::{AppState, Endpoint, ResponseTime};
 use axum::{
 	Extension,
 	async_trait,
@@ -10,6 +10,7 @@ use axum::{
 	response::Response,
 };
 use chrono::{NaiveDateTime, Utc};
+use smart_default::SmartDefault;
 use std::sync::{Arc, atomic::Ordering};
 
 
@@ -21,10 +22,11 @@ use std::sync::{Arc, atomic::Ordering};
 /// 
 /// This struct contains statistics information specific to the current request.
 /// 
-#[derive(Clone)]
+#[derive(Clone, SmartDefault)]
 pub struct StatsContext {
 	//		Public properties													
 	/// The date and time the request processing started.
+	#[default(Utc::now().naive_utc())]
 	pub started_at: NaiveDateTime,
 }
 
@@ -72,14 +74,8 @@ pub async fn stats_layer<B>(
 	mut request:     Request<B>,
 	next:            Next<B>,
 ) -> Response {
-	//		Preparation															
-	//	Note start time
-	let started_at             = Utc::now().naive_utc();
-	
 	//	Create statistics context
-	let stats_cx               = StatsContext {
-		started_at,
-	};
+	let stats_cx    = StatsContext::default();
 	request.extensions_mut().insert(stats_cx.clone());
 	
 	//	Check if statistics are enabled
@@ -88,69 +84,26 @@ pub async fn stats_layer<B>(
 	}
 	
 	//	Obtain endpoint details
-	let endpoint               = Endpoint { path: request.uri().path().to_string(), method: request.method().clone() };
+	let endpoint    = Endpoint {
+		path:         request.uri().path().to_string(),
+		method:       request.method().clone(),
+	};
 	
 	//	Update requests counter
 	appstate.Stats.requests.fetch_add(1, Ordering::Relaxed);
 	
-	//		Request																
 	//	Process request
-	let response               = next.run(request).await;
-	
-	//		Metrics																
-	//	Lock response data
-	let mut lock               = appstate.Stats.responses.lock();
-	
-	//	Update responses counter
-	let status_code            = response.status();
-	if let Some(counter)       = lock.counts.codes.get_mut(&status_code) {
-		*counter              += 1;
-	} else {
-		lock.counts.untracked += 1;
-	}
-	lock.counts.total         += 1;
-	
-	//	Update response time stats
-	let finished_at            = Utc::now().naive_utc();
-	let time_taken             = (finished_at - stats_cx.started_at).num_microseconds().unwrap() as u64;
-	let alpha                  = 1.0 / lock.counts.total as f64;
-	lock.times.average         = lock.times.average * (1.0 - alpha) + time_taken as f64 * alpha;
-	lock.times.count          += 1;
-	if time_taken < lock.times.minimum || lock.times.count == 1 {
-		lock.times.minimum     = time_taken;
-	}
-	if time_taken > lock.times.maximum {
-		lock.times.maximum     = time_taken;
-	}
-	
-	//	Update endpoint response time stats
-	if let Some(ep_stats)      = lock.endpoints.get_mut(&endpoint) {
-		let ep_alpha           = 1.0 / ep_stats.count as f64;
-		ep_stats.average       = ep_stats.average * (1.0 - ep_alpha) + time_taken as f64 * ep_alpha;
-		ep_stats.count        += 1;
-		if time_taken < ep_stats.minimum || ep_stats.count == 1 {
-			ep_stats.minimum   = time_taken;
-		}
-		if time_taken > ep_stats.maximum {
-			ep_stats.maximum   = time_taken;
-		}
-	} else {
-		lock.endpoints.insert(endpoint, AppStatsForPeriod {
-			average:             time_taken as f64,
-			maximum:             time_taken,
-			minimum:             time_taken,
-			count:               1,
-			..Default::default()
-		});
-	}
-	
-	//	Unlock response data
-	drop(lock);
+	let response    = next.run(request).await;
 	
 	//	Add response time to the queue
-	appstate.Queue.send(ResponseTime { started_at, time_taken }).expect("Failed to send response time");
+	appstate.Queue.send(ResponseTime {
+		endpoint,
+		started_at:   stats_cx.started_at,
+		time_taken:   (Utc::now().naive_utc() - stats_cx.started_at).num_microseconds().unwrap() as u64,
+		status_code:  response.status(),
+	}).expect("Failed to send response time");
 	
-	//		Response															
+	//	Return response
 	response
 }
 

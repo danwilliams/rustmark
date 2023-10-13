@@ -353,12 +353,18 @@ impl AppStatsForPeriod {
 #[derive(SmartDefault)]
 pub struct ResponseTime {
 	//		Public properties													
+	/// The endpoint that was requested.
+	pub endpoint:    Endpoint,
+	
 	/// The date and time the request started.
 	#[default(Utc::now().naive_utc())]
-	pub started_at: NaiveDateTime,
+	pub started_at:  NaiveDateTime,
 	
 	/// The time the response took to be generated.
-	pub time_taken: u64,
+	pub time_taken:  u64,
+	
+	/// The status code of the response.
+	pub status_code: StatusCode,
 }
 
 //		Endpoint																
@@ -577,6 +583,53 @@ fn stats_processor(
 	mut stats:          AppStatsForPeriod,
 	mut current_second: NaiveDateTime
 ) -> (AppStatsForPeriod, NaiveDateTime) {
+	//		Update response statistics											
+	//	Lock response data
+	let mut responses               = appstate.Stats.responses.lock();
+	
+	//	Update responses counter
+	if let Some(counter)            = responses.counts.codes.get_mut(&response_time.status_code) {
+		*counter                   += 1;
+	} else {
+		responses.counts.untracked += 1;
+	}
+	responses.counts.total         += 1;
+	
+	//	Update response time stats
+	let alpha                       = 1.0 / responses.counts.total as f64;
+	responses.times.average         = responses.times.average * (1.0 - alpha) + response_time.time_taken as f64 * alpha;
+	responses.times.count          += 1;
+	if response_time.time_taken < responses.times.minimum || responses.times.count == 1 {
+		responses.times.minimum     = response_time.time_taken;
+	}
+	if response_time.time_taken > responses.times.maximum {
+		responses.times.maximum     = response_time.time_taken;
+	}
+	
+	//	Update endpoint response time stats
+	if let Some(ep_stats)           = responses.endpoints.get_mut(&response_time.endpoint) {
+		let ep_alpha                = 1.0 / ep_stats.count as f64;
+		ep_stats.average            = ep_stats.average * (1.0 - ep_alpha) + response_time.time_taken as f64 * ep_alpha;
+		ep_stats.count             += 1;
+		if response_time.time_taken < ep_stats.minimum || ep_stats.count == 1 {
+			ep_stats.minimum        = response_time.time_taken;
+		}
+		if response_time.time_taken > ep_stats.maximum {
+			ep_stats.maximum        = response_time.time_taken;
+		}
+	} else {
+		responses.endpoints.insert(response_time.endpoint, AppStatsForPeriod {
+			average:                  response_time.time_taken as f64,
+			maximum:                  response_time.time_taken,
+			minimum:                  response_time.time_taken,
+			count:                    1,
+			..Default::default()
+		});
+	}
+	
+	//	Unlock response data
+	drop(responses);
+	
 	//		Check time period													
 	let new_second     = response_time.started_at.with_nanosecond(0).unwrap();
 	
