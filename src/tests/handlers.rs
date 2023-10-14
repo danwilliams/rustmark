@@ -83,10 +83,7 @@ mod healthcheck {
 			Key:              hmac::Key::new(HMAC_SHA512, &secret),
 			Template:         Tera::default(),
 		});
-		let stats_cx        = StatsContext {
-			started_at:       Utc::now().naive_utc(),
-		};
-		let unpacked        = get_stats(State(state), Extension(stats_cx)).await.into_response().unpack().unwrap();
+		let unpacked        = get_stats(State(state)).await.into_response().unpack().unwrap();
 		let crafted         = UnpackedResponse {
 			status:           StatusCode::OK,
 			headers:          vec![
@@ -112,7 +109,6 @@ mod healthcheck {
 						"untracked":                     1,
 					},
 					"times":  {
-						"current":     0,
 						"minute":      {
 							"average": 0.0,
 							"maximum": 0,
@@ -148,7 +144,6 @@ mod healthcheck {
 					},
 				},
 				"memory": {
-					"current":     0,
 					"minute":      {
 						"average": 0.0,
 						"maximum": 0,

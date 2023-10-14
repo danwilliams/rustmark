@@ -11,13 +11,11 @@ mod tests;
 use crate::{
 	ASSETS_DIR,
 	CONTENT_DIR,
-	middlewares::StatsContext,
 	utility::*,
 };
 use rustmark::{Heading, self};
 
 use axum::{
-	Extension,
 	Json,
 	body::Body,
 	extract::State,
@@ -34,7 +32,6 @@ use std::{
 	sync::{Arc, atomic::Ordering},
 };
 use tera::Context;
-use tikv_jemalloc_ctl::stats::allocated as Malloc;
 use tokio::{
 	fs::File,
 	io::{AsyncReadExt, BufReader},
@@ -121,9 +118,6 @@ pub struct StatsResponseResponseCounts {
 #[derive(Serialize, ToSchema)]
 pub struct StatsResponseResponseTimes {
 	//		Public properties													
-	/// The response time of the current request.
-	pub current: u64,
-	
 	/// The average, maximum, and minimum response times for the past minute.
 	pub minute:  StatsResponseForPeriod,
 	
@@ -377,8 +371,7 @@ pub async fn get_ping() {}
 /// 
 /// # Parameters
 /// 
-/// * `state`    - The application state.
-/// * `stats_cx` - The statistics context.
+/// * `state` - The application state.
 /// 
 #[utoipa::path(
 	get,
@@ -388,10 +381,7 @@ pub async fn get_ping() {}
 		(status = 200, description = "Application statistics", body = StatsResponse)
 	)
 )]
-pub async fn get_stats(
-	State(state):        State<Arc<AppState>>,
-	Extension(stats_cx): Extension<StatsContext>,
-) -> Json<StatsResponse> {
+pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse> {
 	//		Process stats														
 	//	Create pots for each period
 	let mut timing_stats_minute = AppStatsForPeriod { ..Default::default() };
@@ -451,7 +441,6 @@ pub async fn get_stats(
 				untracked:   responses.counts.untracked,
 			},
 			times:  StatsResponseResponseTimes {
-				current:     (now - stats_cx.started_at).num_microseconds().unwrap() as u64,
 				minute:      StatsResponseForPeriod::from(&timing_stats_minute),
 				hour:        StatsResponseForPeriod::from(&timing_stats_hour),
 				day:         StatsResponseForPeriod::from(&timing_stats_day),
@@ -464,7 +453,6 @@ pub async fn get_stats(
 			),
 		},
 		memory:     StatsResponseResponseTimes {
-			current:         Malloc::read().unwrap() as u64,
 			minute:          StatsResponseForPeriod::from(&memory_stats_minute),
 			hour:            StatsResponseForPeriod::from(&memory_stats_hour),
 			day:             StatsResponseForPeriod::from(&memory_stats_day),
