@@ -1,6 +1,6 @@
 //		Packages
 
-use crate::utility::{AppState, Endpoint, ResponseTime};
+use crate::utility::{AppState, Endpoint, ResponseMetrics};
 use axum::{
 	Extension,
 	async_trait,
@@ -96,7 +96,7 @@ pub async fn stats_layer<B>(
 	let response    = next.run(request).await;
 	
 	//	Add response time to the queue
-	appstate.Queue.send(ResponseTime {
+	appstate.Queue.send(ResponseMetrics {
 		endpoint,
 		started_at:   stats_cx.started_at,
 		time_taken:   (Utc::now().naive_utc() - stats_cx.started_at).num_microseconds().unwrap() as u64,

@@ -202,7 +202,7 @@ pub struct AppState {
 	/// incineration routines, as the stats-handling thread can constantly
 	/// process the queue and there will theoretically never be a large build-up
 	/// of data in memory that has to be dealt with all at once.
-	pub Queue:    Sender<ResponseTime>,
+	pub Queue:    Sender<ResponseMetrics>,
 	
 	/// The application secret.
 	pub Secret:   [u8; 64],
@@ -345,13 +345,13 @@ impl AppStatsForPeriod {
 	}
 }
 
-//		ResponseTime															
+//		ResponseMetrics															
 /// Metrics for a single response.
 /// 
 /// This is used by the statistics queue in [`AppState.Queue`].
 /// 
 #[derive(SmartDefault)]
-pub struct ResponseTime {
+pub struct ResponseMetrics {
 	//		Public properties													
 	/// The endpoint that was requested.
 	pub endpoint:    Endpoint,
@@ -528,7 +528,7 @@ where
 /// * `receiver` - The receiving end of the queue.
 /// * `appstate` - The application state.
 /// 
-pub fn start_stats_processor(receiver: Receiver<ResponseTime>, appstate: Arc<AppState>) {
+pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<AppState>) {
 	//	Fixed time period of the current second
 	let mut current_second = Utc::now().naive_utc().with_nanosecond(0).unwrap();
 	//	Cumulative stats for the current second
@@ -566,31 +566,31 @@ pub fn start_stats_processor(receiver: Receiver<ResponseTime>, appstate: Arc<App
 //		stats_processor															
 /// Processes a single response time.
 /// 
-/// This function processes a single response time, updating the statistics
-/// accordingly.
+/// This function processes a single response metrics sample, updating the
+/// calculated statistics accordingly.
 /// 
 /// # Parameters
 /// 
 /// * `appstate`       - The application state.
-/// * `response_time`  - The response time to process, received from the
+/// * `metrics`        - The response metrics to process, received from the
 ///                      statistics queue in [`AppState.Queue`].
 /// * `stats`          - The cumulative stats for the current second.
 /// * `current_second` - The current second.
 /// 
 fn stats_processor(
 	appstate:           Arc<AppState>,
-	response_time:      ResponseTime,
+	metrics:            ResponseMetrics,
 	mut stats:          AppStatsForPeriod,
 	mut current_second: NaiveDateTime
 ) -> (AppStatsForPeriod, NaiveDateTime) {
 	//		Update response statistics											
 	//	Prepare new stats
 	let newstats                    = AppStatsForPeriod {
-		average:                      response_time.time_taken as f64,
-		maximum:                      response_time.time_taken,
-		minimum:                      response_time.time_taken,
+		average:                      metrics.time_taken as f64,
+		maximum:                      metrics.time_taken,
+		minimum:                      metrics.time_taken,
 		count:                        1,
-		sum:                          response_time.time_taken,
+		sum:                          metrics.time_taken,
 		..Default::default()
 	};
 	
@@ -601,7 +601,7 @@ fn stats_processor(
 	let mut responses               = appstate.Stats.responses.lock();
 	
 	//	Update responses counter
-	if let Some(counter)            = responses.counts.codes.get_mut(&response_time.status_code) {
+	if let Some(counter)            = responses.counts.codes.get_mut(&metrics.status_code) {
 		*counter                   += 1;
 	} else {
 		responses.counts.untracked += 1;
@@ -611,22 +611,22 @@ fn stats_processor(
 	//	Update response time stats
 	responses.times.update(&newstats);
 	let alpha                       = 1.0 / responses.counts.total as f64;
-	responses.times.average         = responses.times.average * (1.0 - alpha) + response_time.time_taken as f64 * alpha;
+	responses.times.average         = responses.times.average * (1.0 - alpha) + metrics.time_taken as f64 * alpha;
 	
 	//	Update endpoint response time stats
-	if let Some(ep_stats)           = responses.endpoints.get_mut(&response_time.endpoint) {
+	if let Some(ep_stats)           = responses.endpoints.get_mut(&metrics.endpoint) {
 		ep_stats.update(&newstats);
 		let ep_alpha                = 1.0 / ep_stats.count as f64;
-		ep_stats.average            = ep_stats.average * (1.0 - ep_alpha) + response_time.time_taken as f64 * ep_alpha;
+		ep_stats.average            = ep_stats.average * (1.0 - ep_alpha) + metrics.time_taken as f64 * ep_alpha;
 	} else {
-		responses.endpoints.insert(response_time.endpoint, newstats);
+		responses.endpoints.insert(metrics.endpoint, newstats);
 	}
 	
 	//	Unlock response data
 	drop(responses);
 	
 	//		Check time period													
-	let new_second     = response_time.started_at.with_nanosecond(0).unwrap();
+	let new_second     = metrics.started_at.with_nanosecond(0).unwrap();
 	
 	//	Check to see if we've moved into a new time period. We want to increment
 	//	the request count and total response time until it "ticks" over into
