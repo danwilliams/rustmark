@@ -236,6 +236,16 @@ pub struct AppStats {
 	/// and it does not have mutex poisoning.
 	pub responses:  Mutex<AppStatsResponses>,
 	
+	/// The average, maximum, and minimum memory usage since the application
+	/// last started. This data is wrapped inside a [`Mutex`] because it is
+	/// important to update the count, use that exact count to calculate the
+	/// average, and then store that average all in one atomic operation while
+	/// blocking any other process from using the data. A [`parking_lot::Mutex`]
+	/// is used instead of a [`std::sync::Mutex`] because it is theoretically
+	/// faster in highly contended situations, but the main advantage is that it
+	/// is infallible, and it does not have mutex poisoning.
+	pub memory:     Mutex<AppStatsForPeriod>,
+	
 	/// A circular buffer of response time stats per second for the configured
 	/// period. The buffer is stored inside a [`RwLock`] because it is only ever
 	/// written to a maximum of once per second. A [`parking_lot::RwLock`] is
@@ -360,11 +370,15 @@ pub struct ResponseMetrics {
 	#[default(Utc::now().naive_utc())]
 	pub started_at:  NaiveDateTime,
 	
-	/// The time the response took to be generated.
+	/// The time the response took to be generated, in microseconds.
 	pub time_taken:  u64,
 	
 	/// The status code of the response.
 	pub status_code: StatusCode,
+	
+	/// The amount of memory allocated at the time the response was generated,
+	/// in bytes.
+	pub memory:      u64,
 }
 
 //		Endpoint																
@@ -531,8 +545,11 @@ where
 pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<AppState>) {
 	//	Fixed time period of the current second
 	let mut current_second = Utc::now().naive_utc().with_nanosecond(0).unwrap();
-	//	Cumulative stats for the current second
-	let mut stats          = AppStatsForPeriod::default();
+	//	Cumulative timing stats for the current second
+	let mut timing_stats   = AppStatsForPeriod::default();
+	//	Cumulative memory stats for the current second
+	let mut memory_stats   = AppStatsForPeriod::default();
+	
 	//	Initialise circular buffer. We reserve the capacity here right at the
 	//	start so that the application always uses exactly the same amount of
 	//	memory for the buffer, so that any memory-usage issues will be spotted
@@ -551,8 +568,8 @@ pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<
 		match receiver.recv() {
 			Ok(response_time) => {
 				//	Process response time
-				(stats, current_second) = stats_processor(
-					Arc::clone(&appstate), response_time, stats, current_second
+				(timing_stats, memory_stats, current_second) = stats_processor(
+					Arc::clone(&appstate), response_time, timing_stats, memory_stats, current_second
 				);
 			},
 			Err(_)            => {
@@ -574,29 +591,41 @@ pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<
 /// * `appstate`       - The application state.
 /// * `metrics`        - The response metrics to process, received from the
 ///                      statistics queue in [`AppState.Queue`].
-/// * `stats`          - The cumulative stats for the current second.
+/// * `timing_stats`   - The cumulative timing stats for the current second.
+/// * `memory_stats`   - The cumulative memory stats for the current second.
 /// * `current_second` - The current second.
 /// 
 fn stats_processor(
 	appstate:           Arc<AppState>,
 	metrics:            ResponseMetrics,
-	mut stats:          AppStatsForPeriod,
+	mut timing_stats:   AppStatsForPeriod,
+	mut memory_stats:   AppStatsForPeriod,
 	mut current_second: NaiveDateTime
-) -> (AppStatsForPeriod, NaiveDateTime) {
-	//		Update response statistics											
+) -> (AppStatsForPeriod, AppStatsForPeriod, NaiveDateTime) {
+	//		Preparation															
 	//	Prepare new stats
-	let newstats                    = AppStatsForPeriod {
-		average:                      metrics.time_taken as f64,
-		maximum:                      metrics.time_taken,
-		minimum:                      metrics.time_taken,
-		count:                        1,
-		sum:                          metrics.time_taken,
+	let newstats = AppStatsForPeriod {
+		average:   metrics.time_taken as f64,
+		maximum:   metrics.time_taken,
+		minimum:   metrics.time_taken,
+		count:     1,
+		sum:       metrics.time_taken,
+		..Default::default()
+	};
+	let memstats = AppStatsForPeriod {
+		average:   metrics.memory as f64,
+		maximum:   metrics.memory,
+		minimum:   metrics.memory,
+		count:     1,
+		sum:       metrics.memory,
 		..Default::default()
 	};
 	
 	//	Increment cumulative stats
-	stats.update(&newstats);
+	timing_stats.update(&newstats);
+	memory_stats.update(&memstats);
 	
+	//		Update response statistics											
 	//	Lock response data
 	let mut responses               = appstate.Stats.responses.lock();
 	
@@ -625,6 +654,18 @@ fn stats_processor(
 	//	Unlock response data
 	drop(responses);
 	
+	//		Update memory statistics											
+	//	Lock memory data
+	let mut memory = appstate.Stats.memory.lock();
+	
+	//	Update memory usage stats
+	memory.update(&memstats);
+	let mem_alpha  = 1.0 / memory.count as f64;
+	memory.average = memory.average * (1.0 - mem_alpha) + metrics.memory as f64 * mem_alpha;
+	
+	//	Unlock memory data
+	drop(memory);
+	
 	//		Check time period													
 	let new_second     = metrics.started_at.with_nanosecond(0).unwrap();
 	
@@ -641,14 +682,14 @@ fn stats_processor(
 			if buffer.len() == appstate.Config.stats.buffer_size {
 				buffer.pop_back();
 			}
-			stats.started_at  = current_second + Duration::seconds(i);
-			buffer.push_front(stats);
-			stats      = AppStatsForPeriod::default();
+			timing_stats.started_at = current_second + Duration::seconds(i);
+			buffer.push_front(timing_stats);
+			timing_stats            = AppStatsForPeriod::default();
 		}
 		current_second = new_second;
 	}
 	
-	(stats, current_second)
+	(timing_stats, memory_stats, current_second)
 }
 
 

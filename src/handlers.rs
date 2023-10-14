@@ -77,6 +77,10 @@ pub struct StatsResponse {
 	/// The number of responses that have been handled, along with the average,
 	/// maximum, and minimum response times by time period.
 	pub responses:  StatsResponseResponses,
+	
+	/// The average, maximum, and minimum memory usage since the application
+	/// last started.
+	pub memory:     StatsResponseForPeriod,
 }
 
 //		StatsResponseResponses													
@@ -367,6 +371,8 @@ pub async fn get_ping() {}
 ///                    broken down by status code. The times are the average,
 ///                    maximum, and minimum response times for the past minute,
 ///                    hour, day, and since the application last started.
+///   - `memory`     - The average, maximum, and minimum memory usage since the
+///                    application last started.
 /// 
 /// # Parameters
 /// 
@@ -408,7 +414,8 @@ pub async fn get_stats(
 	
 	//		Build response data													
 	//	Lock source data
-	let lock      = state.Stats.responses.lock();
+	let responses = state.Stats.responses.lock();
+	let memory    = state.Stats.memory.lock();
 	let now       = Utc::now().naive_utc();
 	let response  = Json(StatsResponse {
 		started_at: state.Stats.started_at,
@@ -416,26 +423,28 @@ pub async fn get_stats(
 		requests:   state.Stats.requests.load(Ordering::Relaxed) as u64,
 		responses:  StatsResponseResponses {
 			counts: StatsResponseResponseCounts {
-				total:       lock.counts.total,
-				codes:       lock.counts.codes.clone(),
-				untracked:   lock.counts.untracked,
+				total:       responses.counts.total,
+				codes:       responses.counts.codes.clone(),
+				untracked:   responses.counts.untracked,
 			},
 			times:  StatsResponseResponseTimes {
 				current:     (now - stats_cx.started_at).num_microseconds().unwrap() as u64,
 				minute:      StatsResponseForPeriod::from(&stats_minute),
 				hour:        StatsResponseForPeriod::from(&stats_hour),
 				day:         StatsResponseForPeriod::from(&stats_day),
-				all:         StatsResponseForPeriod::from(&lock.times),
+				all:         StatsResponseForPeriod::from(&responses.times),
 			},
 			endpoints:       HashMap::from_iter(
-				lock.endpoints.clone()
+				responses.endpoints.clone()
 					.into_iter()
 					.map(|(key, value)| (key, StatsResponseForPeriod::from(&value)))
 			),
 		},
+		memory:     StatsResponseForPeriod::from(&memory.clone()),
 	});
 	//	Unlock source data
-	drop(lock);
+	drop(responses);
+	drop(memory);
 	
 	//		Response															
 	response

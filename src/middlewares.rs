@@ -12,6 +12,7 @@ use axum::{
 use chrono::{NaiveDateTime, Utc};
 use smart_default::SmartDefault;
 use std::sync::{Arc, atomic::Ordering};
+use tikv_jemalloc_ctl::stats::allocated as Malloc;
 
 
 
@@ -101,6 +102,7 @@ pub async fn stats_layer<B>(
 		started_at:   stats_cx.started_at,
 		time_taken:   (Utc::now().naive_utc() - stats_cx.started_at).num_microseconds().unwrap() as u64,
 		status_code:  response.status(),
+		memory:	      Malloc::read().unwrap() as u64,
 	}).expect("Failed to send response time");
 	
 	//	Return response

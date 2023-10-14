@@ -75,6 +75,14 @@ mod healthcheck {
 						}
 					}
 				}),
+				memory:         Mutex::new(AppStatsForPeriod {
+					started_at: start,
+					average:    17_000_000.0,
+					maximum:    20_000_000,
+					minimum:    10_000_000,
+					count:      10,
+					sum:        170_000_000,
+				}),
 				..Default::default()
 			},
 			Queue:            sender,
@@ -145,6 +153,12 @@ mod healthcheck {
 							"count":      10,
 						},
 					},
+				},
+				"memory": {
+					"average": 17_000_000.0,
+					"maximum": 20_000_000,
+					"minimum": 10_000_000,
+					"count":   10,
 				},
 			})),
 		};
