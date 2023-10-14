@@ -6,7 +6,7 @@
 #[cfg(test)]
 mod healthcheck {
 	use super::super::*;
-	use crate::utility::{AppStats, AppStatsResponses, AppStatsResponseCounts, Config};
+	use crate::utility::{AppStats, AppStatsResponses, Config};
 	use assert_json_diff::assert_json_eq;
 	use axum::http::{Method, StatusCode};
 	use chrono::Duration;
@@ -50,15 +50,11 @@ mod healthcheck {
 				started_at:   start,
 				requests:     AtomicUsize::new(10),
 				responses:    Mutex::new(AppStatsResponses {
-					counts:        AppStatsResponseCounts {
-						total:     15,
-						codes:     hash_map!{
-							StatusCode::OK:                    5,
-							StatusCode::UNAUTHORIZED:          4,
-							StatusCode::NOT_FOUND:             3,
-							StatusCode::INTERNAL_SERVER_ERROR: 2,
-						},
-						untracked: 1,
+					codes:    hash_map!{
+						StatusCode::OK:                    5,
+						StatusCode::UNAUTHORIZED:          4,
+						StatusCode::NOT_FOUND:             3,
+						StatusCode::INTERNAL_SERVER_ERROR: 2,
 					},
 					times:         Default::default(),
 					endpoints:     hash_map!{
@@ -98,15 +94,11 @@ mod healthcheck {
 				"uptime":     99,
 				"requests":   10,
 				"responses":  {
-					"counts": {
-						"total":                         15,
-						"codes":                         {
-							"200 OK":                    5,
-							"401 Unauthorized":          4,
-							"404 Not Found":             3,
-							"500 Internal Server Error": 2,
-						},
-						"untracked":                     1,
+					"codes":                         {
+						"200 OK":                    5,
+						"401 Unauthorized":          4,
+						"404 Not Found":             3,
+						"500 Internal Server Error": 2,
 					},
 					"times":  {
 						"second":      {

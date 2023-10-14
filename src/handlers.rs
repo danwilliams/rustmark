@@ -72,8 +72,8 @@ pub struct StatsResponse {
 	/// The number of requests that have been handled.
 	pub requests:   u64,
 	
-	/// The number of responses that have been handled, along with the average,
-	/// maximum, and minimum response times by time period.
+	/// The average, maximum, and minimum response times by time period, status
+	/// code, and endpoint.
 	pub responses:  StatsResponseResponses,
 	
 	/// The average, maximum, and minimum memory usage by time period.
@@ -85,8 +85,9 @@ pub struct StatsResponse {
 #[derive(Serialize, ToSchema)]
 pub struct StatsResponseResponses {
 	//		Public properties													
-	/// The counts of responses.
-	pub counts:    StatsResponseResponseCounts,
+	/// The number of responses that have been handled, by status code.
+	#[serde(serialize_with = "serialize_status_codes")]
+	pub codes:     HashMap<StatusCode, u64>,
 	
 	/// The average, maximum, and minimum response times by time period.
 	pub times:     StatsResponseResponseTimes,
@@ -94,23 +95,6 @@ pub struct StatsResponseResponses {
 	/// The average, maximum, and minimum response times by endpoint since the
 	/// application last started.
 	pub endpoints: HashMap<Endpoint, StatsResponseForPeriod>,
-}
-
-//		StatsResponseResponseCounts												
-/// Counts of response status codes.
-#[derive(Serialize, ToSchema)]
-pub struct StatsResponseResponseCounts {
-	//		Public properties													
-	/// The total number of responses that have been handled.
-	pub total:     u64,
-	
-	/// The number of responses that have been handled, by status code.
-	#[serde(serialize_with = "serialize_status_codes")]
-	pub codes:     HashMap<StatusCode, u64>,
-	
-	/// The number of untracked responses that have been handled, i.e. where the
-	/// code does not match any of the ones in this struct.
-	pub untracked: u64,
 }
 
 //		StatsResponseResponseTimes												
@@ -449,11 +433,7 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 		uptime:     (now - state.Stats.started_at).num_seconds() as u64,
 		requests:   state.Stats.requests.load(Ordering::Relaxed) as u64,
 		responses:  StatsResponseResponses {
-			counts: StatsResponseResponseCounts {
-				total:       responses.counts.total,
-				codes:       responses.counts.codes.clone(),
-				untracked:   responses.counts.untracked,
-			},
+			codes:  responses.codes.clone(),
 			times:  StatsResponseResponseTimes {
 				second:      StatsResponseForPeriod::from(&timing_stats_second),
 				minute:      StatsResponseForPeriod::from(&timing_stats_minute),

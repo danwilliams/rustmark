@@ -237,8 +237,8 @@ pub struct AppStats {
 	/// The number of requests that have been handled.
 	pub requests:      AtomicUsize,
 	
-	/// The number of responses that have been handled, along with the average,
-	/// maximum, and minimum response times by time period. This data is grouped
+	/// The average, maximum, and minimum response times grouped by status code
+	/// and endpoint, and for all time without any grouping. This data is all
 	/// together inside a [`Mutex`] because it is important to update the count,
 	/// use that exact count to calculate the average, and then store that
 	/// average all in one atomic operation while blocking any other process
@@ -246,6 +246,7 @@ pub struct AppStats {
 	/// [`std::sync::Mutex`] because it is theoretically faster in highly
 	/// contended situations, but the main advantage is that it is infallible,
 	/// and it does not have mutex poisoning.
+	#[default(Mutex::new(AppStatsResponses::new()))]
 	pub responses:     Mutex<AppStatsResponses>,
 	
 	/// The average, maximum, and minimum memory usage by time period. This data
@@ -278,9 +279,8 @@ pub struct AppStats {
 #[derive(SmartDefault)]
 pub struct AppStatsResponses {
 	//		Public properties													
-	/// The counts of responses.
-	#[default(AppStatsResponseCounts::new())]
-	pub counts:    AppStatsResponseCounts,
+	/// The number of responses that have been handled, by status code.
+	pub codes:     HashMap<StatusCode, u64>,
 	
 	/// The average, maximum, and minimum response times since the application
 	/// last started.
@@ -288,40 +288,22 @@ pub struct AppStatsResponses {
 	
 	/// The average, maximum, and minimum response times by endpoint since the
 	/// application last started. These statistics are stored in a [`HashMap`]
-	/// for ease, as it doesn't seem sensible to require them all to be
-	/// registered in advance (i.e. unlike [`AppStatsResponseCounts.codes`]).
+	/// for ease.
 	pub endpoints: HashMap<Endpoint, AppStatsForPeriod>,
 }
 
-//		AppStatsResponseCounts													
-/// Counts of response status codes.
-#[derive(SmartDefault)]
-pub struct AppStatsResponseCounts {
-	//		Public properties													
-	/// The total number of responses that have been handled.
-	pub total:     u64,
-	
-	/// The number of responses that have been handled, by status code.
-	pub codes:     HashMap<StatusCode, u64>,
-	
-	/// The number of untracked responses that have been handled, i.e. where the
-	/// code does not match any of the ones in this struct.
-	pub untracked: u64,
-}
-
-impl AppStatsResponseCounts {
+impl AppStatsResponses {
 	//		new																	
 	/// Creates a new instance of the struct.
 	pub fn new() -> Self {
 		Self {
-			total:     0,
-			codes:     hash_map!{
+			codes: hash_map!{
 				StatusCode::OK:                    0,
 				StatusCode::UNAUTHORIZED:          0,
 				StatusCode::NOT_FOUND:             0,
 				StatusCode::INTERNAL_SERVER_ERROR: 0,
 			},
-			untracked: 0,
+			..Default::default()
 		}
 	}
 }
@@ -648,26 +630,21 @@ fn stats_processor(
 	
 	//		Update response statistics											
 	//	Lock response data
-	let mut responses               = appstate.Stats.responses.lock();
+	let mut responses       = appstate.Stats.responses.lock();
 	
 	//	Update responses counter
-	if let Some(counter)            = responses.counts.codes.get_mut(&metrics.status_code) {
-		*counter                   += 1;
-	} else {
-		responses.counts.untracked += 1;
-	}
-	responses.counts.total         += 1;
+	*responses.codes.entry(metrics.status_code).or_insert(0) += 1;
 	
 	//	Update response time stats
 	responses.times.update(&newstats);
-	let alpha                       = 1.0 / responses.counts.total as f64;
-	responses.times.average         = responses.times.average * (1.0 - alpha) + metrics.time_taken as f64 * alpha;
+	let alpha               = 1.0 / responses.times.count as f64;
+	responses.times.average = responses.times.average * (1.0 - alpha) + metrics.time_taken as f64 * alpha;
 	
 	//	Update endpoint response time stats
-	if let Some(ep_stats)           = responses.endpoints.get_mut(&metrics.endpoint) {
+	if let Some(ep_stats)   = responses.endpoints.get_mut(&metrics.endpoint) {
 		ep_stats.update(&newstats);
-		let ep_alpha                = 1.0 / ep_stats.count as f64;
-		ep_stats.average            = ep_stats.average * (1.0 - ep_alpha) + metrics.time_taken as f64 * ep_alpha;
+		let ep_alpha        = 1.0 / ep_stats.count as f64;
+		ep_stats.average    = ep_stats.average * (1.0 - ep_alpha) + metrics.time_taken as f64 * ep_alpha;
 	} else {
 		responses.endpoints.insert(metrics.endpoint, newstats);
 	}
