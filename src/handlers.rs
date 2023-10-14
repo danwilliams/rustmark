@@ -34,6 +34,7 @@ use std::{
 	sync::{Arc, atomic::Ordering},
 };
 use tera::Context;
+use tikv_jemalloc_ctl::stats::allocated as Malloc;
 use tokio::{
 	fs::File,
 	io::{AsyncReadExt, BufReader},
@@ -78,9 +79,8 @@ pub struct StatsResponse {
 	/// maximum, and minimum response times by time period.
 	pub responses:  StatsResponseResponses,
 	
-	/// The average, maximum, and minimum memory usage since the application
-	/// last started.
-	pub memory:     StatsResponseForPeriod,
+	/// The average, maximum, and minimum memory usage by time period.
+	pub memory:     StatsResponseResponseTimes,
 }
 
 //		StatsResponseResponses													
@@ -371,8 +371,9 @@ pub async fn get_ping() {}
 ///                    broken down by status code. The times are the average,
 ///                    maximum, and minimum response times for the past minute,
 ///                    hour, day, and since the application last started.
-///   - `memory`     - The average, maximum, and minimum memory usage since the
-///                    application last started.
+///   - `memory`     - The average, maximum, and minimum memory usage for the
+///                    past minute, hour, day, and since the application last
+///                    started.
 /// 
 /// # Parameters
 /// 
@@ -393,24 +394,46 @@ pub async fn get_stats(
 ) -> Json<StatsResponse> {
 	//		Process stats														
 	//	Create pots for each period
-	let mut stats_minute = AppStatsForPeriod { ..Default::default() };
-	let mut stats_hour   = AppStatsForPeriod { ..Default::default() };
-	let mut stats_day    = AppStatsForPeriod { ..Default::default() };
+	let mut timing_stats_minute = AppStatsForPeriod { ..Default::default() };
+	let mut timing_stats_hour   = AppStatsForPeriod { ..Default::default() };
+	let mut timing_stats_day    = AppStatsForPeriod { ..Default::default() };
+	let mut memory_stats_minute = AppStatsForPeriod { ..Default::default() };
+	let mut memory_stats_hour   = AppStatsForPeriod { ..Default::default() };
+	let mut memory_stats_day    = AppStatsForPeriod { ..Default::default() };
 	
+	//		Timing stats														
 	//	Loop through the circular buffer and calculate the stats
-	let buffer           = state.Stats.buffer.read();
+	let buffer = state.Stats.timing_buffer.read();
 	for (i, stats) in buffer.iter().enumerate() {
 		//	Last minute
 		if i < 60 {
-			stats_minute.update(stats);
+			timing_stats_minute.update(stats);
 		}
 		//	Last hour
 		if i < 360 {
-			stats_hour.update(stats);
+			timing_stats_hour.update(stats);
 		}
 		//	Last day
-		stats_day.update(stats);
+		timing_stats_day.update(stats);
 	}
+	drop(buffer);
+	
+	//		Memory stats														
+	//	Loop through the circular buffer and calculate the stats
+	let buffer = state.Stats.memory_buffer.read();
+	for (i, stats) in buffer.iter().enumerate() {
+		//	Last minute
+		if i < 60 {
+			memory_stats_minute.update(stats);
+		}
+		//	Last hour
+		if i < 360 {
+			memory_stats_hour.update(stats);
+		}
+		//	Last day
+		memory_stats_day.update(stats);
+	}
+	drop(buffer);
 	
 	//		Build response data													
 	//	Lock source data
@@ -429,9 +452,9 @@ pub async fn get_stats(
 			},
 			times:  StatsResponseResponseTimes {
 				current:     (now - stats_cx.started_at).num_microseconds().unwrap() as u64,
-				minute:      StatsResponseForPeriod::from(&stats_minute),
-				hour:        StatsResponseForPeriod::from(&stats_hour),
-				day:         StatsResponseForPeriod::from(&stats_day),
+				minute:      StatsResponseForPeriod::from(&timing_stats_minute),
+				hour:        StatsResponseForPeriod::from(&timing_stats_hour),
+				day:         StatsResponseForPeriod::from(&timing_stats_day),
 				all:         StatsResponseForPeriod::from(&responses.times),
 			},
 			endpoints:       HashMap::from_iter(
@@ -440,7 +463,13 @@ pub async fn get_stats(
 					.map(|(key, value)| (key, StatsResponseForPeriod::from(&value)))
 			),
 		},
-		memory:     StatsResponseForPeriod::from(&memory.clone()),
+		memory:     StatsResponseResponseTimes {
+			current:         Malloc::read().unwrap() as u64,
+			minute:          StatsResponseForPeriod::from(&memory_stats_minute),
+			hour:            StatsResponseForPeriod::from(&memory_stats_hour),
+			day:             StatsResponseForPeriod::from(&memory_stats_day),
+			all:             StatsResponseForPeriod::from(&memory.clone()),
+		},
 	});
 	//	Unlock source data
 	drop(responses);

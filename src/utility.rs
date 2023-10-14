@@ -156,17 +156,18 @@ pub struct StaticFiles {
 pub struct StatsOptions {
 	//		Public properties													
 	/// Whether to enable statistics gathering and processing. If enabled, there
-	/// is a very small CPU overhead for each request, plus a
-	/// [configurable amount of memory](StatsOptions.buffer_size)
-	/// (default 4.8MB) used to store the response time buffer. If disabled, the
-	/// [statistics processing thread](start_stats_processor()) will not be
-	/// started, the buffer's capacity will not be reserved, and the
-	/// [statistics middleware](crate::middlewares::stats_layer()) will do
+	/// is a very small CPU overhead for each request, plus an
+	/// individually-configurable amount of memory used to store the
+	/// [response time buffer](StatsOptions.timing_buffer_size) and the
+	/// [memory usage buffer](StatsOptions.memory_buffer_size) (default 4.8MB
+	/// per buffer). If disabled, the [statistics processing thread](start_stats_processor())
+	/// will not be started, the buffers' capacities will not be reserved, and
+	/// the [statistics middleware](crate::middlewares::stats_layer()) will do
 	/// nothing. Under usual circumstances the statistics thread should easily
 	/// be able to keep up with the incoming requests, even on a system with
 	/// hundreds of CPU cores.
 	#[default = true]
-	pub enabled:          bool,
+	pub enabled:            bool,
 	
 	/// The size of the buffer to use for storing response times, in seconds.
 	/// Each entry (i.e. for one second) will take up 56 bytes, so the default
@@ -177,7 +178,18 @@ pub struct StatsOptions {
 	/// the [`get_stats()`](handlers::get_stats()) code would need to be
 	/// customised.
 	#[default = 86_400]
-	pub buffer_size:      usize,
+	pub timing_buffer_size: usize,
+	
+	/// The size of the buffer to use for storing memory usage data, in seconds.
+	/// Each entry (i.e. for one second) will take up 56 bytes, so the default
+	/// of 86,400 seconds (one day) will take up around 4.8MB of memory. This
+	/// seems like a reasonable default to be useful but not consume too much
+	/// memory. Notably, the statistics output only looks at a maximum of the
+	/// last day's-worth of data, so if a longer period than this is required
+	/// the [`get_stats()`](handlers::get_stats()) code would need to be
+	/// customised.
+	#[default = 86_400]
+	pub memory_buffer_size: usize,
 }
 
 //		AppState																
@@ -220,10 +232,10 @@ pub struct AppState {
 pub struct AppStats {
 	//		Public properties													
 	/// The date and time the application was started.
-	pub started_at: NaiveDateTime,
+	pub started_at:    NaiveDateTime,
 	
 	/// The number of requests that have been handled.
-	pub requests:   AtomicUsize,
+	pub requests:      AtomicUsize,
 	
 	/// The number of responses that have been handled, along with the average,
 	/// maximum, and minimum response times by time period. This data is grouped
@@ -234,24 +246,31 @@ pub struct AppStats {
 	/// [`std::sync::Mutex`] because it is theoretically faster in highly
 	/// contended situations, but the main advantage is that it is infallible,
 	/// and it does not have mutex poisoning.
-	pub responses:  Mutex<AppStatsResponses>,
+	pub responses:     Mutex<AppStatsResponses>,
 	
-	/// The average, maximum, and minimum memory usage since the application
-	/// last started. This data is wrapped inside a [`Mutex`] because it is
-	/// important to update the count, use that exact count to calculate the
-	/// average, and then store that average all in one atomic operation while
-	/// blocking any other process from using the data. A [`parking_lot::Mutex`]
-	/// is used instead of a [`std::sync::Mutex`] because it is theoretically
-	/// faster in highly contended situations, but the main advantage is that it
-	/// is infallible, and it does not have mutex poisoning.
-	pub memory:     Mutex<AppStatsForPeriod>,
+	/// The average, maximum, and minimum memory usage by time period. This data
+	/// is wrapped inside a [`Mutex`] because it is important to update the
+	/// count, use that exact count to calculate the average, and then store
+	/// that average all in one atomic operation while blocking any other
+	/// process from using the data. A [`parking_lot::Mutex`] is used instead of
+	/// a [`std::sync::Mutex`] because it is theoretically faster in highly
+	/// contended situations, but the main advantage is that it is infallible,
+	/// and it does not have mutex poisoning.
+	pub memory:        Mutex<AppStatsForPeriod>,
 	
 	/// A circular buffer of response time stats per second for the configured
 	/// period. The buffer is stored inside a [`RwLock`] because it is only ever
 	/// written to a maximum of once per second. A [`parking_lot::RwLock`] is
 	/// used instead of a [`std::sync::RwLock`] because it is theoretically
 	/// faster in highly contended situations.
-	pub buffer:     RwLock<VecDeque<AppStatsForPeriod>>,
+	pub timing_buffer: RwLock<VecDeque<AppStatsForPeriod>>,
+	
+	/// A circular buffer of memory usage stats per second for the configured
+	/// period. The buffer is stored inside a [`RwLock`] because it is only ever
+	/// written to a maximum of once per second. A [`parking_lot::RwLock`] is
+	/// used instead of a [`std::sync::RwLock`] because it is theoretically
+	/// faster in highly contended situations.
+	pub memory_buffer: RwLock<VecDeque<AppStatsForPeriod>>,
 }
 
 //		AppStatsResponses														
@@ -550,16 +569,18 @@ pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<
 	//	Cumulative memory stats for the current second
 	let mut memory_stats   = AppStatsForPeriod::default();
 	
-	//	Initialise circular buffer. We reserve the capacity here right at the
+	//	Initialise circular buffers. We reserve the capacities here right at the
 	//	start so that the application always uses exactly the same amount of
-	//	memory for the buffer, so that any memory-usage issues will be spotted
+	//	memory for the buffers, so that any memory-usage issues will be spotted
 	//	immediately. For instance, if someone set the config value high enough
 	//	to store a year's worth of data (around 1.8GB) and the system didn't
 	//	have enough memory it would fail right away, instead of gradually
 	//	building up to that point which would make it harder to diagnose.
 	{
-		let mut buffer     = appstate.Stats.buffer.write();
-		buffer.reserve(appstate.Config.stats.buffer_size);
+		let mut buffer     = appstate.Stats.timing_buffer.write();
+		buffer.reserve(appstate.Config.stats.timing_buffer_size);
+		let mut buffer     = appstate.Stats.memory_buffer.write();
+		buffer.reserve(appstate.Config.stats.memory_buffer_size);
 	}
 	
 	//	Queue processing loop
@@ -677,14 +698,25 @@ fn stats_processor(
 	//	the circular buffer of seconds.
 	if new_second > current_second {
 		let elapsed    = (new_second - current_second).num_seconds();
-		let mut buffer = appstate.Stats.buffer.write();
+		//	Timing stats buffer
+		let mut buffer = appstate.Stats.timing_buffer.write();
 		for i in 0..elapsed {
-			if buffer.len() == appstate.Config.stats.buffer_size {
+			if buffer.len() == appstate.Config.stats.timing_buffer_size {
 				buffer.pop_back();
 			}
 			timing_stats.started_at = current_second + Duration::seconds(i);
 			buffer.push_front(timing_stats);
 			timing_stats            = AppStatsForPeriod::default();
+		}
+		//	Memory stats buffer
+		let mut buffer = appstate.Stats.memory_buffer.write();
+		for i in 0..elapsed {
+			if buffer.len() == appstate.Config.stats.memory_buffer_size {
+				buffer.pop_back();
+			}
+			memory_stats.started_at = current_second + Duration::seconds(i);
+			buffer.push_front(memory_stats);
+			memory_stats            = AppStatsForPeriod::default();
 		}
 		current_second = new_second;
 	}
