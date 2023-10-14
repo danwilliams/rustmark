@@ -158,7 +158,8 @@ pub struct StatsOptions {
 	/// Whether to enable statistics gathering and processing. If enabled, there
 	/// is a very small CPU overhead for each request, plus an
 	/// individually-configurable amount of memory used to store the
-	/// [response time buffer](StatsOptions.timing_buffer_size) and the
+	/// [response time buffer](StatsOptions.timing_buffer_size), the
+	/// [connection count buffer](StatsOptions.connection_buffer_size), and the
 	/// [memory usage buffer](StatsOptions.memory_buffer_size) (default 4.8MB
 	/// per buffer). If disabled, the [statistics processing thread](start_stats_processor())
 	/// will not be started, the buffers' capacities will not be reserved, and
@@ -167,7 +168,7 @@ pub struct StatsOptions {
 	/// be able to keep up with the incoming requests, even on a system with
 	/// hundreds of CPU cores.
 	#[default = true]
-	pub enabled:            bool,
+	pub enabled:                bool,
 	
 	/// The size of the buffer to use for storing response times, in seconds.
 	/// Each entry (i.e. for one second) will take up 56 bytes, so the default
@@ -178,7 +179,18 @@ pub struct StatsOptions {
 	/// the [`get_stats()`](handlers::get_stats()) code would need to be
 	/// customised.
 	#[default = 86_400]
-	pub timing_buffer_size: usize,
+	pub timing_buffer_size:     usize,
+	
+	/// The size of the buffer to use for storing connection data, in seconds.
+	/// Each entry (i.e. for one second) will take up 56 bytes, so the default
+	/// of 86,400 seconds (one day) will take up around 4.8MB of memory. This
+	/// seems like a reasonable default to be useful but not consume too much
+	/// memory. Notably, the statistics output only looks at a maximum of the
+	/// last day's-worth of data, so if a longer period than this is required
+	/// the [`get_stats()`](handlers::get_stats()) code would need to be
+	/// customised.
+	#[default = 86_400]
+	pub connection_buffer_size: usize,
 	
 	/// The size of the buffer to use for storing memory usage data, in seconds.
 	/// Each entry (i.e. for one second) will take up 56 bytes, so the default
@@ -189,7 +201,7 @@ pub struct StatsOptions {
 	/// the [`get_stats()`](handlers::get_stats()) code would need to be
 	/// customised.
 	#[default = 86_400]
-	pub memory_buffer_size: usize,
+	pub memory_buffer_size:     usize,
 }
 
 //		AppState																
@@ -234,7 +246,13 @@ pub struct AppStats {
 	/// The date and time the application was started.
 	pub started_at:    NaiveDateTime,
 	
-	/// The number of requests that have been handled.
+	/// The current number of open connections, i.e. requests that have not yet
+	/// been responded to.
+	pub active:        AtomicUsize,
+	
+	/// The number of requests that have been made. The number of responses will
+	/// be incremented only when the request has been fully handled and a
+	/// response generated.
 	pub requests:      AtomicUsize,
 	
 	/// The average, maximum, and minimum response times grouped by status code
@@ -248,6 +266,16 @@ pub struct AppStats {
 	/// and it does not have mutex poisoning.
 	#[default(Mutex::new(AppStatsResponses::new()))]
 	pub responses:     Mutex<AppStatsResponses>,
+	
+	/// The average, maximum, and minimum open connections by time period. This
+	/// data is wrapped inside a [`Mutex`] because it is important to update the
+	/// count, use that exact count to calculate the average, and then store
+	/// that average all in one atomic operation while blocking any other
+	/// process from using the data. A [`parking_lot::Mutex`] is used instead of
+	/// a [`std::sync::Mutex`] because it is theoretically faster in highly
+	/// contended situations, but the main advantage is that it is infallible,
+	/// and it does not have mutex poisoning.
+	pub connections:   Mutex<AppStatsForPeriod>,
 	
 	/// The average, maximum, and minimum memory usage by time period. This data
 	/// is wrapped inside a [`Mutex`] because it is important to update the
@@ -265,6 +293,13 @@ pub struct AppStats {
 	/// used instead of a [`std::sync::RwLock`] because it is theoretically
 	/// faster in highly contended situations.
 	pub timing_buffer: RwLock<VecDeque<AppStatsForPeriod>>,
+	
+	/// A circular buffer of connection stats per second for the configured
+	/// period. The buffer is stored inside a [`RwLock`] because it is only ever
+	/// written to a maximum of once per second. A [`parking_lot::RwLock`] is
+	/// used instead of a [`std::sync::RwLock`] because it is theoretically
+	/// faster in highly contended situations.
+	pub conn_buffer:   RwLock<VecDeque<AppStatsForPeriod>>,
 	
 	/// A circular buffer of memory usage stats per second for the configured
 	/// period. The buffer is stored inside a [`RwLock`] because it is only ever
@@ -387,6 +422,9 @@ pub struct ResponseMetrics {
 	
 	/// The status code of the response.
 	pub status_code: StatusCode,
+	
+	/// The number of open connections at the time the response was generated.
+	pub connections: u64,
 	
 	/// The amount of memory allocated at the time the response was generated,
 	/// in bytes.
@@ -557,9 +595,9 @@ where
 pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<AppState>) {
 	//	Fixed time period of the current second
 	let mut current_second = Utc::now().naive_utc().with_nanosecond(0).unwrap();
-	//	Cumulative timing stats for the current second
+	//	Cumulative stats for the current second
 	let mut timing_stats   = AppStatsForPeriod::default();
-	//	Cumulative memory stats for the current second
+	let mut conn_stats     = AppStatsForPeriod::default();
 	let mut memory_stats   = AppStatsForPeriod::default();
 	
 	//	Initialise circular buffers. We reserve the capacities here right at the
@@ -572,6 +610,8 @@ pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<
 	{
 		let mut buffer     = appstate.Stats.timing_buffer.write();
 		buffer.reserve(appstate.Config.stats.timing_buffer_size);
+		let mut buffer     = appstate.Stats.conn_buffer.write();
+		buffer.reserve(appstate.Config.stats.connection_buffer_size);
 		let mut buffer     = appstate.Stats.memory_buffer.write();
 		buffer.reserve(appstate.Config.stats.memory_buffer_size);
 	}
@@ -582,8 +622,8 @@ pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<
 		match receiver.recv() {
 			Ok(response_time) => {
 				//	Process response time
-				(timing_stats, memory_stats, current_second) = stats_processor(
-					Arc::clone(&appstate), response_time, timing_stats, memory_stats, current_second
+				(timing_stats, conn_stats, memory_stats, current_second) = stats_processor(
+					Arc::clone(&appstate), response_time, timing_stats, conn_stats, memory_stats, current_second
 				);
 			},
 			Err(_)            => {
@@ -606,6 +646,7 @@ pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<
 /// * `metrics`        - The response metrics to process, received from the
 ///                      statistics queue in [`AppState.Queue`].
 /// * `timing_stats`   - The cumulative timing stats for the current second.
+/// * `conn_stats`     - The cumulative connection stats for the current second.
 /// * `memory_stats`   - The cumulative memory stats for the current second.
 /// * `current_second` - The current second.
 /// 
@@ -613,15 +654,23 @@ fn stats_processor(
 	appstate:           Arc<AppState>,
 	metrics:            ResponseMetrics,
 	mut timing_stats:   AppStatsForPeriod,
+	mut conn_stats:     AppStatsForPeriod,
 	mut memory_stats:   AppStatsForPeriod,
 	mut current_second: NaiveDateTime
-) -> (AppStatsForPeriod, AppStatsForPeriod, NaiveDateTime) {
+) -> (AppStatsForPeriod, AppStatsForPeriod, AppStatsForPeriod, NaiveDateTime) {
 	//		Preparation															
 	//	Prepare new stats
 	let newstats = AppStatsForPeriod {
 		average:   metrics.time_taken as f64,
 		maximum:   metrics.time_taken,
 		minimum:   metrics.time_taken,
+		count:     1,
+		..Default::default()
+	};
+	let constats = AppStatsForPeriod {
+		average:   metrics.connections as f64,
+		maximum:   metrics.connections,
+		minimum:   metrics.connections,
 		count:     1,
 		..Default::default()
 	};
@@ -635,6 +684,7 @@ fn stats_processor(
 	
 	//	Increment cumulative stats
 	timing_stats.update(&newstats);
+	conn_stats.update(&constats);
 	memory_stats.update(&memstats);
 	
 	//		Update response statistics											
@@ -656,6 +706,16 @@ fn stats_processor(
 	
 	//	Unlock response data
 	drop(responses);
+	
+	//		Update connections statistics										
+	//	Lock connections data
+	let mut connections = appstate.Stats.connections.lock();
+	
+	//	Update connections usage stats
+	connections.update(&constats);
+	
+	//	Unlock connections data
+	drop(connections);
 	
 	//		Update memory statistics											
 	//	Lock memory data
@@ -688,6 +748,16 @@ fn stats_processor(
 			buffer.push_front(timing_stats);
 			timing_stats            = AppStatsForPeriod::default();
 		}
+		//	Connections stats buffer
+		let mut buffer = appstate.Stats.conn_buffer.write();
+		for i in 0..elapsed {
+			if buffer.len() == appstate.Config.stats.connection_buffer_size {
+				buffer.pop_back();
+			}
+			conn_stats.started_at   = current_second + Duration::seconds(i);
+			buffer.push_front(conn_stats);
+			conn_stats              = AppStatsForPeriod::default();
+		}
 		//	Memory stats buffer
 		let mut buffer = appstate.Stats.memory_buffer.write();
 		for i in 0..elapsed {
@@ -701,7 +771,7 @@ fn stats_processor(
 		current_second = new_second;
 	}
 	
-	(timing_stats, memory_stats, current_second)
+	(timing_stats, conn_stats, memory_stats, current_second)
 }
 
 

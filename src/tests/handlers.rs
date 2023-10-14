@@ -48,6 +48,7 @@ mod healthcheck {
 			Config:           Figment::from(Serialized::defaults(Config::default())).extract().unwrap(),
 			Stats:            AppStats {
 				started_at:   start,
+				active:       AtomicUsize::new(5),
 				requests:     AtomicUsize::new(10),
 				responses:    Mutex::new(AppStatsResponses {
 					codes:    hash_map!{
@@ -70,6 +71,7 @@ mod healthcheck {
 						}
 					}
 				}),
+				connections:  Default::default(),
 				memory:       Default::default(),
 				..Default::default()
 			},
@@ -91,6 +93,7 @@ mod healthcheck {
 			body:             UnpackedResponseBody::new(json!({
 				"started_at": start,
 				"uptime":     99,
+				"active":     5,
 				"requests":   10,
 				"responses":  {
 					"codes":                         {
@@ -138,6 +141,38 @@ mod healthcheck {
 							"minimum":    100,
 							"count":      10,
 						},
+					},
+				},
+				"connections": {
+					"second":      {
+						"average": 0.0,
+						"maximum": 0,
+						"minimum": 0,
+						"count":   0,
+					},
+					"minute":      {
+						"average": 0.0,
+						"maximum": 0,
+						"minimum": 0,
+						"count":   0,
+					},
+					"hour":        {
+						"average": 0.0,
+						"maximum": 0,
+						"minimum": 0,
+						"count":   0,
+					},
+					"day":         {
+						"average": 0.0,
+						"maximum": 0,
+						"minimum": 0,
+						"count":   0,
+					},
+					"all":         {
+						"average": 0.0,
+						"maximum": 0,
+						"minimum": 0,
+						"count":   0,
 					},
 				},
 				"memory": {

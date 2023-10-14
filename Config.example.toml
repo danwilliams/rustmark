@@ -21,9 +21,10 @@ stream_buffer    = 256
 read_buffer      = 128
 
 [stats]
-enabled            = true
-timing_buffer_size = 86_400 # One day: 60 * 60 * 24
-memory_buffer_size = 86_400 # One day: 60 * 60 * 24
+enabled                = true
+timing_buffer_size     = 86_400 # One day: 60 * 60 * 24
+connection_buffer_size = 86_400 # One day: 60 * 60 * 24
+memory_buffer_size     = 86_400 # One day: 60 * 60 * 24
 
 [users]
 #joe = "1a2b3c"

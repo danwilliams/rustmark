@@ -64,20 +64,29 @@ pub enum AssetContext {
 pub struct StatsResponse {
 	//		Public properties													
 	/// The date and time the application was started.
-	pub started_at: NaiveDateTime,
+	pub started_at:  NaiveDateTime,
 	
-	/// The amount of time the application has been running.
-	pub uptime:     u64,
+	/// The amount of time the application has been running, in seconds.
+	pub uptime:      u64,
 	
-	/// The number of requests that have been handled.
-	pub requests:   u64,
+	/// The current number of open connections, i.e. requests that have not yet
+	/// been responded to.
+	pub active:      u64,
+	
+	/// The number of requests that have been made. The number of responses will
+	/// be incremented only when the request has been fully handled and a
+	/// response generated.
+	pub requests:    u64,
 	
 	/// The average, maximum, and minimum response times by time period, status
 	/// code, and endpoint.
-	pub responses:  StatsResponseResponses,
+	pub responses:   StatsResponseResponses,
+	
+	/// The average, maximum, and minimum open connections by time period.
+	pub connections: StatsResponseResponseTimes,
 	
 	/// The average, maximum, and minimum memory usage by time period.
-	pub memory:     StatsResponseResponseTimes,
+	pub memory:      StatsResponseResponseTimes,
 }
 
 //		StatsResponseResponses													
@@ -347,12 +356,15 @@ pub async fn get_ping() {}
 ///   - `uptime`     - The amount of time the application has been running, in
 ///                    seconds.
 ///   - `requests`   - The number of requests that have been handled.
+///   - `active`     - The number of current open connections.
 ///   - `responses`  - The counts and times of responses that have been handled.
 ///                    The total should match the number of requests, but is
 ///                    broken down by status code. The times are the average,
 ///                    maximum, and minimum response times for the past second,
 ///                    minute, hour, day, and since the application last
 ///                    started.
+///   - `connections` - The average, maximum, and minimum number of open
+///                    connections for the past second, minute, hour, and day.
 ///   - `memory`     - The average, maximum, and minimum memory usage for the
 ///                    past minute, hour, day, and since the application last
 ///                    started.
@@ -376,6 +388,10 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	let mut timing_stats_minute = AppStatsForPeriod { ..Default::default() };
 	let mut timing_stats_hour   = AppStatsForPeriod { ..Default::default() };
 	let mut timing_stats_day    = AppStatsForPeriod { ..Default::default() };
+	let mut conn_stats_second   = AppStatsForPeriod { ..Default::default() };
+	let mut conn_stats_minute   = AppStatsForPeriod { ..Default::default() };
+	let mut conn_stats_hour     = AppStatsForPeriod { ..Default::default() };
+	let mut conn_stats_day      = AppStatsForPeriod { ..Default::default() };
 	let mut memory_stats_second = AppStatsForPeriod { ..Default::default() };
 	let mut memory_stats_minute = AppStatsForPeriod { ..Default::default() };
 	let mut memory_stats_hour   = AppStatsForPeriod { ..Default::default() };
@@ -399,6 +415,27 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 		}
 		//	Last day
 		timing_stats_day.update(stats);
+	}
+	drop(buffer);
+	
+	//		Connection stats													
+	//	Loop through the circular buffer and calculate the stats
+	let buffer = state.Stats.conn_buffer.read();
+	for (i, stats) in buffer.iter().enumerate() {
+		//	Last second
+		if i < 60 {
+			conn_stats_second.update(stats);
+		}
+		//	Last minute
+		if i < 60 {
+			conn_stats_minute.update(stats);
+		}
+		//	Last hour
+		if i < 360 {
+			conn_stats_hour.update(stats);
+		}
+		//	Last day
+		conn_stats_day.update(stats);
 	}
 	drop(buffer);
 	
@@ -426,11 +463,13 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	//		Build response data													
 	//	Lock source data
 	let responses = state.Stats.responses.lock();
+	let conns     = state.Stats.connections.lock();
 	let memory    = state.Stats.memory.lock();
 	let now       = Utc::now().naive_utc();
 	let response  = Json(StatsResponse {
 		started_at: state.Stats.started_at,
 		uptime:     (now - state.Stats.started_at).num_seconds() as u64,
+		active:     state.Stats.active.load(Ordering::Relaxed) as u64,
 		requests:   state.Stats.requests.load(Ordering::Relaxed) as u64,
 		responses:  StatsResponseResponses {
 			codes:  responses.codes.clone(),
@@ -447,6 +486,13 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 					.map(|(key, value)| (key, StatsResponseForPeriod::from(&value)))
 			),
 		},
+		connections:StatsResponseResponseTimes {
+			second:          StatsResponseForPeriod::from(&conn_stats_second),
+			minute:          StatsResponseForPeriod::from(&conn_stats_minute),
+			hour:            StatsResponseForPeriod::from(&conn_stats_hour),
+			day:             StatsResponseForPeriod::from(&conn_stats_day),
+			all:             StatsResponseForPeriod::from(&conns.clone()),
+		},
 		memory:     StatsResponseResponseTimes {
 			second:          StatsResponseForPeriod::from(&memory_stats_second),
 			minute:          StatsResponseForPeriod::from(&memory_stats_minute),
@@ -457,6 +503,7 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	});
 	//	Unlock source data
 	drop(responses);
+	drop(conns);
 	drop(memory);
 	
 	//		Response															
