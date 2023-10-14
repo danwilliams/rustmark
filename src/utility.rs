@@ -328,14 +328,25 @@ pub struct AppStatsForPeriod {
 	
 	/// The total number of responses that have been handled.
 	pub count:      u64,
-	
-	/// Sum of response times in milliseconds.
-	pub sum:        u64,
 }
 
 impl AppStatsForPeriod {
 	//		update																
 	/// Updates the stats with new data.
+	/// 
+	/// This function will compare the new data with the existing data and
+	/// update the stats accordingly. The maximum and minimum values will be
+	/// updated if the new data is higher or lower than the existing values,
+	/// and the count will be the combined count of the existing and new data.
+	/// 
+	/// Of particular note is the treatment of the average value. This is
+	/// calculated using a weighted average, combining the existing and new
+	/// averages using the count of each set of data as a weighting factor.
+	/// This means that the average value will be closer to the average of the
+	/// new data if the existing data is much larger than the new data, and vice
+	/// versa.
+	/// 
+	/// The start time will not be updated.
 	/// 
 	/// # Parameters
 	/// 
@@ -349,9 +360,9 @@ impl AppStatsForPeriod {
 			self.maximum = stats.maximum;
 		}
 		self.count      += stats.count;
-		self.sum        += stats.sum;
-		if self.count > 0 {
-			self.average = self.sum as f64 / self.count as f64;
+		if self.count > 0  && stats.count > 0 {
+			let weight   = stats.count as f64 / self.count as f64;
+			self.average = self.average * (1.0 - weight) + stats.average * weight;
 		}
 	}
 }
@@ -612,7 +623,6 @@ fn stats_processor(
 		maximum:   metrics.time_taken,
 		minimum:   metrics.time_taken,
 		count:     1,
-		sum:       metrics.time_taken,
 		..Default::default()
 	};
 	let memstats = AppStatsForPeriod {
@@ -620,7 +630,6 @@ fn stats_processor(
 		maximum:   metrics.memory,
 		minimum:   metrics.memory,
 		count:     1,
-		sum:       metrics.memory,
 		..Default::default()
 	};
 	
@@ -630,24 +639,20 @@ fn stats_processor(
 	
 	//		Update response statistics											
 	//	Lock response data
-	let mut responses       = appstate.Stats.responses.lock();
+	let mut responses = appstate.Stats.responses.lock();
 	
 	//	Update responses counter
 	*responses.codes.entry(metrics.status_code).or_insert(0) += 1;
 	
 	//	Update response time stats
 	responses.times.update(&newstats);
-	let alpha               = 1.0 / responses.times.count as f64;
-	responses.times.average = responses.times.average * (1.0 - alpha) + metrics.time_taken as f64 * alpha;
 	
 	//	Update endpoint response time stats
-	if let Some(ep_stats)   = responses.endpoints.get_mut(&metrics.endpoint) {
-		ep_stats.update(&newstats);
-		let ep_alpha        = 1.0 / ep_stats.count as f64;
-		ep_stats.average    = ep_stats.average * (1.0 - ep_alpha) + metrics.time_taken as f64 * ep_alpha;
-	} else {
-		responses.endpoints.insert(metrics.endpoint, newstats);
-	}
+	responses.endpoints
+		.entry(metrics.endpoint)
+		.and_modify(|ep_stats| ep_stats.update(&newstats))
+		.or_insert(newstats)
+	;
 	
 	//	Unlock response data
 	drop(responses);
@@ -658,8 +663,6 @@ fn stats_processor(
 	
 	//	Update memory usage stats
 	memory.update(&memstats);
-	let mem_alpha  = 1.0 / memory.count as f64;
-	memory.average = memory.average * (1.0 - mem_alpha) + metrics.memory as f64 * mem_alpha;
 	
 	//	Unlock memory data
 	drop(memory);

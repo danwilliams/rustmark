@@ -67,7 +67,6 @@ mod healthcheck {
 							maximum:    1000,
 							minimum:    100,
 							count:      10,
-							sum:        5000,
 						}
 					}
 				}),
