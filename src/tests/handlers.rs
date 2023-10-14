@@ -109,6 +109,12 @@ mod healthcheck {
 						"untracked":                     1,
 					},
 					"times":  {
+						"second":      {
+							"average": 0.0,
+							"maximum": 0,
+							"minimum": 0,
+							"count":   0,
+						},
 						"minute":      {
 							"average": 0.0,
 							"maximum": 0,
@@ -144,6 +150,12 @@ mod healthcheck {
 					},
 				},
 				"memory": {
+					"second":      {
+						"average": 0.0,
+						"maximum": 0,
+						"minimum": 0,
+						"count":   0,
+					},
 					"minute":      {
 						"average": 0.0,
 						"maximum": 0,

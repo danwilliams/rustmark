@@ -118,6 +118,9 @@ pub struct StatsResponseResponseCounts {
 #[derive(Serialize, ToSchema)]
 pub struct StatsResponseResponseTimes {
 	//		Public properties													
+	/// The average, maximum, and minimum response times for the past second.
+	pub second:  StatsResponseForPeriod,
+	
 	/// The average, maximum, and minimum response times for the past minute.
 	pub minute:  StatsResponseForPeriod,
 	
@@ -363,8 +366,9 @@ pub async fn get_ping() {}
 ///   - `responses`  - The counts and times of responses that have been handled.
 ///                    The total should match the number of requests, but is
 ///                    broken down by status code. The times are the average,
-///                    maximum, and minimum response times for the past minute,
-///                    hour, day, and since the application last started.
+///                    maximum, and minimum response times for the past second,
+///                    minute, hour, day, and since the application last
+///                    started.
 ///   - `memory`     - The average, maximum, and minimum memory usage for the
 ///                    past minute, hour, day, and since the application last
 ///                    started.
@@ -384,9 +388,11 @@ pub async fn get_ping() {}
 pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse> {
 	//		Process stats														
 	//	Create pots for each period
+	let mut timing_stats_second = AppStatsForPeriod { ..Default::default() };
 	let mut timing_stats_minute = AppStatsForPeriod { ..Default::default() };
 	let mut timing_stats_hour   = AppStatsForPeriod { ..Default::default() };
 	let mut timing_stats_day    = AppStatsForPeriod { ..Default::default() };
+	let mut memory_stats_second = AppStatsForPeriod { ..Default::default() };
 	let mut memory_stats_minute = AppStatsForPeriod { ..Default::default() };
 	let mut memory_stats_hour   = AppStatsForPeriod { ..Default::default() };
 	let mut memory_stats_day    = AppStatsForPeriod { ..Default::default() };
@@ -395,6 +401,10 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	//	Loop through the circular buffer and calculate the stats
 	let buffer = state.Stats.timing_buffer.read();
 	for (i, stats) in buffer.iter().enumerate() {
+		//	Last second
+		if i == 0 {
+			timing_stats_second.update(stats);
+		}
 		//	Last minute
 		if i < 60 {
 			timing_stats_minute.update(stats);
@@ -412,6 +422,10 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	//	Loop through the circular buffer and calculate the stats
 	let buffer = state.Stats.memory_buffer.read();
 	for (i, stats) in buffer.iter().enumerate() {
+		//	Last second
+		if i < 60 {
+			memory_stats_second.update(stats);
+		}
 		//	Last minute
 		if i < 60 {
 			memory_stats_minute.update(stats);
@@ -441,6 +455,7 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 				untracked:   responses.counts.untracked,
 			},
 			times:  StatsResponseResponseTimes {
+				second:      StatsResponseForPeriod::from(&timing_stats_second),
 				minute:      StatsResponseForPeriod::from(&timing_stats_minute),
 				hour:        StatsResponseForPeriod::from(&timing_stats_hour),
 				day:         StatsResponseForPeriod::from(&timing_stats_day),
@@ -453,6 +468,7 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 			),
 		},
 		memory:     StatsResponseResponseTimes {
+			second:          StatsResponseForPeriod::from(&memory_stats_second),
 			minute:          StatsResponseForPeriod::from(&memory_stats_minute),
 			hour:            StatsResponseForPeriod::from(&memory_stats_hour),
 			day:             StatsResponseForPeriod::from(&memory_stats_day),
