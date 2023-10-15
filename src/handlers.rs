@@ -402,7 +402,7 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	
 	//		Timing stats														
 	//	Loop through the circular buffer and calculate the stats
-	for (i, stats) in buffers.timing_buffer.iter().enumerate() {
+	for (i, stats) in buffers.responses.iter().enumerate() {
 		//	Last second
 		if i == 0 {
 			timing_stats_second.update(stats);
@@ -421,7 +421,7 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	
 	//		Connection stats													
 	//	Loop through the circular buffer and calculate the stats
-	for (i, stats) in buffers.conn_buffer.iter().enumerate() {
+	for (i, stats) in buffers.connections.iter().enumerate() {
 		//	Last second
 		if i < 60 {
 			conn_stats_second.update(stats);
@@ -440,7 +440,7 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	
 	//		Memory stats														
 	//	Loop through the circular buffer and calculate the stats
-	for (i, stats) in buffers.memory_buffer.iter().enumerate() {
+	for (i, stats) in buffers.memory.iter().enumerate() {
 		//	Last second
 		if i < 60 {
 			memory_stats_second.update(stats);
@@ -467,7 +467,7 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	let response  = Json(StatsResponse {
 		started_at: state.Stats.started_at,
 		uptime:     (now - state.Stats.started_at).num_seconds() as u64,
-		active:     state.Stats.active.load(Ordering::Relaxed) as u64,
+		active:     state.Stats.connections.load(Ordering::Relaxed) as u64,
 		requests:   state.Stats.requests.load(Ordering::Relaxed) as u64,
 		responses:  StatsResponseResponses {
 			codes:  totals.responses.codes.clone(),

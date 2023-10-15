@@ -244,16 +244,16 @@ pub struct AppState {
 pub struct AppStats {
 	//		Public properties													
 	/// The date and time the application was started.
-	pub started_at: NaiveDateTime,
+	pub started_at:  NaiveDateTime,
 	
 	/// The current number of open connections, i.e. requests that have not yet
 	/// been responded to.
-	pub active:     AtomicUsize,
+	pub connections: AtomicUsize,
 	
 	/// The number of requests that have been made. The number of responses will
 	/// be incremented only when the request has been fully handled and a
 	/// response generated.
-	pub requests:   AtomicUsize,
+	pub requests:    AtomicUsize,
 	
 	/// The average, maximum, minimum, and count for each area sampled. The data
 	/// is wrapped inside a [`Mutex`] because it is important to update the
@@ -263,7 +263,7 @@ pub struct AppStats {
 	/// a [`std::sync::Mutex`] because it is theoretically faster in highly
 	/// contended situations, but the main advantage is that it is infallible,
 	/// and it does not have mutex poisoning.
-	pub totals:     Mutex<AppStatsTotals>,
+	pub totals:      Mutex<AppStatsTotals>,
 	
 	/// Circular buffers of average, maximum, minimum, and count per second for
 	/// each area sampled, for the individually-configured periods. The buffers
@@ -271,7 +271,7 @@ pub struct AppStats {
 	/// maximum of once per second. A [`parking_lot::RwLock`] is used instead of
 	/// a [`std::sync::RwLock`] because it is theoretically faster in highly
 	/// contended situations.
-	pub buffers:    RwLock<AppStatsBuffers>,
+	pub buffers:     RwLock<AppStatsBuffers>,
 }
 
 //		AppStatsTotals															
@@ -298,15 +298,15 @@ pub struct AppStatsBuffers {
 	//		Public properties													
 	/// A circular buffer of response time stats per second for the configured
 	/// period.
-	pub timing_buffer: VecDeque<AppStatsForPeriod>,
+	pub responses:   VecDeque<AppStatsForPeriod>,
 	
 	/// A circular buffer of connection stats per second for the configured
 	/// period.
-	pub conn_buffer:   VecDeque<AppStatsForPeriod>,
+	pub connections: VecDeque<AppStatsForPeriod>,
 	
 	/// A circular buffer of memory usage stats per second for the configured
 	/// period.
-	pub memory_buffer: VecDeque<AppStatsForPeriod>,
+	pub memory:      VecDeque<AppStatsForPeriod>,
 }
 
 //		AppStatsResponses														
@@ -609,9 +609,9 @@ pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<
 	//	building up to that point which would make it harder to diagnose.
 	{
 		let mut buffers    = appstate.Stats.buffers.write();
-		buffers.timing_buffer.reserve(appstate.Config.stats.timing_buffer_size);
-		buffers.conn_buffer  .reserve(appstate.Config.stats.connection_buffer_size);
-		buffers.memory_buffer.reserve(appstate.Config.stats.memory_buffer_size);
+		buffers.responses  .reserve(appstate.Config.stats.timing_buffer_size);
+		buffers.connections.reserve(appstate.Config.stats.connection_buffer_size);
+		buffers.memory     .reserve(appstate.Config.stats.memory_buffer_size);
 	}
 	
 	//	Queue processing loop
@@ -725,29 +725,29 @@ fn stats_processor(
 		let mut buffers = appstate.Stats.buffers.write();
 		//	Timing stats buffer
 		for i in 0..elapsed {
-			if buffers.timing_buffer.len() == appstate.Config.stats.timing_buffer_size {
-				buffers.timing_buffer.pop_back();
+			if buffers.responses.len() == appstate.Config.stats.timing_buffer_size {
+				buffers.responses.pop_back();
 			}
 			timing_stats.started_at = current_second + Duration::seconds(i);
-			buffers.timing_buffer.push_front(timing_stats);
+			buffers.responses.push_front(timing_stats);
 			timing_stats            = AppStatsForPeriod::default();
 		}
 		//	Connections stats buffer
 		for i in 0..elapsed {
-			if buffers.conn_buffer.len() == appstate.Config.stats.connection_buffer_size {
-				buffers.conn_buffer.pop_back();
+			if buffers.connections.len() == appstate.Config.stats.connection_buffer_size {
+				buffers.connections.pop_back();
 			}
 			conn_stats.started_at   = current_second + Duration::seconds(i);
-			buffers.conn_buffer.push_front(conn_stats);
+			buffers.connections.push_front(conn_stats);
 			conn_stats              = AppStatsForPeriod::default();
 		}
 		//	Memory stats buffer
 		for i in 0..elapsed {
-			if buffers.memory_buffer.len() == appstate.Config.stats.memory_buffer_size {
-				buffers.memory_buffer.pop_back();
+			if buffers.memory.len() == appstate.Config.stats.memory_buffer_size {
+				buffers.memory.pop_back();
 			}
 			memory_stats.started_at = current_second + Duration::seconds(i);
-			buffers.memory_buffer.push_front(memory_stats);
+			buffers.memory.push_front(memory_stats);
 			memory_stats            = AppStatsForPeriod::default();
 		}
 		current_second = new_second;

@@ -48,7 +48,7 @@ mod healthcheck {
 			Config:           Figment::from(Serialized::defaults(Config::default())).extract().unwrap(),
 			Stats:            AppStats {
 				started_at:   start,
-				active:       AtomicUsize::new(5),
+				connections:  AtomicUsize::new(5),
 				requests:     AtomicUsize::new(10),
 				totals:       Mutex::new(AppStatsTotals {
 					responses:    AppStatsResponses {

@@ -92,7 +92,7 @@ pub async fn stats_layer<B>(
 	
 	//	Update requests counter
 	appstate.Stats.requests.fetch_add(1, Ordering::Relaxed);
-	appstate.Stats.active.fetch_add(1, Ordering::Relaxed);
+	appstate.Stats.connections.fetch_add(1, Ordering::Relaxed);
 	
 	//	Process request
 	let response    = next.run(request).await;
@@ -103,11 +103,11 @@ pub async fn stats_layer<B>(
 		started_at:   stats_cx.started_at,
 		time_taken:   (Utc::now().naive_utc() - stats_cx.started_at).num_microseconds().unwrap() as u64,
 		status_code:  response.status(),
-		connections:  appstate.Stats.active.load(Ordering::Relaxed) as u64,
+		connections:  appstate.Stats.connections.load(Ordering::Relaxed) as u64,
 		memory:	      Malloc::read().unwrap() as u64,
 	}).expect("Failed to send response time");
 	
-	appstate.Stats.active.fetch_sub(1, Ordering::Relaxed);
+	appstate.Stats.connections.fetch_sub(1, Ordering::Relaxed);
 	
 	//	Return response
 	response
