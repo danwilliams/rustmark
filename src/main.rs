@@ -3,7 +3,7 @@
 mod auth;
 mod errors;
 mod handlers;
-mod middlewares;
+mod stats;
 mod utility;
 
 
@@ -14,7 +14,7 @@ use crate::{
 	auth::*,
 	errors::*,
 	handlers::*,
-	middlewares::*,
+	stats::*,
 	utility::*,
 };
 use axum::{
