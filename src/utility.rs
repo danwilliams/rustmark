@@ -285,18 +285,18 @@ pub struct AppStatsTotals {
 	
 	/// The average, maximum, and minimum response times since the application
 	/// last started.
-	pub times:       AppStatsForPeriod,
+	pub times:       StatsForPeriod,
 	
 	/// The average, maximum, and minimum response times by endpoint since the
 	/// application last started. These statistics are stored in a [`HashMap`]
 	/// for ease.
-	pub endpoints:   HashMap<Endpoint, AppStatsForPeriod>,
+	pub endpoints:   HashMap<Endpoint, StatsForPeriod>,
 	
 	/// The average, maximum, and minimum open connections by time period.
-	pub connections: AppStatsForPeriod,
+	pub connections: StatsForPeriod,
 	
 	/// The average, maximum, and minimum memory usage by time period.
-	pub memory:      AppStatsForPeriod,
+	pub memory:      StatsForPeriod,
 }
 
 impl AppStatsTotals {
@@ -322,40 +322,40 @@ pub struct AppStatsBuffers {
 	//		Public properties													
 	/// A circular buffer of response time stats per second for the configured
 	/// period.
-	pub responses:   VecDeque<AppStatsForPeriod>,
+	pub responses:   VecDeque<StatsForPeriod>,
 	
 	/// A circular buffer of connection stats per second for the configured
 	/// period.
-	pub connections: VecDeque<AppStatsForPeriod>,
+	pub connections: VecDeque<StatsForPeriod>,
 	
 	/// A circular buffer of memory usage stats per second for the configured
 	/// period.
-	pub memory:      VecDeque<AppStatsForPeriod>,
+	pub memory:      VecDeque<StatsForPeriod>,
 }
 
-//		AppStatsForPeriod														
-/// Average, maximum, and minimum values for a period of time.
+//		StatsForPeriod															
+/// Average, maximum, minimum, and count of values for a period of time.
 #[derive(Clone, SmartDefault)]
-pub struct AppStatsForPeriod {
+pub struct StatsForPeriod {
 	//		Public properties													
 	/// The date and time the period started.
 	#[default(Utc::now().naive_utc())]
 	pub started_at: NaiveDateTime,
 	
-	/// Average response time in microseconds.
+	/// Average value.
 	pub average:    f64,
 	
-	/// Maximum response time in microseconds.
+	/// Maximum value.
 	pub maximum:    u64,
 	
-	/// Minimum response time in microseconds.
+	/// Minimum value.
 	pub minimum:    u64,
 	
-	/// The total number of responses that have been handled.
+	/// The total number of values.
 	pub count:      u64,
 }
 
-impl AppStatsForPeriod {
+impl StatsForPeriod {
 	//		update																
 	/// Updates the stats with new data.
 	/// 
@@ -377,7 +377,7 @@ impl AppStatsForPeriod {
 	/// 
 	/// * `stats` - The stats to update with.
 	/// 
-	pub fn update(&mut self, stats: &AppStatsForPeriod) {
+	pub fn update(&mut self, stats: &StatsForPeriod) {
 		if (stats.minimum < self.minimum && stats.count > 0) || self.count == 0 {
 			self.minimum = stats.minimum;
 		}
@@ -586,9 +586,9 @@ pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<
 	//	Fixed time period of the current second
 	let mut current_second = Utc::now().naive_utc().with_nanosecond(0).unwrap();
 	//	Cumulative stats for the current second
-	let mut timing_stats   = AppStatsForPeriod::default();
-	let mut conn_stats     = AppStatsForPeriod::default();
-	let mut memory_stats   = AppStatsForPeriod::default();
+	let mut timing_stats   = StatsForPeriod::default();
+	let mut conn_stats     = StatsForPeriod::default();
+	let mut memory_stats   = StatsForPeriod::default();
 	
 	//	Initialise circular buffers. We reserve the capacities here right at the
 	//	start so that the application always uses exactly the same amount of
@@ -641,28 +641,28 @@ pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<
 fn stats_processor(
 	appstate:           Arc<AppState>,
 	metrics:            ResponseMetrics,
-	mut timing_stats:   AppStatsForPeriod,
-	mut conn_stats:     AppStatsForPeriod,
-	mut memory_stats:   AppStatsForPeriod,
+	mut timing_stats:   StatsForPeriod,
+	mut conn_stats:     StatsForPeriod,
+	mut memory_stats:   StatsForPeriod,
 	mut current_second: NaiveDateTime
-) -> (AppStatsForPeriod, AppStatsForPeriod, AppStatsForPeriod, NaiveDateTime) {
+) -> (StatsForPeriod, StatsForPeriod, StatsForPeriod, NaiveDateTime) {
 	//		Preparation															
 	//	Prepare new stats
-	let newstats = AppStatsForPeriod {
+	let newstats = StatsForPeriod {
 		average:   metrics.time_taken as f64,
 		maximum:   metrics.time_taken,
 		minimum:   metrics.time_taken,
 		count:     1,
 		..Default::default()
 	};
-	let constats = AppStatsForPeriod {
+	let constats = StatsForPeriod {
 		average:   metrics.connections as f64,
 		maximum:   metrics.connections,
 		minimum:   metrics.connections,
 		count:     1,
 		..Default::default()
 	};
-	let memstats = AppStatsForPeriod {
+	let memstats = StatsForPeriod {
 		average:   metrics.memory as f64,
 		maximum:   metrics.memory,
 		minimum:   metrics.memory,
@@ -720,7 +720,7 @@ fn stats_processor(
 			}
 			timing_stats.started_at = current_second + Duration::seconds(i);
 			buffers.responses.push_front(timing_stats);
-			timing_stats            = AppStatsForPeriod::default();
+			timing_stats            = StatsForPeriod::default();
 		}
 		//	Connections stats buffer
 		for i in 0..elapsed {
@@ -729,7 +729,7 @@ fn stats_processor(
 			}
 			conn_stats.started_at   = current_second + Duration::seconds(i);
 			buffers.connections.push_front(conn_stats);
-			conn_stats              = AppStatsForPeriod::default();
+			conn_stats              = StatsForPeriod::default();
 		}
 		//	Memory stats buffer
 		for i in 0..elapsed {
@@ -738,7 +738,7 @@ fn stats_processor(
 			}
 			memory_stats.started_at = current_second + Duration::seconds(i);
 			buffers.memory.push_front(memory_stats);
-			memory_stats            = AppStatsForPeriod::default();
+			memory_stats            = StatsForPeriod::default();
 		}
 		current_second = new_second;
 	}

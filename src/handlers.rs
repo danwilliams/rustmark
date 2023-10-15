@@ -82,63 +82,64 @@ pub struct StatsResponse {
 	#[serde(serialize_with = "serialize_status_codes")]
 	pub codes:       HashMap<StatusCode, u64>,
 	
-	/// The average, maximum, and minimum response times by time period.
-	pub times:       StatsResponseResponseTimes,
+	/// The average, maximum, and minimum response times by time period, in
+	/// microseconds.
+	pub times:       StatsResponseByTimePeriod,
 	
 	/// The average, maximum, and minimum response times by endpoint since the
-	/// application last started.
+	/// application last started, in microseconds.
 	pub endpoints:   HashMap<Endpoint, StatsResponseForPeriod>,
 	
 	/// The average, maximum, and minimum open connections by time period.
-	pub connections: StatsResponseResponseTimes,
+	pub connections: StatsResponseByTimePeriod,
 	
-	/// The average, maximum, and minimum memory usage by time period.
-	pub memory:      StatsResponseResponseTimes,
+	/// The average, maximum, and minimum memory usage by time period, in bytes.
+	pub memory:      StatsResponseByTimePeriod,
 }
 
-//		StatsResponseResponseTimes												
-/// Response times in microseconds.
+//		StatsResponseByTimePeriod												
+/// Average, maximum, minimum, and count of values grouped by time period.
 #[derive(Serialize, ToSchema)]
-pub struct StatsResponseResponseTimes {
+pub struct StatsResponseByTimePeriod {
 	//		Public properties													
-	/// The average, maximum, and minimum response times for the past second.
+	/// The average, maximum, and minimum values for the past second.
 	pub second:  StatsResponseForPeriod,
 	
-	/// The average, maximum, and minimum response times for the past minute.
+	/// The average, maximum, and minimum values for the past minute.
 	pub minute:  StatsResponseForPeriod,
 	
-	/// The average, maximum, and minimum response times for the past hour.
+	/// The average, maximum, and minimum values for the past hour.
 	pub hour:    StatsResponseForPeriod,
 	
-	/// The average, maximum, and minimum response times for the past day.
+	/// The average, maximum, and minimum values for the past day.
 	pub day:     StatsResponseForPeriod,
 	
-	/// The average, maximum, and minimum response times since the application
-	/// last started.
+	/// The average, maximum, and minimum values since the application last
+	/// started.
 	pub all:     StatsResponseForPeriod,
 }
 
 //		StatsResponseForPeriod													
-/// Average, maximum, and minimum values for a period of time.
+/// Average, maximum, minimum, and count of values for a period of time.
 #[derive(Serialize, ToSchema)]
 pub struct StatsResponseForPeriod {
 	//		Public properties													
-	/// Average response time in microseconds.
+	/// Average value.
 	pub average: f64,
 	
-	/// Maximum response time in microseconds.
+	/// Maximum value.
 	pub maximum: u64,
 	
-	/// Minimum response time in microseconds.
+	/// Minimum value.
 	pub minimum: u64,
 	
-	/// The total number of responses that have been handled.
+	/// The total number of values.
 	pub count:   u64,
 }
 
-impl From<&AppStatsForPeriod> for StatsResponseForPeriod {
+impl From<&StatsForPeriod> for StatsResponseForPeriod {
 	//		from																
-	fn from(stats: &AppStatsForPeriod) -> Self {
+	fn from(stats: &StatsForPeriod) -> Self {
 		Self {
 			average: stats.average,
 			maximum: stats.maximum,
@@ -377,18 +378,18 @@ pub async fn get_ping() {}
 pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse> {
 	//		Process stats														
 	//	Create pots for each period
-	let mut timing_stats_second = AppStatsForPeriod { ..Default::default() };
-	let mut timing_stats_minute = AppStatsForPeriod { ..Default::default() };
-	let mut timing_stats_hour   = AppStatsForPeriod { ..Default::default() };
-	let mut timing_stats_day    = AppStatsForPeriod { ..Default::default() };
-	let mut conn_stats_second   = AppStatsForPeriod { ..Default::default() };
-	let mut conn_stats_minute   = AppStatsForPeriod { ..Default::default() };
-	let mut conn_stats_hour     = AppStatsForPeriod { ..Default::default() };
-	let mut conn_stats_day      = AppStatsForPeriod { ..Default::default() };
-	let mut memory_stats_second = AppStatsForPeriod { ..Default::default() };
-	let mut memory_stats_minute = AppStatsForPeriod { ..Default::default() };
-	let mut memory_stats_hour   = AppStatsForPeriod { ..Default::default() };
-	let mut memory_stats_day    = AppStatsForPeriod { ..Default::default() };
+	let mut timing_stats_second = StatsForPeriod { ..Default::default() };
+	let mut timing_stats_minute = StatsForPeriod { ..Default::default() };
+	let mut timing_stats_hour   = StatsForPeriod { ..Default::default() };
+	let mut timing_stats_day    = StatsForPeriod { ..Default::default() };
+	let mut conn_stats_second   = StatsForPeriod { ..Default::default() };
+	let mut conn_stats_minute   = StatsForPeriod { ..Default::default() };
+	let mut conn_stats_hour     = StatsForPeriod { ..Default::default() };
+	let mut conn_stats_day      = StatsForPeriod { ..Default::default() };
+	let mut memory_stats_second = StatsForPeriod { ..Default::default() };
+	let mut memory_stats_minute = StatsForPeriod { ..Default::default() };
+	let mut memory_stats_hour   = StatsForPeriod { ..Default::default() };
+	let mut memory_stats_day    = StatsForPeriod { ..Default::default() };
 	
 	//	Lock source data
 	let buffers                 = state.Stats.buffers.read();
@@ -463,7 +464,7 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 		active:      state.Stats.connections.load(Ordering::Relaxed) as u64,
 		requests:    state.Stats.requests.load(Ordering::Relaxed) as u64,
 		codes:       totals.codes.clone(),
-		times:       StatsResponseResponseTimes {
+		times:       StatsResponseByTimePeriod {
 			second:  StatsResponseForPeriod::from(&timing_stats_second),
 			minute:  StatsResponseForPeriod::from(&timing_stats_minute),
 			hour:    StatsResponseForPeriod::from(&timing_stats_hour),
@@ -475,14 +476,14 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 				.into_iter()
 				.map(|(key, value)| (key, StatsResponseForPeriod::from(&value)))
 		),
-		connections: StatsResponseResponseTimes {
+		connections: StatsResponseByTimePeriod {
 			second:  StatsResponseForPeriod::from(&conn_stats_second),
 			minute:  StatsResponseForPeriod::from(&conn_stats_minute),
 			hour:    StatsResponseForPeriod::from(&conn_stats_hour),
 			day:     StatsResponseForPeriod::from(&conn_stats_day),
 			all:     StatsResponseForPeriod::from(&totals.connections.clone()),
 		},
-		memory:      StatsResponseResponseTimes {
+		memory:      StatsResponseByTimePeriod {
 			second:  StatsResponseForPeriod::from(&memory_stats_second),
 			minute:  StatsResponseForPeriod::from(&memory_stats_minute),
 			hour:    StatsResponseForPeriod::from(&memory_stats_hour),

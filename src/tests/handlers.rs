@@ -62,7 +62,7 @@ mod healthcheck {
 						Endpoint {
 							method:     Method::GET,
 							path:       s!("/api/stats"),
-						}:              AppStatsForPeriod {
+						}:              StatsForPeriod {
 							started_at: start,
 							average:    500.0,
 							maximum:    1000,
