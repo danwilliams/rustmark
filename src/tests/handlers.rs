@@ -6,7 +6,7 @@
 #[cfg(test)]
 mod healthcheck {
 	use super::super::*;
-	use crate::utility::{AppStats, AppStatsResponses, Config};
+	use crate::utility::{AppStats, Config};
 	use assert_json_diff::assert_json_eq;
 	use axum::http::{Method, StatusCode};
 	use chrono::Duration;
@@ -51,29 +51,27 @@ mod healthcheck {
 				connections:  AtomicUsize::new(5),
 				requests:     AtomicUsize::new(10),
 				totals:       Mutex::new(AppStatsTotals {
-					responses:    AppStatsResponses {
-						codes:    hash_map!{
-							StatusCode::OK:                    5,
-							StatusCode::UNAUTHORIZED:          4,
-							StatusCode::NOT_FOUND:             3,
-							StatusCode::INTERNAL_SERVER_ERROR: 2,
-						},
-						times:         Default::default(),
-						endpoints:     hash_map!{
-							Endpoint {
-								method:     Method::GET,
-								path:       s!("/api/stats"),
-							}:              AppStatsForPeriod {
-								started_at: start,
-								average:    500.0,
-								maximum:    1000,
-								minimum:    100,
-								count:      10,
-							}
-						}
+					codes:       hash_map!{
+						StatusCode::OK:                    5,
+						StatusCode::UNAUTHORIZED:          4,
+						StatusCode::NOT_FOUND:             3,
+						StatusCode::INTERNAL_SERVER_ERROR: 2,
 					},
-					connections:  Default::default(),
-					memory:       Default::default(),
+					times:       Default::default(),
+					endpoints:   hash_map!{
+						Endpoint {
+							method:     Method::GET,
+							path:       s!("/api/stats"),
+						}:              AppStatsForPeriod {
+							started_at: start,
+							average:    500.0,
+							maximum:    1000,
+							minimum:    100,
+							count:      10,
+						},
+					},
+					connections: Default::default(),
+					memory:      Default::default(),
 				}),
 				..Default::default()
 			},
@@ -97,52 +95,50 @@ mod healthcheck {
 				"uptime":     99,
 				"active":     5,
 				"requests":   10,
-				"responses":  {
-					"codes":                         {
-						"200 OK":                    5,
-						"401 Unauthorized":          4,
-						"404 Not Found":             3,
-						"500 Internal Server Error": 2,
+				"codes":                         {
+					"200 OK":                    5,
+					"401 Unauthorized":          4,
+					"404 Not Found":             3,
+					"500 Internal Server Error": 2,
+				},
+				"times":  {
+					"second":      {
+						"average": 0.0,
+						"maximum": 0,
+						"minimum": 0,
+						"count":   0,
 					},
-					"times":  {
-						"second":      {
-							"average": 0.0,
-							"maximum": 0,
-							"minimum": 0,
-							"count":   0,
-						},
-						"minute":      {
-							"average": 0.0,
-							"maximum": 0,
-							"minimum": 0,
-							"count":   0,
-						},
-						"hour":        {
-							"average": 0.0,
-							"maximum": 0,
-							"minimum": 0,
-							"count":   0,
-						},
-						"day":         {
-							"average": 0.0,
-							"maximum": 0,
-							"minimum": 0,
-							"count":   0,
-						},
-						"all":         {
-							"average": 0.0,
-							"maximum": 0,
-							"minimum": 0,
-							"count":   0,
-						},
+					"minute":      {
+						"average": 0.0,
+						"maximum": 0,
+						"minimum": 0,
+						"count":   0,
 					},
-					"endpoints": {
-						"GET /api/stats": {
-							"average":    500.0,
-							"maximum":    1000,
-							"minimum":    100,
-							"count":      10,
-						},
+					"hour":        {
+						"average": 0.0,
+						"maximum": 0,
+						"minimum": 0,
+						"count":   0,
+					},
+					"day":         {
+						"average": 0.0,
+						"maximum": 0,
+						"minimum": 0,
+						"count":   0,
+					},
+					"all":         {
+						"average": 0.0,
+						"maximum": 0,
+						"minimum": 0,
+						"count":   0,
+					},
+				},
+				"endpoints": {
+					"GET /api/stats": {
+						"average":    500.0,
+						"maximum":    1000,
+						"minimum":    100,
+						"count":      10,
 					},
 				},
 				"connections": {

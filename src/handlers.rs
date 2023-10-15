@@ -78,32 +78,22 @@ pub struct StatsResponse {
 	/// response generated.
 	pub requests:    u64,
 	
-	/// The average, maximum, and minimum response times by time period, status
-	/// code, and endpoint.
-	pub responses:   StatsResponseResponses,
+	/// The number of responses that have been handled, by status code.
+	#[serde(serialize_with = "serialize_status_codes")]
+	pub codes:       HashMap<StatusCode, u64>,
+	
+	/// The average, maximum, and minimum response times by time period.
+	pub times:       StatsResponseResponseTimes,
+	
+	/// The average, maximum, and minimum response times by endpoint since the
+	/// application last started.
+	pub endpoints:   HashMap<Endpoint, StatsResponseForPeriod>,
 	
 	/// The average, maximum, and minimum open connections by time period.
 	pub connections: StatsResponseResponseTimes,
 	
 	/// The average, maximum, and minimum memory usage by time period.
 	pub memory:      StatsResponseResponseTimes,
-}
-
-//		StatsResponseResponses													
-/// Counts and times of responses.
-#[derive(Serialize, ToSchema)]
-pub struct StatsResponseResponses {
-	//		Public properties													
-	/// The number of responses that have been handled, by status code.
-	#[serde(serialize_with = "serialize_status_codes")]
-	pub codes:     HashMap<StatusCode, u64>,
-	
-	/// The average, maximum, and minimum response times by time period.
-	pub times:     StatsResponseResponseTimes,
-	
-	/// The average, maximum, and minimum response times by endpoint since the
-	/// application last started.
-	pub endpoints: HashMap<Endpoint, StatsResponseForPeriod>,
 }
 
 //		StatsResponseResponseTimes												
@@ -355,16 +345,19 @@ pub async fn get_ping() {}
 ///                    8601 format.
 ///   - `uptime`     - The amount of time the application has been running, in
 ///                    seconds.
-///   - `requests`   - The number of requests that have been handled.
+///   - `requests`   - The number of requests that have been handled since the
+///                    application last started.
 ///   - `active`     - The number of current open connections.
-///   - `responses`  - The counts and times of responses that have been handled.
-///                    The total should match the number of requests, but is
-///                    broken down by status code. The times are the average,
-///                    maximum, and minimum response times for the past second,
-///                    minute, hour, day, and since the application last
-///                    started.
+///   - `codes`      - The counts of responses that have been handled, broken
+///                    down by status code, since the application last started.
+///   - `times`      - The average, maximum, and minimum response times for the
+///                    past second, minute, hour, day, and since the application
+///                    last started.
+///   - `endpoints`  - The counts of responses that have been handled, broken
+///                    down by endpoint, since the application last started.
 ///   - `connections` - The average, maximum, and minimum number of open
-///                    connections for the past second, minute, hour, and day.
+///                    connections for the past second, minute, hour, day, and
+///                    since the application last started.
 ///   - `memory`     - The average, maximum, and minimum memory usage for the
 ///                    past minute, hour, day, and since the application last
 ///                    started.
@@ -462,41 +455,39 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	
 	//		Build response data													
 	//	Lock source data
-	let totals    = state.Stats.totals.lock();
-	let now       = Utc::now().naive_utc();
-	let response  = Json(StatsResponse {
-		started_at: state.Stats.started_at,
-		uptime:     (now - state.Stats.started_at).num_seconds() as u64,
-		active:     state.Stats.connections.load(Ordering::Relaxed) as u64,
-		requests:   state.Stats.requests.load(Ordering::Relaxed) as u64,
-		responses:  StatsResponseResponses {
-			codes:  totals.responses.codes.clone(),
-			times:  StatsResponseResponseTimes {
-				second:      StatsResponseForPeriod::from(&timing_stats_second),
-				minute:      StatsResponseForPeriod::from(&timing_stats_minute),
-				hour:        StatsResponseForPeriod::from(&timing_stats_hour),
-				day:         StatsResponseForPeriod::from(&timing_stats_day),
-				all:         StatsResponseForPeriod::from(&totals.responses.times),
-			},
-			endpoints:       HashMap::from_iter(
-				totals.responses.endpoints.clone()
-					.into_iter()
-					.map(|(key, value)| (key, StatsResponseForPeriod::from(&value)))
-			),
+	let totals     = state.Stats.totals.lock();
+	let now        = Utc::now().naive_utc();
+	let response   = Json(StatsResponse {
+		started_at:  state.Stats.started_at,
+		uptime:      (now - state.Stats.started_at).num_seconds() as u64,
+		active:      state.Stats.connections.load(Ordering::Relaxed) as u64,
+		requests:    state.Stats.requests.load(Ordering::Relaxed) as u64,
+		codes:       totals.codes.clone(),
+		times:       StatsResponseResponseTimes {
+			second:  StatsResponseForPeriod::from(&timing_stats_second),
+			minute:  StatsResponseForPeriod::from(&timing_stats_minute),
+			hour:    StatsResponseForPeriod::from(&timing_stats_hour),
+			day:     StatsResponseForPeriod::from(&timing_stats_day),
+			all:     StatsResponseForPeriod::from(&totals.times),
 		},
-		connections:StatsResponseResponseTimes {
-			second:          StatsResponseForPeriod::from(&conn_stats_second),
-			minute:          StatsResponseForPeriod::from(&conn_stats_minute),
-			hour:            StatsResponseForPeriod::from(&conn_stats_hour),
-			day:             StatsResponseForPeriod::from(&conn_stats_day),
-			all:             StatsResponseForPeriod::from(&totals.connections.clone()),
+		endpoints:   HashMap::from_iter(
+			totals.endpoints.clone()
+				.into_iter()
+				.map(|(key, value)| (key, StatsResponseForPeriod::from(&value)))
+		),
+		connections: StatsResponseResponseTimes {
+			second:  StatsResponseForPeriod::from(&conn_stats_second),
+			minute:  StatsResponseForPeriod::from(&conn_stats_minute),
+			hour:    StatsResponseForPeriod::from(&conn_stats_hour),
+			day:     StatsResponseForPeriod::from(&conn_stats_day),
+			all:     StatsResponseForPeriod::from(&totals.connections.clone()),
 		},
-		memory:     StatsResponseResponseTimes {
-			second:          StatsResponseForPeriod::from(&memory_stats_second),
-			minute:          StatsResponseForPeriod::from(&memory_stats_minute),
-			hour:            StatsResponseForPeriod::from(&memory_stats_hour),
-			day:             StatsResponseForPeriod::from(&memory_stats_day),
-			all:             StatsResponseForPeriod::from(&totals.memory.clone()),
+		memory:      StatsResponseResponseTimes {
+			second:  StatsResponseForPeriod::from(&memory_stats_second),
+			minute:  StatsResponseForPeriod::from(&memory_stats_minute),
+			hour:    StatsResponseForPeriod::from(&memory_stats_hour),
+			day:     StatsResponseForPeriod::from(&memory_stats_day),
+			all:     StatsResponseForPeriod::from(&totals.memory.clone()),
 		},
 	});
 	//	Unlock source data
