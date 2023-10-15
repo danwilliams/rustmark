@@ -30,7 +30,7 @@ use rubedo::sugar::s;
 use serde::Serialize;
 use serde_json::{self};
 use std::{
-	collections::HashMap,
+	collections::{HashMap, VecDeque},
 	fs,
 	sync::{Arc, atomic::Ordering},
 };
@@ -359,72 +359,61 @@ pub async fn get_ping() {}
 	)
 )]
 pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse> {
+	//		Helper functions													
+	fn initialize_map(
+		periods: &HashMap<String, usize>,
+		buffer:  &VecDeque<StatsForPeriod>,
+	) -> IndexMap<String, StatsForPeriod> {
+		let mut output: IndexMap<String, StatsForPeriod> = periods
+			.iter()
+			.sorted_by(|a, b| a.1.cmp(b.1))
+			.map(|(name, _)| (name.clone(), StatsForPeriod { ..Default::default() }))
+			.collect()
+		;
+		//	Loop through the circular buffer and calculate the stats
+		for (i, stats) in buffer.iter().enumerate() {
+			for (name, period) in periods.iter() {
+				if i < *period {
+					output.get_mut(name).unwrap().update(stats);
+				}
+			}
+		}
+		output
+	}
+	
+	fn convert_map(
+		input: IndexMap<String, StatsForPeriod>,
+		all:   &StatsForPeriod
+	) -> IndexMap<String, StatsResponseForPeriod> {
+		let mut output: IndexMap<String, StatsResponseForPeriod> = input
+			.into_iter()
+			.map(|(key, value)| (key, StatsResponseForPeriod::from(&value)))
+			.collect()
+		;
+		output.insert(s!("all"), StatsResponseForPeriod::from(all));
+		output
+	}
+	
 	//		Preparation															
-	//	Create pots for each period
-	let mut timing_input = IndexMap::new();
-	let mut conn_input   = IndexMap::new();
-	let mut memory_input = IndexMap::new();
-	for (name, _) in state.Config.stats_periods.iter().sorted_by(|a, b| a.1.cmp(b.1)) {
-		timing_input.insert(name.clone(), StatsForPeriod { ..Default::default() });
-		conn_input  .insert(name.clone(), StatsForPeriod { ..Default::default() });
-		memory_input.insert(name.clone(), StatsForPeriod { ..Default::default() });
-	}
-	
-	//		Process stats buffers												
 	//	Lock source data
-	let buffers = state.Stats.buffers.read();
+	let buffers      = state.Stats.buffers.read();
 	
-	//	Loop through the circular buffers and calculate the stats
-	for (i, stats) in buffers.responses.iter().enumerate() {
-		for (name, period) in state.Config.stats_periods.iter() {
-			if i < *period {
-				timing_input.get_mut(name).unwrap().update(stats);
-			}
-		}
-	}
-	for (i, stats) in buffers.connections.iter().enumerate() {
-		for (name, period) in state.Config.stats_periods.iter() {
-			if i < *period {
-				conn_input.get_mut(name).unwrap().update(stats);
-			}
-		}
-	}
-	for (i, stats) in buffers.memory.iter().enumerate() {
-		for (name, period) in state.Config.stats_periods.iter() {
-			if i < *period {
-				memory_input.get_mut(name).unwrap().update(stats);
-			}
-		}
-	}
+	//	Create pots for each period and process stats buffers
+	let timing_input = initialize_map(&state.Config.stats_periods, &buffers.responses);
+	let conn_input   = initialize_map(&state.Config.stats_periods, &buffers.connections);
+	let memory_input = initialize_map(&state.Config.stats_periods, &buffers.memory);
 	
 	//	Unlock source data
 	drop(buffers);
 	
 	//		Process stats														
 	//	Lock source data
-	let totals = state.Stats.totals.lock();
+	let totals        = state.Stats.totals.lock();
 	
 	//	Convert the input stats data into the output stats data
-	let mut timing_output: IndexMap<String, StatsResponseForPeriod> = timing_input
-		.into_iter()
-		.map(|(key, value)| (key, StatsResponseForPeriod::from(&value)))
-		.collect()
-	;
-	let mut conn_output:   IndexMap<String, StatsResponseForPeriod> = conn_input
-		.into_iter()
-		.map(|(key, value)| (key, StatsResponseForPeriod::from(&value)))
-		.collect()
-	;
-	let mut memory_output: IndexMap<String, StatsResponseForPeriod> = memory_input
-		.into_iter()
-		.map(|(key, value)| (key, StatsResponseForPeriod::from(&value)))
-		.collect()
-	;
-	
-	//	Add the all-time stats data
-	timing_output.insert(s!("all"), StatsResponseForPeriod::from(&totals.times));
-	conn_output  .insert(s!("all"), StatsResponseForPeriod::from(&totals.connections.clone()));
-	memory_output.insert(s!("all"), StatsResponseForPeriod::from(&totals.memory.clone()));
+	let timing_output = convert_map(timing_input, &totals.times);
+	let conn_output   = convert_map(conn_input,   &totals.connections);
+	let memory_output = convert_map(memory_input, &totals.memory);
 	
 	//		Build response data													
 	let now        = Utc::now().naive_utc();
