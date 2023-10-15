@@ -3,6 +3,7 @@
 mod auth;
 mod errors;
 mod handlers;
+mod health;
 mod utility;
 
 
@@ -13,6 +14,7 @@ use crate::{
 	auth::*,
 	errors::*,
 	handlers::*,
+	health::*,
 	utility::*,
 };
 use axum::{

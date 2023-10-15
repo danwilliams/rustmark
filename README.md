@@ -102,6 +102,7 @@ The main high-level points of note are:
       - Static file handling
       - Single-file deployment — all assets baked in (optional and configurable)
       - Logging of HTTP requests and events using [Tokio Tracing][Tracing]
+      - Health check API endpoints
       - Graceful handling of 404 and 500 HTTP errors
       - Graceful handling of runtime application errors
       - Full OpenAPI documentation
