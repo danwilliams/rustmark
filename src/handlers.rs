@@ -397,10 +397,12 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	let mut memory_stats_hour   = AppStatsForPeriod { ..Default::default() };
 	let mut memory_stats_day    = AppStatsForPeriod { ..Default::default() };
 	
+	//	Lock source data
+	let buffers                 = state.Stats.buffers.read();
+	
 	//		Timing stats														
 	//	Loop through the circular buffer and calculate the stats
-	let buffer = state.Stats.timing_buffer.read();
-	for (i, stats) in buffer.iter().enumerate() {
+	for (i, stats) in buffers.timing_buffer.iter().enumerate() {
 		//	Last second
 		if i == 0 {
 			timing_stats_second.update(stats);
@@ -416,12 +418,10 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 		//	Last day
 		timing_stats_day.update(stats);
 	}
-	drop(buffer);
 	
 	//		Connection stats													
 	//	Loop through the circular buffer and calculate the stats
-	let buffer = state.Stats.conn_buffer.read();
-	for (i, stats) in buffer.iter().enumerate() {
+	for (i, stats) in buffers.conn_buffer.iter().enumerate() {
 		//	Last second
 		if i < 60 {
 			conn_stats_second.update(stats);
@@ -437,12 +437,10 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 		//	Last day
 		conn_stats_day.update(stats);
 	}
-	drop(buffer);
 	
 	//		Memory stats														
 	//	Loop through the circular buffer and calculate the stats
-	let buffer = state.Stats.memory_buffer.read();
-	for (i, stats) in buffer.iter().enumerate() {
+	for (i, stats) in buffers.memory_buffer.iter().enumerate() {
 		//	Last second
 		if i < 60 {
 			memory_stats_second.update(stats);
@@ -458,13 +456,13 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 		//	Last day
 		memory_stats_day.update(stats);
 	}
-	drop(buffer);
+	
+	//	Unlock source data
+	drop(buffers);
 	
 	//		Build response data													
 	//	Lock source data
-	let responses = state.Stats.responses.lock();
-	let conns     = state.Stats.connections.lock();
-	let memory    = state.Stats.memory.lock();
+	let totals    = state.Stats.totals.lock();
 	let now       = Utc::now().naive_utc();
 	let response  = Json(StatsResponse {
 		started_at: state.Stats.started_at,
@@ -472,16 +470,16 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 		active:     state.Stats.active.load(Ordering::Relaxed) as u64,
 		requests:   state.Stats.requests.load(Ordering::Relaxed) as u64,
 		responses:  StatsResponseResponses {
-			codes:  responses.codes.clone(),
+			codes:  totals.responses.codes.clone(),
 			times:  StatsResponseResponseTimes {
 				second:      StatsResponseForPeriod::from(&timing_stats_second),
 				minute:      StatsResponseForPeriod::from(&timing_stats_minute),
 				hour:        StatsResponseForPeriod::from(&timing_stats_hour),
 				day:         StatsResponseForPeriod::from(&timing_stats_day),
-				all:         StatsResponseForPeriod::from(&responses.times),
+				all:         StatsResponseForPeriod::from(&totals.responses.times),
 			},
 			endpoints:       HashMap::from_iter(
-				responses.endpoints.clone()
+				totals.responses.endpoints.clone()
 					.into_iter()
 					.map(|(key, value)| (key, StatsResponseForPeriod::from(&value)))
 			),
@@ -491,20 +489,18 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 			minute:          StatsResponseForPeriod::from(&conn_stats_minute),
 			hour:            StatsResponseForPeriod::from(&conn_stats_hour),
 			day:             StatsResponseForPeriod::from(&conn_stats_day),
-			all:             StatsResponseForPeriod::from(&conns.clone()),
+			all:             StatsResponseForPeriod::from(&totals.connections.clone()),
 		},
 		memory:     StatsResponseResponseTimes {
 			second:          StatsResponseForPeriod::from(&memory_stats_second),
 			minute:          StatsResponseForPeriod::from(&memory_stats_minute),
 			hour:            StatsResponseForPeriod::from(&memory_stats_hour),
 			day:             StatsResponseForPeriod::from(&memory_stats_day),
-			all:             StatsResponseForPeriod::from(&memory.clone()),
+			all:             StatsResponseForPeriod::from(&totals.memory.clone()),
 		},
 	});
 	//	Unlock source data
-	drop(responses);
-	drop(conns);
-	drop(memory);
+	drop(totals);
 	
 	//		Response															
 	response

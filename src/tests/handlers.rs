@@ -50,29 +50,31 @@ mod healthcheck {
 				started_at:   start,
 				active:       AtomicUsize::new(5),
 				requests:     AtomicUsize::new(10),
-				responses:    Mutex::new(AppStatsResponses {
-					codes:    hash_map!{
-						StatusCode::OK:                    5,
-						StatusCode::UNAUTHORIZED:          4,
-						StatusCode::NOT_FOUND:             3,
-						StatusCode::INTERNAL_SERVER_ERROR: 2,
-					},
-					times:         Default::default(),
-					endpoints:     hash_map!{
-						Endpoint {
-							method:     Method::GET,
-							path:       s!("/api/stats"),
-						}:              AppStatsForPeriod {
-							started_at: start,
-							average:    500.0,
-							maximum:    1000,
-							minimum:    100,
-							count:      10,
+				totals:       Mutex::new(AppStatsTotals {
+					responses:    AppStatsResponses {
+						codes:    hash_map!{
+							StatusCode::OK:                    5,
+							StatusCode::UNAUTHORIZED:          4,
+							StatusCode::NOT_FOUND:             3,
+							StatusCode::INTERNAL_SERVER_ERROR: 2,
+						},
+						times:         Default::default(),
+						endpoints:     hash_map!{
+							Endpoint {
+								method:     Method::GET,
+								path:       s!("/api/stats"),
+							}:              AppStatsForPeriod {
+								started_at: start,
+								average:    500.0,
+								maximum:    1000,
+								minimum:    100,
+								count:      10,
+							}
 						}
-					}
+					},
+					connections:  Default::default(),
+					memory:       Default::default(),
 				}),
-				connections:  Default::default(),
-				memory:       Default::default(),
 				..Default::default()
 			},
 			Queue:            sender,

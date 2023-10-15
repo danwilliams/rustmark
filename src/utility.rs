@@ -244,40 +244,18 @@ pub struct AppState {
 pub struct AppStats {
 	//		Public properties													
 	/// The date and time the application was started.
-	pub started_at:    NaiveDateTime,
+	pub started_at: NaiveDateTime,
 	
 	/// The current number of open connections, i.e. requests that have not yet
 	/// been responded to.
-	pub active:        AtomicUsize,
+	pub active:     AtomicUsize,
 	
 	/// The number of requests that have been made. The number of responses will
 	/// be incremented only when the request has been fully handled and a
 	/// response generated.
-	pub requests:      AtomicUsize,
+	pub requests:   AtomicUsize,
 	
-	/// The average, maximum, and minimum response times grouped by status code
-	/// and endpoint, and for all time without any grouping. This data is all
-	/// together inside a [`Mutex`] because it is important to update the count,
-	/// use that exact count to calculate the average, and then store that
-	/// average all in one atomic operation while blocking any other process
-	/// from using the data. A [`parking_lot::Mutex`] is used instead of a
-	/// [`std::sync::Mutex`] because it is theoretically faster in highly
-	/// contended situations, but the main advantage is that it is infallible,
-	/// and it does not have mutex poisoning.
-	#[default(Mutex::new(AppStatsResponses::new()))]
-	pub responses:     Mutex<AppStatsResponses>,
-	
-	/// The average, maximum, and minimum open connections by time period. This
-	/// data is wrapped inside a [`Mutex`] because it is important to update the
-	/// count, use that exact count to calculate the average, and then store
-	/// that average all in one atomic operation while blocking any other
-	/// process from using the data. A [`parking_lot::Mutex`] is used instead of
-	/// a [`std::sync::Mutex`] because it is theoretically faster in highly
-	/// contended situations, but the main advantage is that it is infallible,
-	/// and it does not have mutex poisoning.
-	pub connections:   Mutex<AppStatsForPeriod>,
-	
-	/// The average, maximum, and minimum memory usage by time period. This data
+	/// The average, maximum, minimum, and count for each area sampled. The data
 	/// is wrapped inside a [`Mutex`] because it is important to update the
 	/// count, use that exact count to calculate the average, and then store
 	/// that average all in one atomic operation while blocking any other
@@ -285,28 +263,50 @@ pub struct AppStats {
 	/// a [`std::sync::Mutex`] because it is theoretically faster in highly
 	/// contended situations, but the main advantage is that it is infallible,
 	/// and it does not have mutex poisoning.
-	pub memory:        Mutex<AppStatsForPeriod>,
+	pub totals:     Mutex<AppStatsTotals>,
 	
+	/// Circular buffers of average, maximum, minimum, and count per second for
+	/// each area sampled, for the individually-configured periods. The buffers
+	/// are stored inside a [`RwLock`] because they are only ever written to a
+	/// maximum of once per second. A [`parking_lot::RwLock`] is used instead of
+	/// a [`std::sync::RwLock`] because it is theoretically faster in highly
+	/// contended situations.
+	pub buffers:    RwLock<AppStatsBuffers>,
+}
+
+//		AppStatsTotals															
+/// The all-time application statistics totals for each area sampled.
+#[derive(SmartDefault)]
+pub struct AppStatsTotals {
+	//		Public properties													
+	/// The average, maximum, and minimum response times grouped by status code
+	/// and endpoint, and for all time without any grouping.
+	#[default(AppStatsResponses::new())]
+	pub responses:   AppStatsResponses,
+	
+	/// The average, maximum, and minimum open connections by time period.
+	pub connections: AppStatsForPeriod,
+	
+	/// The average, maximum, and minimum memory usage by time period.
+	pub memory:      AppStatsForPeriod,
+}
+
+//		AppStatsBuffers															
+/// Buffers for storing application statistics data.
+#[derive(SmartDefault)]
+pub struct AppStatsBuffers {
+	//		Public properties													
 	/// A circular buffer of response time stats per second for the configured
-	/// period. The buffer is stored inside a [`RwLock`] because it is only ever
-	/// written to a maximum of once per second. A [`parking_lot::RwLock`] is
-	/// used instead of a [`std::sync::RwLock`] because it is theoretically
-	/// faster in highly contended situations.
-	pub timing_buffer: RwLock<VecDeque<AppStatsForPeriod>>,
+	/// period.
+	pub timing_buffer: VecDeque<AppStatsForPeriod>,
 	
 	/// A circular buffer of connection stats per second for the configured
-	/// period. The buffer is stored inside a [`RwLock`] because it is only ever
-	/// written to a maximum of once per second. A [`parking_lot::RwLock`] is
-	/// used instead of a [`std::sync::RwLock`] because it is theoretically
-	/// faster in highly contended situations.
-	pub conn_buffer:   RwLock<VecDeque<AppStatsForPeriod>>,
+	/// period.
+	pub conn_buffer:   VecDeque<AppStatsForPeriod>,
 	
 	/// A circular buffer of memory usage stats per second for the configured
-	/// period. The buffer is stored inside a [`RwLock`] because it is only ever
-	/// written to a maximum of once per second. A [`parking_lot::RwLock`] is
-	/// used instead of a [`std::sync::RwLock`] because it is theoretically
-	/// faster in highly contended situations.
-	pub memory_buffer: RwLock<VecDeque<AppStatsForPeriod>>,
+	/// period.
+	pub memory_buffer: VecDeque<AppStatsForPeriod>,
 }
 
 //		AppStatsResponses														
@@ -608,12 +608,10 @@ pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<
 	//	have enough memory it would fail right away, instead of gradually
 	//	building up to that point which would make it harder to diagnose.
 	{
-		let mut buffer     = appstate.Stats.timing_buffer.write();
-		buffer.reserve(appstate.Config.stats.timing_buffer_size);
-		let mut buffer     = appstate.Stats.conn_buffer.write();
-		buffer.reserve(appstate.Config.stats.connection_buffer_size);
-		let mut buffer     = appstate.Stats.memory_buffer.write();
-		buffer.reserve(appstate.Config.stats.memory_buffer_size);
+		let mut buffers    = appstate.Stats.buffers.write();
+		buffers.timing_buffer.reserve(appstate.Config.stats.timing_buffer_size);
+		buffers.conn_buffer  .reserve(appstate.Config.stats.connection_buffer_size);
+		buffers.memory_buffer.reserve(appstate.Config.stats.memory_buffer_size);
 	}
 	
 	//	Queue processing loop
@@ -687,48 +685,34 @@ fn stats_processor(
 	conn_stats.update(&constats);
 	memory_stats.update(&memstats);
 	
-	//		Update response statistics											
-	//	Lock response data
-	let mut responses = appstate.Stats.responses.lock();
+	//		Update statistics													
+	//	Lock source data
+	let mut totals = appstate.Stats.totals.lock();
 	
 	//	Update responses counter
-	*responses.codes.entry(metrics.status_code).or_insert(0) += 1;
+	*totals.responses.codes.entry(metrics.status_code).or_insert(0) += 1;
 	
 	//	Update response time stats
-	responses.times.update(&newstats);
+	totals.responses.times.update(&newstats);
 	
 	//	Update endpoint response time stats
-	responses.endpoints
+	totals.responses.endpoints
 		.entry(metrics.endpoint)
 		.and_modify(|ep_stats| ep_stats.update(&newstats))
 		.or_insert(newstats)
 	;
 	
-	//	Unlock response data
-	drop(responses);
-	
-	//		Update connections statistics										
-	//	Lock connections data
-	let mut connections = appstate.Stats.connections.lock();
-	
 	//	Update connections usage stats
-	connections.update(&constats);
-	
-	//	Unlock connections data
-	drop(connections);
-	
-	//		Update memory statistics											
-	//	Lock memory data
-	let mut memory = appstate.Stats.memory.lock();
+	totals.connections.update(&constats);
 	
 	//	Update memory usage stats
-	memory.update(&memstats);
+	totals.memory.update(&memstats);
 	
-	//	Unlock memory data
-	drop(memory);
+	//	Unlock source data
+	drop(totals);
 	
 	//		Check time period													
-	let new_second     = metrics.started_at.with_nanosecond(0).unwrap();
+	let new_second      = metrics.started_at.with_nanosecond(0).unwrap();
 	
 	//	Check to see if we've moved into a new time period. We want to increment
 	//	the request count and total response time until it "ticks" over into
@@ -737,35 +721,33 @@ fn stats_processor(
 	//	This way, the last period's data can be calculated by looking through
 	//	the circular buffer of seconds.
 	if new_second > current_second {
-		let elapsed    = (new_second - current_second).num_seconds();
+		let elapsed     = (new_second - current_second).num_seconds();
+		let mut buffers = appstate.Stats.buffers.write();
 		//	Timing stats buffer
-		let mut buffer = appstate.Stats.timing_buffer.write();
 		for i in 0..elapsed {
-			if buffer.len() == appstate.Config.stats.timing_buffer_size {
-				buffer.pop_back();
+			if buffers.timing_buffer.len() == appstate.Config.stats.timing_buffer_size {
+				buffers.timing_buffer.pop_back();
 			}
 			timing_stats.started_at = current_second + Duration::seconds(i);
-			buffer.push_front(timing_stats);
+			buffers.timing_buffer.push_front(timing_stats);
 			timing_stats            = AppStatsForPeriod::default();
 		}
 		//	Connections stats buffer
-		let mut buffer = appstate.Stats.conn_buffer.write();
 		for i in 0..elapsed {
-			if buffer.len() == appstate.Config.stats.connection_buffer_size {
-				buffer.pop_back();
+			if buffers.conn_buffer.len() == appstate.Config.stats.connection_buffer_size {
+				buffers.conn_buffer.pop_back();
 			}
 			conn_stats.started_at   = current_second + Duration::seconds(i);
-			buffer.push_front(conn_stats);
+			buffers.conn_buffer.push_front(conn_stats);
 			conn_stats              = AppStatsForPeriod::default();
 		}
 		//	Memory stats buffer
-		let mut buffer = appstate.Stats.memory_buffer.write();
 		for i in 0..elapsed {
-			if buffer.len() == appstate.Config.stats.memory_buffer_size {
-				buffer.pop_back();
+			if buffers.memory_buffer.len() == appstate.Config.stats.memory_buffer_size {
+				buffers.memory_buffer.pop_back();
 			}
 			memory_stats.started_at = current_second + Duration::seconds(i);
-			buffer.push_front(memory_stats);
+			buffers.memory_buffer.push_front(memory_stats);
 			memory_stats            = AppStatsForPeriod::default();
 		}
 		current_second = new_second;
