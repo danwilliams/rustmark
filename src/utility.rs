@@ -82,6 +82,18 @@ pub struct Config {
 	/// The configuration options for gathering and processing statistics.
 	pub stats:         StatsOptions,
 	
+	/// The time periods to report statistics for. These will default to second,
+	/// minute, hour, and day, and refer to the last such period of time from
+	/// the current time, measured back from the start of the current second.
+	/// They will be used to calculate the average, maximum, and minimum values
+	/// for each period, and the number of values in each period. In addition,
+	/// the statistics since the application started will always be reported.
+	/// Note that any defaults specified here would be augmented by items added
+	/// to config, and not replaced by them, so the desired periods NEED to be
+	/// placed in the application config file. If omitted, there will be no
+	/// registered periods.
+	pub stats_periods: HashMap<String, usize>,
+	
 	/// A list of users and their passwords.
 	#[default(HashMap::new())]
 	pub users:         HashMap<String, String>,
@@ -443,7 +455,10 @@ impl Serialize for Endpoint {
 		handlers::get_stats,
 	),
 	components(
-		schemas(handlers::StatsResponse),
+		schemas(
+			handlers::StatsResponse,
+			handlers::StatsResponseForPeriod,
+		),
 	),
 	tags(
 		(name = "health", description = "Health check endpoints"),

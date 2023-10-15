@@ -26,5 +26,11 @@ timing_buffer_size     = 86_400 # One day: 60 * 60 * 24
 connection_buffer_size = 86_400 # One day: 60 * 60 * 24
 memory_buffer_size     = 86_400 # One day: 60 * 60 * 24
 
+[stats_periods]
+second =      1
+minute =     60
+hour   =  3_600
+day    = 86_400
+
 [users]
 #joe = "1a2b3c"

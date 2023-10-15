@@ -27,6 +27,8 @@ comrak = { version = "0.18.0", features = ["emojis", "shortcodes"] }
 figment = { version = "0.10.10", features = ["toml", "env"] }
 flume = "0.11.0"
 include_dir = { version = "0.7.3", features = ["glob"] }
+indexmap = { version = "2.0.2", features = ["serde"] }
+itertools = "0.11.0"
 mime_guess = "2.0.4"
 nipper = "0.1.9"
 parking_lot = "0.12.1"
@@ -48,7 +50,7 @@ tracing = "0.1.37"
 tracing-appender = "0.2.2"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 url = "2.4.1"
-utoipa = { version = "3.5.0", features = ["axum_extras", "chrono", "preserve_order"] }
+utoipa = { version = "3.5.0", features = ["axum_extras", "chrono", "preserve_order", "indexmap"] }
 utoipa-rapidoc = { version = "0.1.0", features = ["axum"] }
 utoipa-redoc = { version = "0.1.0", features = ["axum"] }
 utoipa-swagger-ui = { version = "3.1.5", features = ["axum"] }

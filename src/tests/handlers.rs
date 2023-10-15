@@ -44,7 +44,7 @@ mod healthcheck {
 		let start           = Utc::now().naive_utc() - Duration::seconds(99);
 		let (sender, _)     = flume::unbounded();
 		let secret          = rand::thread_rng().gen::<[u8; 64]>();
-		let state           = Arc::new(AppState {
+		let mut state       = AppState {
 			Config:           Figment::from(Serialized::defaults(Config::default())).extract().unwrap(),
 			Stats:            AppStats {
 				started_at:   start,
@@ -79,8 +79,14 @@ mod healthcheck {
 			Secret:           secret,
 			Key:              hmac::Key::new(HMAC_SHA512, &secret),
 			Template:         Tera::default(),
-		});
-		let unpacked        = get_stats(State(state)).await.into_response().unpack().unwrap();
+		};
+		state.Config.stats_periods = hash_map!{
+			s!("second"):          1,
+			s!("minute"):         60,
+			s!("hour"):        3_600,
+			s!("day"):        86_400,
+		};
+		let unpacked        = get_stats(State(Arc::new(state))).await.into_response().unpack().unwrap();
 		let crafted         = UnpackedResponse {
 			status:           StatusCode::OK,
 			headers:          vec![
