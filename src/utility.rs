@@ -263,7 +263,6 @@ pub struct AppStats {
 	/// a [`std::sync::Mutex`] because it is theoretically faster in highly
 	/// contended situations, but the main advantage is that it is infallible,
 	/// and it does not have mutex poisoning.
-	#[default(Mutex::new(AppStatsTotals::new()))]
 	pub totals:      Mutex<AppStatsTotals>,
 	
 	/// Circular buffers of average, maximum, minimum, and count per second for
@@ -281,6 +280,12 @@ pub struct AppStats {
 pub struct AppStatsTotals {
 	//		Public properties													
 	/// The number of responses that have been handled, by status code.
+	#[default(hash_map!{
+		StatusCode::OK:                    0,
+		StatusCode::UNAUTHORIZED:          0,
+		StatusCode::NOT_FOUND:             0,
+		StatusCode::INTERNAL_SERVER_ERROR: 0,
+	})]
 	pub codes:       HashMap<StatusCode, u64>,
 	
 	/// The average, maximum, and minimum response times since the application
@@ -297,22 +302,6 @@ pub struct AppStatsTotals {
 	
 	/// The average, maximum, and minimum memory usage by time period.
 	pub memory:      StatsForPeriod,
-}
-
-impl AppStatsTotals {
-	//		new																	
-	/// Creates a new instance of the struct.
-	pub fn new() -> Self {
-		Self {
-			codes: hash_map!{
-				StatusCode::OK:                    0,
-				StatusCode::UNAUTHORIZED:          0,
-				StatusCode::NOT_FOUND:             0,
-				StatusCode::INTERNAL_SERVER_ERROR: 0,
-			},
-			..Default::default()
-		}
-	}
 }
 
 //		AppStatsBuffers															
