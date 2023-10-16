@@ -138,6 +138,7 @@ async fn main() {
 			Router::new()
 				.route("/api/ping",       get(get_ping))
 				.route("/api/stats",      get(get_stats))
+				.route("/api/stats/raw",  get(get_stats_raw))
 				.route("/login",          post(post_login))
 				.route("/logout",         get(get_logout))
 				.route("/css/*path",      get(get_public_static_asset))

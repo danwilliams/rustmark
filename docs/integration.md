@@ -27,6 +27,10 @@ available. Statistics are available at `/api/stats`.
     Returns a `200 OK` response with a JSON body containing various statistics
     about the API service.
 
+  - **`GET /api/stats/raw`**
+    Returns a `200 OK` response with a JSON body containing raw interval
+    statistics about the API service.
+
 The health check endpoints are not authenticated, and not versioned.
 
 

@@ -24,12 +24,8 @@ use serde_json::json;
 use tera::Tera;
 use velcro::hash_map;
 
-//		stats																	
-#[tokio::test]
-async fn stats() {
-	//	There is a very small possibility that this test will fail if the
-	//	test is run at the exact moment that the date changes.
-	let start           = Utc::now().naive_utc() - Duration::seconds(99);
+//		prepare_state															
+fn prepare_state(start: NaiveDateTime) -> AppState {
 	let (sender, _)     = flume::unbounded();
 	let secret          = rand::thread_rng().gen::<[u8; 64]>();
 	let mut state       = AppState {
@@ -74,6 +70,16 @@ async fn stats() {
 		s!("hour"):        3_600,
 		s!("day"):        86_400,
 	};
+	state
+}
+
+//		stats																	
+#[tokio::test]
+async fn stats() {
+	//	There is a very small possibility that this test will fail if the
+	//	test is run at the exact moment that the date changes.
+	let start           = Utc::now().naive_utc() - Duration::seconds(99);
+	let state           = prepare_state(start);
 	let unpacked        = get_stats(State(Arc::new(state))).await.into_response().unpack().unwrap();
 	let crafted         = UnpackedResponse {
 		status:           StatusCode::OK,
@@ -199,6 +205,59 @@ async fn stats() {
 					"count":   0,
 				},
 			},
+		})),
+	};
+	assert_json_eq!(unpacked, crafted);
+}
+
+//		stats_raw																
+#[tokio::test]
+async fn stats_raw() {
+	//	There is a very small possibility that this test will fail if the
+	//	test is run at the exact moment that the date changes.
+	let start        = Utc::now().naive_utc() - Duration::seconds(99);
+	let state        = prepare_state(start);
+	{
+		let mut buffers = state.Stats.buffers.write();
+		buffers.responses  .push_front(StatsForPeriod::default());
+		buffers.connections.push_front(StatsForPeriod::default());
+		buffers.memory     .push_front(StatsForPeriod::default());
+	}
+	let unpacked     = get_stats_raw(State(Arc::new(state))).await.into_response().unpack().unwrap();
+	let crafted      = UnpackedResponse {
+		status:        StatusCode::OK,
+		headers:       vec![
+			//	Axum automatically adds a content-type header.
+			UnpackedResponseHeader {
+				name:  s!("content-type"),
+				value: s!("application/json"),
+			},
+		],
+		body:          UnpackedResponseBody::new(json!({
+			"times": [
+				{
+					"average": 0.0,
+					"maximum": 0,
+					"minimum": 0,
+					"count":   0,
+				},
+			],
+			"connections": [
+				{
+					"average": 0.0,
+					"maximum": 0,
+					"minimum": 0,
+					"count":   0,
+				},
+			],
+			"memory": [
+				{
+					"average": 0.0,
+					"maximum": 0,
+					"minimum": 0,
+					"count":   0,
+				},
+			],
 		})),
 	};
 	assert_json_eq!(unpacked, crafted);

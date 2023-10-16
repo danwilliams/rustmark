@@ -280,11 +280,13 @@ impl Serialize for Endpoint {
 	paths(
 		handlers::get_ping,
 		stats::get_stats,
+		stats::get_stats_raw,
 	),
 	components(
 		schemas(
 			stats::StatsResponse,
 			stats::StatsResponseForPeriod,
+			stats::StatsRawResponse,
 		),
 	),
 	tags(

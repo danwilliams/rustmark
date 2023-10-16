@@ -288,6 +288,27 @@ pub struct StatsResponse {
 	pub memory:      IndexMap<String, StatsResponseForPeriod>,
 }
 
+//		StatsRawResponse														
+/// The application statistics returned by the `/api/stats/raw` endpoint.
+#[derive(Serialize, ToSchema)]
+pub struct StatsRawResponse {
+	//		Public properties													
+	/// The average, maximum, and minimum response times in microseconds, plus
+	/// sample count, per second for every second since the application last
+	/// started, or up until the end of the [configured buffer](StatsOptions.timing_buffer_size).
+	pub times:       Vec<StatsResponseForPeriod>,
+	
+	/// The average, maximum, and minimum open connections, plus sample count,
+	/// per second for every second since the application last started, or up
+	/// until the end of the [configured buffer](StatsOptions.connection_buffer_size).
+	pub connections: Vec<StatsResponseForPeriod>,
+	
+	/// The average, maximum, and minimum memory usage in bytes, plus sample
+	/// count, per second for every second since the application last started,
+	/// or up until the end of the [configured buffer](StatsOptions.memory_buffer_size).
+	pub memory:      Vec<StatsResponseForPeriod>,
+}
+
 //		StatsResponseForPeriod													
 /// Average, maximum, minimum, and count of values for a period of time.
 #[derive(Serialize, ToSchema)]
@@ -674,6 +695,50 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	drop(totals);
 	
 	//		Response															
+	response
+}
+
+//		get_stats_raw															
+/// Returns raw stats interval data from the buffers.
+/// 
+/// This endpoint returns a JSON object containing the following information:
+/// 
+///   - `times`       - The average, maximum, and minimum response times, plus
+///                     sample count, per second for every second since the
+///                     application last started, or up until the end of the
+///                     [configured buffer](StatsOptions.timing_buffer_size).
+///   - `connections` - The average, maximum, and minimum open connections, plus
+///                     sample count, per second for every second since the
+///                     application last started, or up until the end of the
+///                     [configured buffer](StatsOptions.connection_buffer_size).
+///   - `memory`      - The average, maximum, and minimum memory usage, plus
+///                     sample count, per second for every second since the
+///                     application last started, or up until the end of the
+///                     [configured buffer](StatsOptions.memory_buffer_size).
+/// 
+/// # Parameters
+/// 
+/// * `state` - The application state.
+/// 
+#[utoipa::path(
+	get,
+	path = "/api/stats/raw",
+	tag  = "health",
+	responses(
+		(status = 200, description = "Application statistics buffer data", body = StatsRawResponse)
+	)
+)]
+pub async fn get_stats_raw(State(state): State<Arc<AppState>>) -> Json<StatsRawResponse> {
+	//	Lock source data
+	let buffers = state.Stats.buffers.read();
+	//	Convert the statistics buffers
+	let response   = Json(StatsRawResponse {
+		times:       buffers.responses  .iter().map(StatsResponseForPeriod::from).collect(),
+		connections: buffers.connections.iter().map(StatsResponseForPeriod::from).collect(),
+		memory:      buffers.memory     .iter().map(StatsResponseForPeriod::from).collect(),
+	});
+	//	Unlock source data
+	drop(buffers);
 	response
 }
 
