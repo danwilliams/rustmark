@@ -33,9 +33,13 @@ use std::{
 	collections::{BTreeMap, HashMap, VecDeque},
 	str::FromStr,
 	sync::{Arc, atomic::AtomicUsize, atomic::Ordering},
-	thread::spawn,
 };
 use tikv_jemalloc_ctl::stats::allocated as Malloc;
+use tokio::{
+	select,
+	spawn,
+	time::{interval, sleep},
+};
 use utoipa::{IntoParams, ToSchema};
 use velcro::hash_map;
 
@@ -460,12 +464,23 @@ pub async fn stats_layer<B>(
 /// affected more than others. The stats-handling thread blocks on the queue, so
 /// it will only process a response time when one is available.
 /// 
+/// The thread will also wake up every second to ensure that the period that has 
+/// just ended gets wrapped up. This is necessary because the thread otherwise
+/// only wakes up when the queue has data in it, and if there is a period of
+/// inactivity then the current period will not be completed until the next
+/// request comes in. This can lead to a long delay until the statistics are
+/// updated, which is undesirable because the buffer will be stuck at the
+/// position of the last period to be completed.
+/// 
+/// Although this periodic wake-up does incur a very slight overhead, it is
+/// extremely small, and ensures that the statistics are always up-to-date.
+/// 
 /// # Parameters
 /// 
 /// * `receiver` - The receiving end of the queue.
 /// * `appstate` - The application state.
 /// 
-pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<AppState>) {
+pub async fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<AppState>) {
 	//	Fixed time period of the current second
 	let mut current_second = Utc::now().naive_utc().with_nanosecond(0).unwrap();
 	//	Cumulative stats for the current second
@@ -487,22 +502,34 @@ pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<
 		buffers.memory     .reserve(appstate.Config.stats.memory_buffer_size);
 	}
 	
+	//	Wait until the start of the next second, to align with it so that the
+	//	tick interval change happens right after the second change, to wrap up
+	//	the data for the period that has just ended.
+	sleep((current_second + Duration::seconds(1) - Utc::now().naive_utc()).to_std().unwrap()).await;
+	
 	//	Queue processing loop
-	spawn(move || loop {
+	let mut timer = interval(Duration::seconds(1).to_std().unwrap());
+	spawn(async move { loop { select!{
+		_ = timer.tick()      => {
+			//	Ensure last period is wrapped up
+			(timing_stats, conn_stats, memory_stats, current_second) = stats_processor(
+				Arc::clone(&appstate), None, timing_stats, conn_stats, memory_stats, current_second
+			);
+		}
 		//	Wait for message - this is a blocking call
-		match receiver.recv() {
+		message = receiver.recv_async() => { match message {
 			Ok(response_time) => {
 				//	Process response time
 				(timing_stats, conn_stats, memory_stats, current_second) = stats_processor(
-					Arc::clone(&appstate), response_time, timing_stats, conn_stats, memory_stats, current_second
+					Arc::clone(&appstate), Some(response_time), timing_stats, conn_stats, memory_stats, current_second
 				);
 			},
 			Err(_)            => {
 				eprintln!("Channel has been disconnected, exiting thread.");
 				break;
 			},
-		}
-	});
+		}}
+	}}});
 }
 
 //		stats_processor															
@@ -515,7 +542,10 @@ pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<
 /// 
 /// * `appstate`       - The application state.
 /// * `metrics`        - The response metrics to process, received from the
-///                      statistics queue in [`AppState.Queue`].
+///                      statistics queue in [`AppState.Queue`]. If [`None`],
+///                      then no stats will be added or altered, and no counters
+///                      will be incremented, but the most-recent period will be
+///                      checked and wrapped up if not already done.
 /// * `timing_stats`   - The cumulative timing stats for the current second.
 /// * `conn_stats`     - The cumulative connection stats for the current second.
 /// * `memory_stats`   - The cumulative memory stats for the current second.
@@ -523,69 +553,74 @@ pub fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate: Arc<
 /// 
 fn stats_processor(
 	appstate:           Arc<AppState>,
-	metrics:            ResponseMetrics,
+	metrics:            Option<ResponseMetrics>,
 	mut timing_stats:   StatsForPeriod,
 	mut conn_stats:     StatsForPeriod,
 	mut memory_stats:   StatsForPeriod,
 	mut current_second: NaiveDateTime
 ) -> (StatsForPeriod, StatsForPeriod, StatsForPeriod, NaiveDateTime) {
 	//		Preparation															
-	//	Prepare new stats
-	let newstats = StatsForPeriod {
-		average:   metrics.time_taken as f64,
-		maximum:   metrics.time_taken,
-		minimum:   metrics.time_taken,
-		count:     1,
-		..Default::default()
-	};
-	let constats = StatsForPeriod {
-		average:   metrics.connections as f64,
-		maximum:   metrics.connections,
-		minimum:   metrics.connections,
-		count:     1,
-		..Default::default()
-	};
-	let memstats = StatsForPeriod {
-		average:   metrics.memory as f64,
-		maximum:   metrics.memory,
-		minimum:   metrics.memory,
-		count:     1,
-		..Default::default()
-	};
-	
-	//	Increment cumulative stats
-	timing_stats.update(&newstats);
-	conn_stats.update(&constats);
-	memory_stats.update(&memstats);
-	
+	let new_second: NaiveDateTime;
+	if let Some(metrics) = metrics {
+		//	Prepare new stats
+		let newstats = StatsForPeriod {
+			average:   metrics.time_taken as f64,
+			maximum:   metrics.time_taken,
+			minimum:   metrics.time_taken,
+			count:     1,
+			..Default::default()
+		};
+		let constats = StatsForPeriod {
+			average:   metrics.connections as f64,
+			maximum:   metrics.connections,
+			minimum:   metrics.connections,
+			count:     1,
+			..Default::default()
+		};
+		let memstats = StatsForPeriod {
+			average:   metrics.memory as f64,
+			maximum:   metrics.memory,
+			minimum:   metrics.memory,
+			count:     1,
+			..Default::default()
+		};
+		
+		//	Increment cumulative stats
+		timing_stats.update(&newstats);
+		conn_stats.update(&constats);
+		memory_stats.update(&memstats);
+		
 	//		Update statistics													
-	//	Lock source data
-	let mut totals = appstate.Stats.totals.lock();
-	
-	//	Update responses counter
-	*totals.codes.entry(metrics.status_code).or_insert(0) += 1;
-	
-	//	Update response time stats
-	totals.times.update(&newstats);
-	
-	//	Update endpoint response time stats
-	totals.endpoints
-		.entry(metrics.endpoint)
-		.and_modify(|ep_stats| ep_stats.update(&newstats))
-		.or_insert(newstats)
-	;
-	
-	//	Update connections usage stats
-	totals.connections.update(&constats);
-	
-	//	Update memory usage stats
-	totals.memory.update(&memstats);
-	
-	//	Unlock source data
-	drop(totals);
-	
+		//	Lock source data
+		let mut totals = appstate.Stats.totals.lock();
+		
+		//	Update responses counter
+		*totals.codes.entry(metrics.status_code).or_insert(0) += 1;
+		
+		//	Update response time stats
+		totals.times.update(&newstats);
+		
+		//	Update endpoint response time stats
+		totals.endpoints
+			.entry(metrics.endpoint)
+			.and_modify(|ep_stats| ep_stats.update(&newstats))
+			.or_insert(newstats)
+		;
+		
+		//	Update connections usage stats
+		totals.connections.update(&constats);
+		
+		//	Update memory usage stats
+		totals.memory.update(&memstats);
+		
+		//	Unlock source data
+		drop(totals);
+		
 	//		Check time period													
-	let new_second      = metrics.started_at.with_nanosecond(0).unwrap();
+		new_second      = metrics.started_at.with_nanosecond(0).unwrap();
+	} else {
+		new_second      = Utc::now().naive_utc().with_nanosecond(0).unwrap();
+	};
 	
 	//	Check to see if we've moved into a new time period. We want to increment
 	//	the request count and total response time until it "ticks" over into

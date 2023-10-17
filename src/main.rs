@@ -126,7 +126,7 @@ async fn main() {
 		Template:       tera,
 	});
 	if shared_state.Config.stats.enabled {
-		start_stats_processor(rec, Arc::clone(&shared_state));
+		start_stats_processor(rec, Arc::clone(&shared_state)).await;
 	}
 	//	Protected routes
 	let app           = Router::new()
