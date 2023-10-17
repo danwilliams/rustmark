@@ -13,7 +13,7 @@ use axum::{
 	Extension,
 	Json,
 	async_trait,
-	extract::{FromRequestParts, State},
+	extract::{FromRequestParts, Query, State},
 	http::{Request, StatusCode, request::Parts},
 	middleware::Next,
 	response::{Response},
@@ -23,17 +23,54 @@ use flume::Receiver;
 use indexmap::IndexMap;
 use itertools::Itertools;
 use parking_lot::{Mutex, RwLock};
-use rubedo::sugar::s;
-use serde::{Serialize, Serializer};
+use rubedo::{
+	std::IteratorExt,
+	sugar::s,
+};
+use serde::{Deserialize, Serialize, Serializer};
 use smart_default::SmartDefault;
 use std::{
 	collections::{BTreeMap, HashMap, VecDeque},
+	str::FromStr,
 	sync::{Arc, atomic::AtomicUsize, atomic::Ordering},
 	thread::spawn,
 };
 use tikv_jemalloc_ctl::stats::allocated as Malloc;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use velcro::hash_map;
+
+
+
+//		Enums
+
+//		BufferType																
+/// The type of buffer to get statistics for.
+#[derive(Copy, Clone, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum BufferType {
+	/// Response times.
+	Times,
+	
+	/// Active connections.
+	Connections,
+	
+	/// Memory usage.
+	Memory,
+}
+
+impl FromStr for BufferType {
+	type Err = ();
+	
+	//		from_str															
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s.to_lowercase().as_str() {
+			"times"       => Ok(BufferType::Times),
+			"connections" => Ok(BufferType::Connections),
+			"memory"      => Ok(BufferType::Memory),
+			_             => Err(()),
+		}
+	}
+}
 
 
 
@@ -211,6 +248,19 @@ pub struct ResponseMetrics {
 	pub memory:      u64,
 }
 
+//		GetStatsRawParams														
+/// The parameters for the [`get_stats_raw()`] handler.
+#[derive(Clone, Default, Deserialize, IntoParams)]
+pub struct GetStatsRawParams {
+	//		Public properties													
+	/// The buffer to get the statistics for.
+	pub buffer: Option<BufferType>,
+	
+	/// The number of buffer entries, i.e. the number of seconds, to get the
+	/// statistics for.
+	pub limit:  Option<usize>,
+}
+
 //		StatsContext															
 /// The statistics context.
 /// 
@@ -290,7 +340,7 @@ pub struct StatsResponse {
 
 //		StatsRawResponse														
 /// The application statistics returned by the `/api/stats/raw` endpoint.
-#[derive(Serialize, ToSchema)]
+#[derive(Default, Serialize, ToSchema)]
 pub struct StatsRawResponse {
 	//		Public properties													
 	/// The average, maximum, and minimum response times in microseconds, plus
@@ -718,28 +768,47 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 /// 
 /// # Parameters
 /// 
-/// * `state` - The application state.
+/// * `state`  - The application state.
+/// * `params` - The parameters for the request.
 /// 
 #[utoipa::path(
 	get,
 	path = "/api/stats/raw",
 	tag  = "health",
+	params(
+		GetStatsRawParams
+	),
 	responses(
 		(status = 200, description = "Application statistics buffer data", body = StatsRawResponse)
 	)
 )]
-pub async fn get_stats_raw(State(state): State<Arc<AppState>>) -> Json<StatsRawResponse> {
+pub async fn get_stats_raw(
+	State(state):  State<Arc<AppState>>,
+	Query(params): Query<GetStatsRawParams>,
+) -> Json<StatsRawResponse> {
 	//	Lock source data
-	let buffers = state.Stats.buffers.read();
+	let buffers      = state.Stats.buffers.read();
+	let mut response = StatsRawResponse::default();
 	//	Convert the statistics buffers
-	let response   = Json(StatsRawResponse {
-		times:       buffers.responses  .iter().map(StatsResponseForPeriod::from).collect(),
-		connections: buffers.connections.iter().map(StatsResponseForPeriod::from).collect(),
-		memory:      buffers.memory     .iter().map(StatsResponseForPeriod::from).collect(),
-	});
+	match params.buffer {
+		Some(BufferType::Times) => {
+			response.times       = buffers.responses.iter().limit(params.limit).map(StatsResponseForPeriod::from).collect();
+		},
+		Some(BufferType::Connections) => {
+			response.connections = buffers.connections.iter().limit(params.limit).map(StatsResponseForPeriod::from).collect();
+		},
+		Some(BufferType::Memory) => {
+			response.memory      = buffers.memory.iter().limit(params.limit).map(StatsResponseForPeriod::from).collect();
+		},
+		None => {
+			response.times       = buffers.responses  .iter().limit(params.limit).map(StatsResponseForPeriod::from).collect();
+			response.connections = buffers.connections.iter().limit(params.limit).map(StatsResponseForPeriod::from).collect();
+			response.memory      = buffers.memory     .iter().limit(params.limit).map(StatsResponseForPeriod::from).collect();
+		},
+	}
 	//	Unlock source data
 	drop(buffers);
-	response
+	Json(response)
 }
 
 //		serialize_status_codes													

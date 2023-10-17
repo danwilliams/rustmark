@@ -223,7 +223,8 @@ async fn stats_raw() {
 		buffers.connections.push_front(StatsForPeriod::default());
 		buffers.memory     .push_front(StatsForPeriod::default());
 	}
-	let unpacked     = get_stats_raw(State(Arc::new(state))).await.into_response().unpack().unwrap();
+	let params       = GetStatsRawParams::default();
+	let unpacked     = get_stats_raw(State(Arc::new(state)), Query(params)).await.into_response().unpack().unwrap();
 	let crafted      = UnpackedResponse {
 		status:        StatusCode::OK,
 		headers:       vec![
