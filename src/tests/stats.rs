@@ -20,13 +20,14 @@ use rubedo::{
 	sugar::s,
 };
 use std::sync::atomic::AtomicUsize;
-use serde_json::json;
 use tera::Tera;
+use tokio::sync::broadcast;
 use velcro::hash_map;
 
 //		prepare_state															
 fn prepare_state(start: NaiveDateTime) -> AppState {
 	let (sender, _)     = flume::unbounded();
+	let (tx, _)         = broadcast::channel(10);
 	let secret          = rand::thread_rng().gen::<[u8; 64]>();
 	let mut state       = AppState {
 		Config:           Figment::from(Serialized::defaults(Config::default())).extract().unwrap(),
@@ -61,6 +62,7 @@ fn prepare_state(start: NaiveDateTime) -> AppState {
 			..Default::default()
 		},
 		Queue:            sender,
+		Broadcast:        tx,
 		Secret:           secret,
 		Key:              hmac::Key::new(HMAC_SHA512, &secret),
 		Template:         Tera::default(),

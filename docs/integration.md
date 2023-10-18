@@ -31,6 +31,12 @@ available. Statistics are available at `/api/stats`.
     Returns a `200 OK` response with a JSON body containing raw interval
     statistics about the API service.
 
+  - **`GET /api/stats/feed`**
+    Returns a `200 OK` response with a status code of `101 Switching Protocols`
+    and the `Connection` header set to `Upgrade`. This will upgrade the HTTP
+    connection to a WebSocket connection, It will then stream statistics every
+    second in JSON format.
+
 The health check endpoints are not authenticated, and not versioned.
 
 

@@ -18,7 +18,7 @@ opt-level = 3    # Maximum optimisation (this is the cargo default)
 lto = "thin"     # Enable link-time optimisation (fast)
 
 [dependencies]
-axum = "0.6.20"
+axum = { version = "0.6.20", features = ["ws"] }
 axum-sessions = "0.5.0"
 base64 = "0.21.4"
 bytes = "1.5.0"
@@ -68,4 +68,3 @@ walkdir = "2.4.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0.2"
-serde_json = { version = "1.0.107", features = ["preserve_order"] }

@@ -42,6 +42,7 @@ use std::{
 };
 use tera::Tera;
 use tikv_jemallocator::Jemalloc;
+use tokio::sync::broadcast;
 use tower_http::catch_panic::CatchPanicLayer;
 use tracing::{Level, Span, info};
 use tracing_appender::{self};
@@ -112,6 +113,7 @@ async fn main() {
 	tera.add_raw_templates(templates).expect("Error parsing templates");
 	tera.autoescape_on(vec![".tera.html", ".html"]);
 	let (sender, rec) = flume::unbounded();
+	let (tx, _rx)     = broadcast::channel(10);
 	let secret        = rand::thread_rng().gen::<[u8; 64]>();
 	let session_store = SessionMemoryStore::new();
 	let shared_state  = Arc::new(AppState {
@@ -121,6 +123,7 @@ async fn main() {
 			..Default::default()
 		},
 		Queue:          sender,
+		Broadcast:      tx,
 		Secret:         secret,
 		Key:            hmac::Key::new(HMAC_SHA512, &secret),
 		Template:       tera,
@@ -139,6 +142,7 @@ async fn main() {
 				.route("/api/ping",       get(get_ping))
 				.route("/api/stats",      get(get_stats))
 				.route("/api/stats/raw",  get(get_stats_raw))
+				.route("/api/stats/feed", get(get_stats_feed))
 				.route("/login",          post(post_login))
 				.route("/logout",         get(get_logout))
 				.route("/css/*path",      get(get_public_static_asset))

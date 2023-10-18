@@ -14,6 +14,7 @@ use axum::{
 	Json,
 	async_trait,
 	extract::{FromRequestParts, Query, State},
+	extract::ws::{Message, WebSocketUpgrade, WebSocket},
 	http::{Request, StatusCode, request::Parts},
 	middleware::Next,
 	response::{Response},
@@ -28,6 +29,7 @@ use rubedo::{
 	sugar::s,
 };
 use serde::{Deserialize, Serialize, Serializer};
+use serde_json::json;
 use smart_default::SmartDefault;
 use std::{
 	collections::{BTreeMap, HashMap, VecDeque},
@@ -169,7 +171,7 @@ pub struct AppStatsBuffers {
 
 //		StatsForPeriod															
 /// Average, maximum, minimum, and count of values for a period of time.
-#[derive(Clone, SmartDefault)]
+#[derive(Clone, Debug, Serialize, SmartDefault)]
 pub struct StatsForPeriod {
 	//		Public properties													
 	/// The date and time the period started.
@@ -663,7 +665,8 @@ fn stats_processor(
 				buffers.responses.pop_back();
 			}
 			timing_stats.started_at = current_second + Duration::seconds(i);
-			buffers.responses.push_front(timing_stats);
+			buffers.responses.push_front(timing_stats.clone());
+			appstate.Broadcast.send(timing_stats).expect("Failed to broadcast stats");
 			timing_stats            = StatsForPeriod::default();
 		}
 		//	Connections stats buffer
@@ -895,6 +898,78 @@ pub async fn get_stats_raw(
 	//	Unlock source data
 	drop(buffers);
 	Json(response)
+}
+
+//		get_stats_feed															
+/// Returns a websocket feed of statistics events.
+/// 
+/// This endpoint returns an open WebSocket connection for a feed of statistics
+/// events. It will establish a handshake with the [`WebSocket`] and then pass
+/// over to [`ws_stats_feed`] to handle the connection. This function will then
+/// return a [`Response`] with a status code of `101 Switching Protocols` and
+/// the `Connection` header set to `Upgrade`.
+/// 
+/// # Parameters
+/// 
+/// * `state`  - The application state.
+/// * `ws_req` - The websocket request.
+/// 
+#[utoipa::path(
+	get,
+	path = "/api/stats/feed",
+	tag  = "health",
+	responses(
+		(status = 200, description = "Application statistics event feed", body = Response)
+	)
+)]
+pub async fn get_stats_feed(
+	State(state): State<Arc<AppState>>,
+	ws_req:       WebSocketUpgrade,
+) -> Response {
+	//	Establish a handshake with the WebSocket
+	ws_req.on_upgrade(move |socket| ws_stats_feed(Arc::clone(&state), socket))
+}
+
+//		ws_stats_feed															
+/// Returns statistics events via a websocket feed.
+/// 
+/// This endpoint returns a feed of statistics over an established WebSocket
+/// connection. Statistics events are sent as they are received from the
+/// broadcast channel. The events are [`StatsForPeriod`] instances, sent as
+/// JSON objects.
+/// 
+/// # Parameters
+/// 
+/// * `state` - The application state.
+/// * `ws`    - The websocket stream.
+/// 
+pub async fn ws_stats_feed(
+	state:  Arc<AppState>,
+	mut ws: WebSocket,
+) {
+	//	Subscribe to the broadcast channel
+	let mut rx     = state.Broadcast.subscribe();
+	//	Message processing loop
+	loop { select! {
+		//	Handle incoming messages from the WebSocket
+		Some(msg)  = ws.recv() => {
+			match msg {
+				Ok(Message::Ping(ping)) => {
+					let _ = ws.send(Message::Pong(ping)).await;
+				}
+				Ok(Message::Pong(_)) |
+				Ok(Message::Close(_)) |
+				Err(_)                  => {
+					break;
+				}
+				_                       => {}
+			}
+		}
+		//	Handle new data from the broadcast channel
+		Ok(data)  = rx.recv() => {
+			let _ = ws.send(Message::Text(json!{data}.to_string())).await;
+		}
+	}}
 }
 
 //		serialize_status_codes													
