@@ -260,11 +260,28 @@ pub struct ResponseMetrics {
 #[derive(Clone, Default, Deserialize, IntoParams)]
 pub struct GetStatsRawParams {
 	//		Public properties													
-	/// The buffer to get the statistics for.
+	/// The buffer to get the statistics for. The buffer items are returned in
+	/// order of most-recent first.
 	pub buffer: Option<BufferType>,
 	
+	/// The date and time to get the statistics from. This will apply from the
+	/// given point in time until now, i.e. the check is, "is the time of the
+	/// response item newer than or equal to the given time?". The expected
+	/// format is `YYYY-MM-DDTHH:MM:SS`, e.g. `2023-10-18T06:08:34`.
+	pub from:   Option<NaiveDateTime>,
+	
 	/// The number of buffer entries, i.e. the number of seconds, to get the
-	/// statistics for.
+	/// statistics for. This will apply from now backwards, i.e. the count will
+	/// start with the most-recent item and return up to the given number of
+	/// items. If used with [`GetStatsRawParams::from`], this may seem somewhat
+	/// counter-intuitive, as the item identified by that parameter may not be
+	/// included in the results, but the items closest to the current time are
+	/// the ones of most interest, and so asking for a maximum number of items
+	/// is most likely to mean the X most-recent items rather than the X oldest
+	/// items. Because the most-recent items are always returned first, the
+	/// [`last_second`](StatsResponse::last_second)/[`last_second`](StatsRawResponse::last_second)
+	/// property of the response will always be the time of the first item in
+	/// the list.
 	pub limit:  Option<usize>,
 }
 
@@ -834,6 +851,24 @@ pub async fn get_stats_raw(
 	State(state):  State<Arc<AppState>>,
 	Query(params): Query<GetStatsRawParams>,
 ) -> Json<StatsRawResponse> {
+	//		Helper function														
+	fn process_buffer(
+		buffer: &VecDeque<StatsForPeriod>,
+		from:   Option<NaiveDateTime>,
+		limit:  Option<usize>,
+	) -> Vec<StatsResponseForPeriod> {
+		buffer.iter().take_while(|entry| {
+			match from {
+				Some(from) => entry.started_at >= from,
+				None       => true,
+			}
+		})
+			.limit(limit)
+			.map(StatsResponseForPeriod::from)
+			.collect()
+	}
+	
+	//		Prepare response data												
 	//	Lock source data
 	let buffers      = state.Stats.buffers.read();
 	let mut response = StatsRawResponse {
@@ -843,18 +878,18 @@ pub async fn get_stats_raw(
 	//	Convert the statistics buffers
 	match params.buffer {
 		Some(BufferType::Times) => {
-			response.times       = buffers.responses.iter().limit(params.limit).map(StatsResponseForPeriod::from).collect();
+			response.times       = process_buffer(&buffers.responses,   params.from, params.limit);
 		},
 		Some(BufferType::Connections) => {
-			response.connections = buffers.connections.iter().limit(params.limit).map(StatsResponseForPeriod::from).collect();
+			response.connections = process_buffer(&buffers.connections, params.from, params.limit);
 		},
 		Some(BufferType::Memory) => {
-			response.memory      = buffers.memory.iter().limit(params.limit).map(StatsResponseForPeriod::from).collect();
+			response.memory      = process_buffer(&buffers.memory,      params.from, params.limit);
 		},
 		None => {
-			response.times       = buffers.responses  .iter().limit(params.limit).map(StatsResponseForPeriod::from).collect();
-			response.connections = buffers.connections.iter().limit(params.limit).map(StatsResponseForPeriod::from).collect();
-			response.memory      = buffers.memory     .iter().limit(params.limit).map(StatsResponseForPeriod::from).collect();
+			response.times       = process_buffer(&buffers.responses,   params.from, params.limit);
+			response.connections = process_buffer(&buffers.connections, params.from, params.limit);
+			response.memory      = process_buffer(&buffers.memory,      params.from, params.limit);
 		},
 	}
 	//	Unlock source data
