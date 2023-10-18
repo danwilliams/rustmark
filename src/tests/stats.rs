@@ -32,6 +32,7 @@ fn prepare_state(start: NaiveDateTime) -> AppState {
 		Config:           Figment::from(Serialized::defaults(Config::default())).extract().unwrap(),
 		Stats:            AppStats {
 			started_at:   start,
+			last_second:  RwLock::new((start + Duration::seconds(95)).with_nanosecond(0).unwrap()),
 			connections:  AtomicUsize::new(5),
 			requests:     AtomicUsize::new(10),
 			totals:       Mutex::new(AppStatsTotals {
@@ -91,10 +92,11 @@ async fn stats() {
 			},
 		],
 		body:             UnpackedResponseBody::new(json!({
-			"started_at": start,
-			"uptime":     99,
-			"active":     5,
-			"requests":   10,
+			"started_at":  start.with_nanosecond(0).unwrap(),
+			"last_second": (start + Duration::seconds(95)).with_nanosecond(0).unwrap(),
+			"uptime":      99,
+			"active":      5,
+			"requests":    10,
 			"codes":                         {
 				"200 OK":                    5,
 				"401 Unauthorized":          4,
@@ -235,6 +237,7 @@ async fn stats_raw() {
 			},
 		],
 		body:          UnpackedResponseBody::new(json!({
+			"last_second":     (start + Duration::seconds(95)).with_nanosecond(0).unwrap(),
 			"times": [
 				{
 					"average": 0.0,

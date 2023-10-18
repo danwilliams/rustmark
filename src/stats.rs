@@ -88,6 +88,9 @@ pub struct AppStats {
 	/// The date and time the application was started.
 	pub started_at:  NaiveDateTime,
 	
+	/// The latest second period that has been completed.
+	pub last_second: RwLock<NaiveDateTime>,
+	
 	/// The current number of open connections, i.e. requests that have not yet
 	/// been responded to.
 	pub connections: AtomicUsize,
@@ -309,6 +312,9 @@ pub struct StatsResponse {
 	/// The date and time the application was started.
 	pub started_at:  NaiveDateTime,
 	
+	/// The latest second period that has been completed.
+	pub last_second: NaiveDateTime,
+	
 	/// The amount of time the application has been running, in seconds.
 	pub uptime:      u64,
 	
@@ -347,6 +353,9 @@ pub struct StatsResponse {
 #[derive(Default, Serialize, ToSchema)]
 pub struct StatsRawResponse {
 	//		Public properties													
+	/// The latest second period that has been completed.
+	pub last_second: NaiveDateTime,
+	
 	/// The average, maximum, and minimum response times in microseconds, plus
 	/// sample count, per second for every second since the application last
 	/// started, or up until the end of the [configured buffer](StatsOptions.timing_buffer_size).
@@ -658,6 +667,7 @@ fn stats_processor(
 			buffers.memory.push_front(memory_stats);
 			memory_stats            = StatsForPeriod::default();
 		}
+		*appstate.Stats.last_second.write() = current_second;
 		current_second = new_second;
 	}
 	
@@ -669,26 +679,27 @@ fn stats_processor(
 /// 
 /// This endpoint returns a JSON object containing the following information:
 /// 
-///   - `started_at` - The date and time the application was started, in ISO
-///                    8601 format.
-///   - `uptime`     - The amount of time the application has been running, in
-///                    seconds.
-///   - `requests`   - The number of requests that have been handled since the
-///                    application last started.
-///   - `active`     - The number of current open connections.
-///   - `codes`      - The counts of responses that have been handled, broken
-///                    down by status code, since the application last started.
-///   - `times`      - The average, maximum, and minimum response times, plus
-///                    sample count, for the [configured periods](StatsOptions.stats_periods),
-///                    and since the application last started.
-///   - `endpoints`  - The counts of responses that have been handled, broken
-///                    down by endpoint, since the application last started.
+///   - `started_at`  - The date and time the application was started, in ISO
+///                     8601 format.
+///   - `last_second` - The latest second period that has been completed.
+///   - `uptime`      - The amount of time the application has been running, in
+///                     seconds.
+///   - `requests`    - The number of requests that have been handled since the
+///                     application last started.
+///   - `active`      - The number of current open connections.
+///   - `codes`       - The counts of responses that have been handled, broken
+///                     down by status code, since the application last started.
+///   - `times`       - The average, maximum, and minimum response times, plus
+///                     sample count, for the [configured periods](StatsOptions.stats_periods),
+///                     and since the application last started.
+///   - `endpoints`   - The counts of responses that have been handled, broken
+///                     down by endpoint, since the application last started.
 ///   - `connections` - The average, maximum, and minimum open connections, plus
-///                    sample count, for the [configured periods](StatsOptions.stats_periods),
-///                    and since the application last started.
-///   - `memory`     - The average, maximum, and minimum memory usage, plus
-///                    sample count, for the [configured periods](StatsOptions.stats_periods),
-///                    and since the application last started.
+///                     sample count, for the [configured periods](StatsOptions.stats_periods),
+///                     and since the application last started.
+///   - `memory`      - The average, maximum, and minimum memory usage, plus
+///                     sample count, for the [configured periods](StatsOptions.stats_periods),
+///                     and since the application last started.
 /// 
 /// # Parameters
 /// 
@@ -762,7 +773,8 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	//		Build response data													
 	let now        = Utc::now().naive_utc();
 	let response   = Json(StatsResponse {
-		started_at:  state.Stats.started_at,
+		started_at:  state.Stats.started_at.with_nanosecond(0).unwrap(),
+		last_second: *state.Stats.last_second.read(),
 		uptime:      (now - state.Stats.started_at).num_seconds() as u64,
 		active:      state.Stats.connections.load(Ordering::Relaxed) as u64,
 		requests:    state.Stats.requests.load(Ordering::Relaxed) as u64,
@@ -788,6 +800,7 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 /// 
 /// This endpoint returns a JSON object containing the following information:
 /// 
+///   - `last_second` - The latest second period that has been completed.
 ///   - `times`       - The average, maximum, and minimum response times, plus
 ///                     sample count, per second for every second since the
 ///                     application last started, or up until the end of the
@@ -823,7 +836,10 @@ pub async fn get_stats_raw(
 ) -> Json<StatsRawResponse> {
 	//	Lock source data
 	let buffers      = state.Stats.buffers.read();
-	let mut response = StatsRawResponse::default();
+	let mut response = StatsRawResponse {
+		last_second:   *state.Stats.last_second.read(),
+		..Default::default()
+	};
 	//	Convert the statistics buffers
 	match params.buffer {
 		Some(BufferType::Times) => {
