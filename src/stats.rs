@@ -56,7 +56,7 @@ use velcro::{btree_map, hash_map};
 
 //		MeasurementType															
 /// The type of measurement to get statistics for.
-#[derive(Copy, Clone, Deserialize, PartialEq)]
+#[derive(Copy, Clone, Deserialize, PartialEq, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum MeasurementType {
 	/// Response times.
@@ -783,9 +783,10 @@ fn stats_processor(
 }
 
 //		get_stats																
-/// Produces various statistics about the service.
+/// Application statistics overview.
 /// 
-/// This endpoint returns a JSON object containing the following information:
+/// This endpoint produces various statistics about the application. It returns
+/// a JSON object containing the following information:
 /// 
 ///   - `started_at`  - The date and time the application was started, in ISO
 ///                     8601 format.
@@ -818,7 +819,7 @@ fn stats_processor(
 	path = "/api/stats",
 	tag  = "health",
 	responses(
-		(status = 200, description = "Application statistics", body = StatsResponse)
+		(status = 200, description = "Application statistics overview", body = StatsResponse)
 	)
 )]
 pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse> {
@@ -904,9 +905,11 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 }
 
 //		get_stats_history														
-/// Returns historical stats interval data from the buffers.
+/// Historical application statistics interval data.
 /// 
-/// This endpoint returns a JSON object containing the following information:
+/// This endpoint provides access to historical application statistics interval
+/// data available from the statistics buffers. It returns a JSON object
+/// containing the following information:
 /// 
 ///   - `last_second` - The latest second period that has been completed.
 ///   - `times`       - The average, maximum, and minimum response times, plus
@@ -989,13 +992,13 @@ pub async fn get_stats_history(
 }
 
 //		get_stats_feed															
-/// Returns a websocket feed of statistics events.
+/// Application statistics event feed.
 /// 
 /// This endpoint returns an open WebSocket connection for a feed of statistics
 /// events. It will establish a handshake with the [`WebSocket`] and then pass
-/// over to [`ws_stats_feed`] to handle the connection. This function will then
-/// return a [`Response`] with a status code of `101 Switching Protocols` and
-/// the `Connection` header set to `Upgrade`.
+/// over to [`ws_stats_feed()`] to handle the connection. This function will
+/// then return a [`Response`] with a status code of `101 Switching Protocols`
+/// and the `Connection` header set to `Upgrade`.
 /// 
 /// # Parameters
 /// 
@@ -1011,7 +1014,7 @@ pub async fn get_stats_history(
 		GetStatsFeedParams
 	),
 	responses(
-		(status = 200, description = "Application statistics event feed", body = Response)
+		(status = 200, description = "Application statistics event feed")
 	)
 )]
 pub async fn get_stats_feed(
@@ -1024,12 +1027,12 @@ pub async fn get_stats_feed(
 }
 
 //		ws_stats_feed															
-/// Returns statistics events via a websocket feed.
+/// WebSocket feed of application statistics events.
 /// 
-/// This endpoint returns a feed of statistics over an established WebSocket
-/// connection. Statistics events are sent as they are received from the
-/// broadcast channel. The events are [`StatsForPeriod`] instances, sent as
-/// JSON objects.
+/// This endpoint returns a feed of application statistics over a WebSocket
+/// connection established by [`get_stats_feed()`]. Statistics events are sent
+/// as they are received from the broadcast channel. The events are
+/// [`StatsForPeriod`] instances, sent as JSON objects.
 /// 
 /// Notably, if not filtered by measurement type, all measurement types will
 /// have their statistics returned in a JSON object, with the type names as keys
