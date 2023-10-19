@@ -214,9 +214,9 @@ async fn stats() {
 	assert_json_eq!(unpacked, crafted);
 }
 
-//		stats_raw																
+//		stats_history															
 #[tokio::test]
-async fn stats_raw() {
+async fn stats_history() {
 	//	There is a very small possibility that this test will fail if the
 	//	test is run at the exact moment that the date changes.
 	let start        = Utc::now().naive_utc() - Duration::seconds(99);
@@ -227,8 +227,8 @@ async fn stats_raw() {
 		buffers.connections.push_front(StatsForPeriod::default());
 		buffers.memory     .push_front(StatsForPeriod::default());
 	}
-	let params       = GetStatsRawParams::default();
-	let unpacked     = get_stats_raw(State(Arc::new(state)), Query(params)).await.into_response().unpack().unwrap();
+	let params       = GetStatsHistoryParams::default();
+	let unpacked     = get_stats_history(State(Arc::new(state)), Query(params)).await.into_response().unpack().unwrap();
 	let crafted      = UnpackedResponse {
 		status:        StatusCode::OK,
 		headers:       vec![

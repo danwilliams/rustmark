@@ -278,10 +278,10 @@ pub struct ResponseMetrics {
 	pub memory:      u64,
 }
 
-//		GetStatsRawParams														
-/// The parameters for the [`get_stats_raw()`] handler.
+//		GetStatsHistoryParams													
+/// The parameters for the [`get_stats_history()`] handler.
 #[derive(Clone, Default, Deserialize, IntoParams)]
-pub struct GetStatsRawParams {
+pub struct GetStatsHistoryParams {
 	//		Public properties													
 	/// The buffer to get the statistics for. The buffer items are returned in
 	/// order of most-recent first.
@@ -296,13 +296,13 @@ pub struct GetStatsRawParams {
 	/// The number of buffer entries, i.e. the number of seconds, to get the
 	/// statistics for. This will apply from now backwards, i.e. the count will
 	/// start with the most-recent item and return up to the given number of
-	/// items. If used with [`GetStatsRawParams::from`], this may seem somewhat
-	/// counter-intuitive, as the item identified by that parameter may not be
-	/// included in the results, but the items closest to the current time are
-	/// the ones of most interest, and so asking for a maximum number of items
-	/// is most likely to mean the X most-recent items rather than the X oldest
-	/// items. Because the most-recent items are always returned first, the
-	/// [`last_second`](StatsResponse::last_second)/[`last_second`](StatsRawResponse::last_second)
+	/// items. If used with [`GetStatsHistoryParams::from`], this may seem
+	/// somewhat counter-intuitive, as the item identified by that parameter may
+	/// not be included in the results, but the items closest to the current
+	/// time are the ones of most interest, and so asking for a maximum number
+	/// of items is most likely to mean the X most-recent items rather than the
+	/// X oldest items. Because the most-recent items are always returned first,
+	/// the [`last_second`](StatsResponse::last_second)/[`last_second`](StatsHistoryResponse::last_second)
 	/// property of the response will always be the time of the first item in
 	/// the list.
 	pub limit:  Option<usize>,
@@ -397,10 +397,10 @@ pub struct StatsResponse {
 	pub memory:      IndexMap<String, StatsResponseForPeriod>,
 }
 
-//		StatsRawResponse														
-/// The application statistics returned by the `/api/stats/raw` endpoint.
+//		StatsHistoryResponse													
+/// The application statistics returned by the `/api/stats/history` endpoint.
 #[derive(Default, Serialize, ToSchema)]
-pub struct StatsRawResponse {
+pub struct StatsHistoryResponse {
 	//		Public properties													
 	/// The latest second period that has been completed.
 	pub last_second: NaiveDateTime,
@@ -849,8 +849,8 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	response
 }
 
-//		get_stats_raw															
-/// Returns raw stats interval data from the buffers.
+//		get_stats_history														
+/// Returns historical stats interval data from the buffers.
 /// 
 /// This endpoint returns a JSON object containing the following information:
 /// 
@@ -875,19 +875,19 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 /// 
 #[utoipa::path(
 	get,
-	path = "/api/stats/raw",
+	path = "/api/stats/history",
 	tag  = "health",
 	params(
-		GetStatsRawParams
+		GetStatsHistoryParams
 	),
 	responses(
-		(status = 200, description = "Application statistics buffer data", body = StatsRawResponse)
+		(status = 200, description = "Historical application statistics interval data", body = StatsHistoryResponse)
 	)
 )]
-pub async fn get_stats_raw(
+pub async fn get_stats_history(
 	State(state):  State<Arc<AppState>>,
-	Query(params): Query<GetStatsRawParams>,
-) -> Json<StatsRawResponse> {
+	Query(params): Query<GetStatsHistoryParams>,
+) -> Json<StatsHistoryResponse> {
 	//		Helper function														
 	fn process_buffer(
 		buffer: &VecDeque<StatsForPeriod>,
@@ -908,7 +908,7 @@ pub async fn get_stats_raw(
 	//		Prepare response data												
 	//	Lock source data
 	let buffers      = state.Stats.buffers.read();
-	let mut response = StatsRawResponse {
+	let mut response = StatsHistoryResponse {
 		last_second:   *state.Stats.last_second.read(),
 		..Default::default()
 	};

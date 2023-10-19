@@ -27,8 +27,8 @@ available. Statistics are available at `/api/stats`.
     Returns a `200 OK` response with a JSON body containing various statistics
     about the API service.
 
-  - **`GET /api/stats/raw`**
-    Returns a `200 OK` response with a JSON body containing raw interval
+  - **`GET /api/stats/history`**
+    Returns a `200 OK` response with a JSON body containing historical interval
     statistics about the API service.
 
   - **`GET /api/stats/feed`**
