@@ -224,6 +224,25 @@ pub struct StatsForPeriod {
 }
 
 impl StatsForPeriod {
+	//		initialize															
+	/// Initialises the stats based on a single starting value.
+	/// 
+	/// # Parameters
+	/// 
+	/// * `value` - The single value to start with. This will be applied to the
+	///             average, maximum, and minimum values, and the count will be
+	///             set to 1.
+	/// 
+	pub fn initialize(value: u64) -> Self {
+		Self {
+			average: value as f64,
+			maximum: value,
+			minimum: value,
+			count:   1,
+			..Default::default()
+		}
+	}
+	
 	//		update																
 	/// Updates the stats with new data.
 	/// 
@@ -648,36 +667,40 @@ fn stats_processor(
 	mut memory_stats:   StatsForPeriod,
 	mut current_second: NaiveDateTime
 ) -> (StatsForPeriod, StatsForPeriod, StatsForPeriod, NaiveDateTime) {
+	//		Helper functions													
+	fn update_buffer(
+		buffer:             &mut VecDeque<StatsForPeriod>,
+		buffer_size:        usize,
+		mut stats:          StatsForPeriod,
+		current_second:     NaiveDateTime,
+		elapsed:            i64,
+		message:            &mut AllStatsForPeriod,
+		mut update_message: impl FnMut(StatsForPeriod, &mut AllStatsForPeriod),
+	) -> StatsForPeriod {
+		for i in 0..elapsed {
+			if buffer.len() == buffer_size {
+				buffer.pop_back();
+			}
+			stats.started_at = current_second + Duration::seconds(i);
+			buffer.push_front(stats.clone());
+			update_message(stats, message);
+			stats            = StatsForPeriod::default();
+		}
+		stats
+	}
+	
 	//		Preparation															
 	let new_second: NaiveDateTime;
 	if let Some(metrics) = metrics {
 		//	Prepare new stats
-		let newstats = StatsForPeriod {
-			average:   metrics.time_taken as f64,
-			maximum:   metrics.time_taken,
-			minimum:   metrics.time_taken,
-			count:     1,
-			..Default::default()
-		};
-		let constats = StatsForPeriod {
-			average:   metrics.connections as f64,
-			maximum:   metrics.connections,
-			minimum:   metrics.connections,
-			count:     1,
-			..Default::default()
-		};
-		let memstats = StatsForPeriod {
-			average:   metrics.memory as f64,
-			maximum:   metrics.memory,
-			minimum:   metrics.memory,
-			count:     1,
-			..Default::default()
-		};
+		let new_timing_stats = StatsForPeriod::initialize(metrics.time_taken);
+		let new_conn_stats   = StatsForPeriod::initialize(metrics.connections);
+		let new_memory_stats = StatsForPeriod::initialize(metrics.memory);
 		
 		//	Increment cumulative stats
-		timing_stats.update(&newstats);
-		conn_stats.update(&constats);
-		memory_stats.update(&memstats);
+		timing_stats.update(&new_timing_stats);
+		conn_stats  .update(&new_conn_stats);
+		memory_stats.update(&new_memory_stats);
 		
 	//		Update statistics													
 		//	Lock source data
@@ -687,20 +710,20 @@ fn stats_processor(
 		*totals.codes.entry(metrics.status_code).or_insert(0) += 1;
 		
 		//	Update response time stats
-		totals.times.update(&newstats);
+		totals.times.update(&new_timing_stats);
 		
 		//	Update endpoint response time stats
 		totals.endpoints
 			.entry(metrics.endpoint)
-			.and_modify(|ep_stats| ep_stats.update(&newstats))
-			.or_insert(newstats)
+			.and_modify(|ep_stats| ep_stats.update(&new_timing_stats))
+			.or_insert(new_timing_stats)
 		;
 		
 		//	Update connections usage stats
-		totals.connections.update(&constats);
+		totals.connections.update(&new_conn_stats);
 		
 		//	Update memory usage stats
-		totals.memory.update(&memstats);
+		totals.memory.update(&new_memory_stats);
 		
 		//	Unlock source data
 		drop(totals);
@@ -722,35 +745,35 @@ fn stats_processor(
 		let mut buffers = appstate.Stats.Data.buffers.write();
 		let mut message = AllStatsForPeriod::default();
 		//	Timing stats buffer
-		for i in 0..elapsed {
-			if buffers.responses.len() == appstate.Config.stats.timing_buffer_size {
-				buffers.responses.pop_back();
-			}
-			timing_stats.started_at = current_second + Duration::seconds(i);
-			buffers.responses.push_front(timing_stats.clone());
-			message.times           = timing_stats;
-			timing_stats            = StatsForPeriod::default();
-		}
+		timing_stats = update_buffer(
+			&mut buffers.responses,
+			appstate.Config.stats.timing_buffer_size,
+			timing_stats,
+			current_second,
+			elapsed,
+			&mut message,
+			|stats, message| { message.times = stats; },
+		);
 		//	Connections stats buffer
-		for i in 0..elapsed {
-			if buffers.connections.len() == appstate.Config.stats.connection_buffer_size {
-				buffers.connections.pop_back();
-			}
-			conn_stats.started_at   = current_second + Duration::seconds(i);
-			buffers.connections.push_front(conn_stats.clone());
-			message.connections     = conn_stats;
-			conn_stats              = StatsForPeriod::default();
-		}
+		conn_stats   = update_buffer(
+			&mut buffers.connections,
+			appstate.Config.stats.connection_buffer_size,
+			conn_stats,
+			current_second,
+			elapsed,
+			&mut message,
+			|stats, message| { message.connections = stats; },
+		);
 		//	Memory stats buffer
-		for i in 0..elapsed {
-			if buffers.memory.len() == appstate.Config.stats.memory_buffer_size {
-				buffers.memory.pop_back();
-			}
-			memory_stats.started_at = current_second + Duration::seconds(i);
-			buffers.memory.push_front(memory_stats.clone());
-			message.memory          = memory_stats;
-			memory_stats            = StatsForPeriod::default();
-		}
+		memory_stats = update_buffer(
+			&mut buffers.memory,
+			appstate.Config.stats.memory_buffer_size,
+			memory_stats,
+			current_second,
+			elapsed,
+			&mut message,
+			|stats, message| { message.memory = stats; },
+		);
 		*appstate.Stats.Data.last_second.write() = current_second;
 		current_second = new_second;
 		appstate.Stats.Broadcast.send(message).expect("Failed to broadcast stats");
