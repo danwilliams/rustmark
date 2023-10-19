@@ -35,6 +35,7 @@ use std::{
 	collections::{BTreeMap, HashMap, VecDeque},
 	str::FromStr,
 	sync::{Arc, atomic::AtomicUsize, atomic::Ordering},
+	time::Instant,
 };
 use tikv_jemalloc_ctl::stats::allocated as Malloc;
 use tokio::{
@@ -42,6 +43,7 @@ use tokio::{
 	spawn,
 	time::{interval, sleep},
 };
+use tracing::{info, warn};
 use utoipa::{IntoParams, ToSchema};
 use velcro::hash_map;
 
@@ -947,27 +949,80 @@ pub async fn ws_stats_feed(
 	state:  Arc<AppState>,
 	mut ws: WebSocket,
 ) {
+	//		Preparation															
+	info!("WebSocket connection established");
 	//	Subscribe to the broadcast channel
-	let mut rx     = state.Broadcast.subscribe();
+	let mut rx        = state.Broadcast.subscribe();
+	//	Set up a timer to send pings at regular intervals
+	let mut timer     = interval(Duration::seconds(state.Config.stats.ws_ping_interval as i64).to_std().unwrap());
+	let mut timeout   = interval(Duration::seconds(state.Config.stats.ws_ping_timeout  as i64).to_std().unwrap());
+	let mut last_ping = None;
+	let mut last_pong = Instant::now();
+	
 	//	Message processing loop
 	loop { select! {
-		//	Handle incoming messages from the WebSocket
-		Some(msg)  = ws.recv() => {
-			match msg {
-				Ok(Message::Ping(ping)) => {
-					let _ = ws.send(Message::Pong(ping)).await;
-				}
-				Ok(Message::Pong(_)) |
-				Ok(Message::Close(_)) |
-				Err(_)                  => {
+		//		Ping															
+		//	Send a ping at regular intervals
+		_ = timer.tick() => {
+			if let Err(err) = ws.send(Message::Ping(Vec::new())).await {
+				warn!("Failed to send ping over WebSocket: {}", err);
+				break;
+			}
+			last_ping = Some(Instant::now());
+		},
+		//		Ping/pong timeout												
+		//	Check for ping timeout (X seconds since the last ping without a pong)
+		_ = timeout.tick() => {
+			if let Some(ping_time) = last_ping {
+				let limit = Duration::seconds(state.Config.stats.ws_ping_timeout as i64).to_std().unwrap();
+				if last_pong < ping_time && ping_time.elapsed() > limit {
+					warn!("WebSocket ping timed out");
 					break;
 				}
-				_                       => {}
 			}
+		},
+		//		Incoming message												
+		//	Handle incoming messages from the WebSocket
+		Some(msg) = ws.recv() => {
+			match msg {
+				Ok(Message::Ping(ping)) => {
+					if let Err(err) = ws.send(Message::Pong(ping)).await {
+						warn!("Failed to send pong over WebSocket: {}", err);
+						break;
+					}
+				}
+				Ok(Message::Pong(_))    => {
+					last_pong = Instant::now();
+				}
+				Ok(Message::Close(_))   => {
+					info!("WebSocket connection closed");
+					break;
+				}
+				Ok(Message::Text(_))    => {
+					warn!("Unexpected WebSocket text message");
+				}
+				Ok(Message::Binary(_))  => {
+					warn!("Unexpected WebSocket binary message");
+				}
+				Err(err)                => {
+					warn!("WebSocket error: {}", err);
+					break;
+				}
+				#[allow(unreachable_patterns)]
+				_                       => {
+					//	At present there are no other message types, but this is here to catch
+					//	any future additions.
+					warn!("Unknown WebSocket message type");
+				}
+			}	
 		}
+		//		Send stats data													
 		//	Handle new data from the broadcast channel
-		Ok(data)  = rx.recv() => {
-			let _ = ws.send(Message::Text(json!{data}.to_string())).await;
+		Ok(data) = rx.recv() => {
+			if let Err(err) = ws.send(Message::Text(json!{data}.to_string())).await {
+				warn!("Failed to send data over WebSocket: {}", err);
+				break;
+			}
 		}
 	}}
 }

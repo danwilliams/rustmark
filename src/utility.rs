@@ -214,6 +214,17 @@ pub struct StatsOptions {
 	/// customised.
 	#[default = 86_400]
 	pub memory_buffer_size:     usize,
+	
+	/// The interval at which to send ping messages to WebSocket clients, in
+	/// seconds. This is used to check the connection is still alive.
+	#[default = 60]
+	pub ws_ping_interval:       usize,
+	
+	/// The timeout for WebSocket ping messages, in seconds. If a pong message
+	/// is not received in reply to the outgoing ping message within this time,
+	/// the connection will be closed.
+	#[default = 10]
+	pub ws_ping_timeout:        usize,
 }
 
 //		AppState																
