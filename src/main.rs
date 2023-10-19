@@ -4,6 +4,7 @@ mod auth;
 mod errors;
 mod handlers;
 mod health;
+mod stats;
 mod utility;
 
 
@@ -15,6 +16,7 @@ use crate::{
 	errors::*,
 	handlers::*,
 	health::*,
+	stats::*,
 	utility::*,
 };
 use axum::{
@@ -26,19 +28,23 @@ use axum_sessions::{
 	SessionLayer,
 	async_session::MemoryStore as SessionMemoryStore,
 };
+use chrono::Utc;
 use figment::{
 	Figment,
 	providers::{Env, Format, Serialized, Toml},
 };
+use flume::{self};
 use include_dir::{Dir, include_dir};
 use rand::Rng;
-use ring::hmac::{self, HMAC_SHA512};
+use ring::hmac::{HMAC_SHA512, self};
 use std::{
 	net::SocketAddr,
 	sync::Arc,
 	time::Duration,
 };
 use tera::Tera;
+use tikv_jemallocator::Jemalloc;
+use tokio::sync::broadcast;
 use tower_http::catch_panic::CatchPanicLayer;
 use tracing::{Level, Span, info};
 use tracing_appender::{self};
@@ -55,6 +61,9 @@ use utoipa_swagger_ui::SwaggerUi;
 
 
 //		Constants
+
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
 
 static TEMPLATE_DIR: Dir<'_> = include_dir!("html");
 static ASSETS_DIR:   Dir<'_> = include_dir!("static");
@@ -105,14 +114,27 @@ async fn main() {
 	let mut tera      = Tera::default();
 	tera.add_raw_templates(templates).expect("Error parsing templates");
 	tera.autoescape_on(vec![".tera.html", ".html"]);
+	let (sender, rec) = flume::unbounded();
+	let (tx, _rx)     = broadcast::channel(10);
 	let secret        = rand::thread_rng().gen::<[u8; 64]>();
 	let session_store = SessionMemoryStore::new();
 	let shared_state  = Arc::new(AppState {
 		Config:         config,
+		Stats:          AppStateStats {
+			Data:       AppStats {
+				started_at: Utc::now().naive_utc(),
+				..Default::default()
+			},
+			Queue:      sender,
+			Broadcast:  tx,
+		},
 		Secret:         secret,
 		Key:            hmac::Key::new(HMAC_SHA512, &secret),
 		Template:       tera,
 	});
+	if shared_state.Config.stats.enabled {
+		start_stats_processor(rec, Arc::clone(&shared_state)).await;
+	}
 	//	Protected routes
 	let app           = Router::new()
 		.route("/",      get(get_index))
@@ -121,13 +143,16 @@ async fn main() {
 		.merge(
 			//	Public routes
 			Router::new()
-				.route("/api/ping",       get(get_ping))
-				.route("/login",          post(post_login))
-				.route("/logout",         get(get_logout))
-				.route("/css/*path",      get(get_public_static_asset))
-				.route("/img/*path",      get(get_public_static_asset))
-				.route("/js/*path",       get(get_public_static_asset))
-				.route("/webfonts/*path", get(get_public_static_asset))
+				.route("/api/ping",          get(get_ping))
+				.route("/api/stats",         get(get_stats))
+				.route("/api/stats/history", get(get_stats_history))
+				.route("/api/stats/feed",    get(get_stats_feed))
+				.route("/login",             post(post_login))
+				.route("/logout",            get(get_logout))
+				.route("/css/*path",         get(get_public_static_asset))
+				.route("/img/*path",         get(get_public_static_asset))
+				.route("/js/*path",          get(get_public_static_asset))
+				.route("/webfonts/*path",    get(get_public_static_asset))
 		)
 		.merge(SwaggerUi::new("/api-docs/swagger").url("/api-docs/openapi.json", ApiDoc::openapi()))
 		.merge(Redoc::with_url("/api-docs/redoc", ApiDoc::openapi()))
@@ -137,6 +162,7 @@ async fn main() {
 		.layer(middleware::from_fn_with_state(Arc::clone(&shared_state), graceful_error_layer))
 		.layer(middleware::from_fn_with_state(Arc::clone(&shared_state), auth_layer))
 		.layer(SessionLayer::new(session_store, &secret).with_secure(false))
+		.layer(middleware::from_fn_with_state(Arc::clone(&shared_state), stats_layer))
 		.with_state(shared_state)
 		.layer(tower_http::trace::TraceLayer::new_for_http()
 			.on_request(

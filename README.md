@@ -103,6 +103,8 @@ The main high-level points of note are:
       - Single-file deployment — all assets baked in (optional and configurable)
       - Logging of HTTP requests and events using [Tokio Tracing][Tracing]
       - Health check API endpoints
+      - Comprehensive application statistics gathering and API endpoints for
+        reporting
       - Graceful handling of 404 and 500 HTTP errors
       - Graceful handling of runtime application errors
       - Full OpenAPI documentation
@@ -124,6 +126,22 @@ The authentication system is set up to make it easy to configure routes as
 either public or protected, and is fully-implemented including a login page,
 logout action, and handling of every part of the authentication journey and the
 possible situations.
+
+### Statistics
+
+Terracotta gathers a wide range of statistics about the application, and
+provides a number of API endpoints to access them. These are intended to be used
+by monitoring systems, and also to provide a simple way to see what is going on
+with the application.
+
+The approach is highly performant, despite gathering a comprehensive set of
+measurements, and is designed to be as efficient as possible. It is also
+designed to be easy to extend, to add new statistics to the system. There is a
+central statistics queue plus broadcast system, with circular buffers for
+interval history, and a tick clock to keep everything up-to-date.
+
+The statistics data is available in summary form, per-measurement history form,
+and as a real-time WebSocket event stream.
 
 ### Databases
 
@@ -526,10 +544,11 @@ rustmark`, you will need to run it using `rustmark` rather than `cargo run`.
 You can run the test suite using `cargo test`. This will run all unit and
 integration tests.
 
-**Note that, at present, there are no tests written specifically for this
+**Note that, at present, there are very few tests written specifically for this
 project, as it is mostly a combination of other crates from the Rust ecosystem.
-Tests might be added when the project is more mature and sensible things to test
-have been clearly identified.**
+Those tests that do exist are intended to be examples of approach, and are not
+exhaustive. Additional tests might be added when the project is more mature, and
+sensible things to test have been clearly identified.**
 
 ### Documentation
 
