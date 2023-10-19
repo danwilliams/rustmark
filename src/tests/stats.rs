@@ -31,38 +31,40 @@ fn prepare_state(start: NaiveDateTime) -> AppState {
 	let secret          = rand::thread_rng().gen::<[u8; 64]>();
 	let mut state       = AppState {
 		Config:           Figment::from(Serialized::defaults(Config::default())).extract().unwrap(),
-		Stats:            AppStats {
-			started_at:   start,
-			last_second:  RwLock::new((start + Duration::seconds(95)).with_nanosecond(0).unwrap()),
-			connections:  AtomicUsize::new(5),
-			requests:     AtomicUsize::new(10),
-			totals:       Mutex::new(AppStatsTotals {
-				codes:       hash_map!{
-					StatusCode::OK:                    5,
-					StatusCode::UNAUTHORIZED:          4,
-					StatusCode::NOT_FOUND:             3,
-					StatusCode::INTERNAL_SERVER_ERROR: 2,
-				},
-				times:       Default::default(),
-				endpoints:   hash_map!{
-					Endpoint {
-						method:     Method::GET,
-						path:       s!("/api/stats"),
-					}:              StatsForPeriod {
-						started_at: start,
-						average:    500.0,
-						maximum:    1000,
-						minimum:    100,
-						count:      10,
+		Stats:            AppStateStats {
+			Data:                AppStats {
+				started_at:      start,
+				last_second:     RwLock::new((start + Duration::seconds(95)).with_nanosecond(0).unwrap()),
+				connections:     AtomicUsize::new(5),
+				requests:        AtomicUsize::new(10),
+				totals:          Mutex::new(AppStatsTotals {
+					codes:       hash_map!{
+						StatusCode::OK:                    5,
+						StatusCode::UNAUTHORIZED:          4,
+						StatusCode::NOT_FOUND:             3,
+						StatusCode::INTERNAL_SERVER_ERROR: 2,
 					},
-				},
-				connections: Default::default(),
-				memory:      Default::default(),
-			}),
-			..Default::default()
+					times:       Default::default(),
+					endpoints:   hash_map!{
+						Endpoint {
+							method:     Method::GET,
+							path:       s!("/api/stats"),
+						}:              StatsForPeriod {
+							started_at: start,
+							average:    500.0,
+							maximum:    1000,
+							minimum:    100,
+							count:      10,
+						},
+					},
+					connections: Default::default(),
+					memory:      Default::default(),
+				}),
+				..Default::default()
+			},
+			Queue:               sender,
+			Broadcast:           tx,
 		},
-		Queue:            sender,
-		Broadcast:        tx,
 		Secret:           secret,
 		Key:              hmac::Key::new(HMAC_SHA512, &secret),
 		Template:         Tera::default(),
@@ -222,7 +224,7 @@ async fn stats_history() {
 	let start        = Utc::now().naive_utc() - Duration::seconds(99);
 	let state        = prepare_state(start);
 	{
-		let mut buffers = state.Stats.buffers.write();
+		let mut buffers = state.Stats.Data.buffers.write();
 		buffers.responses  .push_front(StatsForPeriod::default());
 		buffers.connections.push_front(StatsForPeriod::default());
 		buffers.memory     .push_front(StatsForPeriod::default());

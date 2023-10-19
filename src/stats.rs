@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 //		Modules
 
 #[cfg(test)]
@@ -20,7 +22,7 @@ use axum::{
 	response::{Response},
 };
 use chrono::{Duration, NaiveDateTime, Timelike, Utc};
-use flume::Receiver;
+use flume::{Receiver, Sender};
 use indexmap::IndexMap;
 use itertools::Itertools;
 use parking_lot::{Mutex, RwLock};
@@ -41,6 +43,7 @@ use tikv_jemalloc_ctl::stats::allocated as Malloc;
 use tokio::{
 	select,
 	spawn,
+	sync::broadcast::Sender as Broadcaster,
 	time::{interval, sleep},
 };
 use tracing::{info, warn};
@@ -83,6 +86,33 @@ impl FromStr for MeasurementType {
 
 
 //		Structs
+
+//		AppStateStats															
+/// Statistics-related central constructs to be stored in application state.
+/// 
+/// This is used to store global state information that is shared between
+/// requests, specific to what is used for statistics purposes.
+/// 
+pub struct AppStateStats {
+	//		Public properties													
+	/// The application statistics data.
+	pub Data:      AppStats,
+	
+	/// The statistics queue that response times are added to. This is the
+	/// sender side only. A queue is used so that each request-handling thread's
+	/// stats middleware can send its metrics into the queue instead of updating
+	/// a central, locked data structure. This avoids the need for locking and
+	/// incineration routines, as the stats-handling thread can constantly
+	/// process the queue and there will theoretically never be a large build-up
+	/// of data in memory that has to be dealt with all at once.
+	pub Queue:     Sender<ResponseMetrics>,
+	
+	/// The statistics broadcast channel that period-based statistics are added
+	/// to. This is the receiver side only. Each interested party can subscribe
+	/// to this channel to receive the latest statistics for a given period on
+	/// a real-time basis.
+	pub Broadcast: Broadcaster<AllStatsForPeriod>,
+}
 
 //		AppStats																
 /// Various application statistics.
@@ -252,7 +282,7 @@ pub struct AllStatsForPeriod {
 //		ResponseMetrics															
 /// Metrics for a single response.
 /// 
-/// This is used by the statistics queue in [`AppState.Queue`].
+/// This is used by the statistics queue in [`AppState.Stats.Queue`].
 /// 
 #[derive(SmartDefault)]
 pub struct ResponseMetrics {
@@ -488,23 +518,23 @@ pub async fn stats_layer<B>(
 	};
 	
 	//	Update requests counter
-	appstate.Stats.requests.fetch_add(1, Ordering::Relaxed);
-	appstate.Stats.connections.fetch_add(1, Ordering::Relaxed);
+	appstate.Stats.Data.requests.fetch_add(1, Ordering::Relaxed);
+	appstate.Stats.Data.connections.fetch_add(1, Ordering::Relaxed);
 	
 	//	Process request
 	let response    = next.run(request).await;
 	
 	//	Add response time to the queue
-	appstate.Queue.send(ResponseMetrics {
+	appstate.Stats.Queue.send(ResponseMetrics {
 		endpoint,
 		started_at:   stats_cx.started_at,
 		time_taken:   (Utc::now().naive_utc() - stats_cx.started_at).num_microseconds().unwrap() as u64,
 		status_code:  response.status(),
-		connections:  appstate.Stats.connections.load(Ordering::Relaxed) as u64,
+		connections:  appstate.Stats.Data.connections.load(Ordering::Relaxed) as u64,
 		memory:	      Malloc::read().unwrap() as u64,
 	}).expect("Failed to send response time");
 	
-	appstate.Stats.connections.fetch_sub(1, Ordering::Relaxed);
+	appstate.Stats.Data.connections.fetch_sub(1, Ordering::Relaxed);
 	
 	//	Return response
 	response
@@ -514,7 +544,7 @@ pub async fn stats_layer<B>(
 /// Starts the statistics processor.
 /// 
 /// This function starts a thread that will process the statistics queue in
-/// [`AppState.Queue`]. It will run until the channel is disconnected.
+/// [`AppState.Stats.Queue`]. It will run until the channel is disconnected.
 /// 
 /// The processing of the statistics is done in a separate thread so that the
 /// request-handling threads can continue to handle requests without being
@@ -554,7 +584,7 @@ pub async fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate
 	//	have enough memory it would fail right away, instead of gradually
 	//	building up to that point which would make it harder to diagnose.
 	{
-		let mut buffers    = appstate.Stats.buffers.write();
+		let mut buffers    = appstate.Stats.Data.buffers.write();
 		buffers.responses  .reserve(appstate.Config.stats.timing_buffer_size);
 		buffers.connections.reserve(appstate.Config.stats.connection_buffer_size);
 		buffers.memory     .reserve(appstate.Config.stats.memory_buffer_size);
@@ -600,10 +630,11 @@ pub async fn start_stats_processor(receiver: Receiver<ResponseMetrics>, appstate
 /// 
 /// * `appstate`       - The application state.
 /// * `metrics`        - The response metrics to process, received from the
-///                      statistics queue in [`AppState.Queue`]. If [`None`],
-///                      then no stats will be added or altered, and no counters
-///                      will be incremented, but the most-recent period will be
-///                      checked and wrapped up if not already done.
+///                      statistics queue in [`AppState.Stats.Queue`]. If
+///                      [`None`], then no stats will be added or altered, and
+///                      no counters will be incremented, but the most-recent
+///                      period will be checked and wrapped up if not already
+///                      done.
 /// * `timing_stats`   - The cumulative timing stats for the current second.
 /// * `conn_stats`     - The cumulative connection stats for the current second.
 /// * `memory_stats`   - The cumulative memory stats for the current second.
@@ -650,7 +681,7 @@ fn stats_processor(
 		
 	//		Update statistics													
 		//	Lock source data
-		let mut totals = appstate.Stats.totals.lock();
+		let mut totals = appstate.Stats.Data.totals.lock();
 		
 		//	Update responses counter
 		*totals.codes.entry(metrics.status_code).or_insert(0) += 1;
@@ -688,7 +719,7 @@ fn stats_processor(
 	//	the circular buffer of seconds.
 	if new_second > current_second {
 		let elapsed     = (new_second - current_second).num_seconds();
-		let mut buffers = appstate.Stats.buffers.write();
+		let mut buffers = appstate.Stats.Data.buffers.write();
 		let mut message = AllStatsForPeriod::default();
 		//	Timing stats buffer
 		for i in 0..elapsed {
@@ -720,9 +751,9 @@ fn stats_processor(
 			message.memory          = memory_stats;
 			memory_stats            = StatsForPeriod::default();
 		}
-		*appstate.Stats.last_second.write() = current_second;
+		*appstate.Stats.Data.last_second.write() = current_second;
 		current_second = new_second;
-		appstate.Broadcast.send(message).expect("Failed to broadcast stats");
+		appstate.Stats.Broadcast.send(message).expect("Failed to broadcast stats");
 	}
 	
 	(timing_stats, conn_stats, memory_stats, current_second)
@@ -805,7 +836,7 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	
 	//		Preparation															
 	//	Lock source data
-	let buffers      = state.Stats.buffers.read();
+	let buffers      = state.Stats.Data.buffers.read();
 	
 	//	Create pots for each period and process stats buffers
 	let timing_input = initialize_map(&state.Config.stats_periods, &buffers.responses);
@@ -817,7 +848,7 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	
 	//		Process stats														
 	//	Lock source data
-	let totals        = state.Stats.totals.lock();
+	let totals        = state.Stats.Data.totals.lock();
 	
 	//	Convert the input stats data into the output stats data
 	let timing_output = convert_map(timing_input, &totals.times);
@@ -827,11 +858,11 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	//		Build response data													
 	let now        = Utc::now().naive_utc();
 	let response   = Json(StatsResponse {
-		started_at:  state.Stats.started_at.with_nanosecond(0).unwrap(),
-		last_second: *state.Stats.last_second.read(),
-		uptime:      (now - state.Stats.started_at).num_seconds() as u64,
-		active:      state.Stats.connections.load(Ordering::Relaxed) as u64,
-		requests:    state.Stats.requests.load(Ordering::Relaxed) as u64,
+		started_at:  state.Stats.Data.started_at.with_nanosecond(0).unwrap(),
+		last_second: *state.Stats.Data.last_second.read(),
+		uptime:      (now - state.Stats.Data.started_at).num_seconds() as u64,
+		active:      state.Stats.Data.connections.load(Ordering::Relaxed) as u64,
+		requests:    state.Stats.Data.requests.load(Ordering::Relaxed) as u64,
 		codes:       totals.codes.clone(),
 		times:       timing_output,
 		endpoints:   HashMap::from_iter(
@@ -907,9 +938,9 @@ pub async fn get_stats_history(
 	
 	//		Prepare response data												
 	//	Lock source data
-	let buffers      = state.Stats.buffers.read();
+	let buffers      = state.Stats.Data.buffers.read();
 	let mut response = StatsHistoryResponse {
-		last_second:   *state.Stats.last_second.read(),
+		last_second:   *state.Stats.Data.last_second.read(),
 		..Default::default()
 	};
 	//	Convert the statistics buffers
@@ -997,7 +1028,7 @@ pub async fn ws_stats_feed(
 	//		Preparation															
 	info!("WebSocket connection established");
 	//	Subscribe to the broadcast channel
-	let mut rx        = state.Broadcast.subscribe();
+	let mut rx        = state.Stats.Broadcast.subscribe();
 	//	Set up a timer to send pings at regular intervals
 	let mut timer     = interval(Duration::seconds(state.Config.stats.ws_ping_interval as i64).to_std().unwrap());
 	let mut timeout   = interval(Duration::seconds(state.Config.stats.ws_ping_timeout  as i64).to_std().unwrap());

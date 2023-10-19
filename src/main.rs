@@ -118,12 +118,14 @@ async fn main() {
 	let session_store = SessionMemoryStore::new();
 	let shared_state  = Arc::new(AppState {
 		Config:         config,
-		Stats:          AppStats {
-			started_at: Utc::now().naive_utc(),
-			..Default::default()
+		Stats:          AppStateStats {
+			Data:       AppStats {
+				started_at: Utc::now().naive_utc(),
+				..Default::default()
+			},
+			Queue:      sender,
+			Broadcast:  tx,
 		},
-		Queue:          sender,
-		Broadcast:      tx,
 		Secret:         secret,
 		Key:            hmac::Key::new(HMAC_SHA512, &secret),
 		Template:       tera,
