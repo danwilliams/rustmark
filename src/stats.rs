@@ -45,17 +45,17 @@ use tokio::{
 };
 use tracing::{info, warn};
 use utoipa::{IntoParams, ToSchema};
-use velcro::hash_map;
+use velcro::{btree_map, hash_map};
 
 
 
 //		Enums
 
-//		BufferType																
-/// The type of buffer to get statistics for.
+//		MeasurementType															
+/// The type of measurement to get statistics for.
 #[derive(Copy, Clone, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
-pub enum BufferType {
+pub enum MeasurementType {
 	/// Response times.
 	Times,
 	
@@ -66,15 +66,15 @@ pub enum BufferType {
 	Memory,
 }
 
-impl FromStr for BufferType {
+impl FromStr for MeasurementType {
 	type Err = ();
 	
 	//		from_str															
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		match s.to_lowercase().as_str() {
-			"times"       => Ok(BufferType::Times),
-			"connections" => Ok(BufferType::Connections),
-			"memory"      => Ok(BufferType::Memory),
+			"times"       => Ok(MeasurementType::Times),
+			"connections" => Ok(MeasurementType::Connections),
+			"memory"      => Ok(MeasurementType::Memory),
 			_             => Err(()),
 		}
 	}
@@ -230,6 +230,25 @@ impl StatsForPeriod {
 	}
 }
 
+//		AllStatsForPeriod														
+/// Average, maximum, minimum, and count of values for a period of time, for all
+/// areas being measured.
+#[derive(Clone, Debug, Default, Serialize, ToSchema)]
+pub struct AllStatsForPeriod {
+	//		Public properties													
+	/// The average, maximum, and minimum response times in microseconds, plus
+	/// sample count, for the most recent second.
+	pub times:       StatsForPeriod,
+	
+	/// The average, maximum, and minimum open connections, plus sample count,
+	/// for the most recent second.
+	pub connections: StatsForPeriod,
+	
+	/// The average, maximum, and minimum memory usage in bytes, plus sample
+	/// count, for the most recent second.
+	pub memory:      StatsForPeriod,
+}
+
 //		ResponseMetrics															
 /// Metrics for a single response.
 /// 
@@ -266,7 +285,7 @@ pub struct GetStatsRawParams {
 	//		Public properties													
 	/// The buffer to get the statistics for. The buffer items are returned in
 	/// order of most-recent first.
-	pub buffer: Option<BufferType>,
+	pub buffer: Option<MeasurementType>,
 	
 	/// The date and time to get the statistics from. This will apply from the
 	/// given point in time until now, i.e. the check is, "is the time of the
@@ -287,6 +306,15 @@ pub struct GetStatsRawParams {
 	/// property of the response will always be the time of the first item in
 	/// the list.
 	pub limit:  Option<usize>,
+}
+
+//		GetStatsFeedParams														
+/// The parameters for the [`get_stats_feed()`] handler.
+#[derive(Clone, Default, Deserialize, IntoParams)]
+pub struct GetStatsFeedParams {
+	//		Public properties													
+	/// The type of measurement to subscribe to statistics for.
+	pub r#type: Option<MeasurementType>,
 }
 
 //		StatsContext															
@@ -661,6 +689,7 @@ fn stats_processor(
 	if new_second > current_second {
 		let elapsed     = (new_second - current_second).num_seconds();
 		let mut buffers = appstate.Stats.buffers.write();
+		let mut message = AllStatsForPeriod::default();
 		//	Timing stats buffer
 		for i in 0..elapsed {
 			if buffers.responses.len() == appstate.Config.stats.timing_buffer_size {
@@ -668,7 +697,7 @@ fn stats_processor(
 			}
 			timing_stats.started_at = current_second + Duration::seconds(i);
 			buffers.responses.push_front(timing_stats.clone());
-			appstate.Broadcast.send(timing_stats).expect("Failed to broadcast stats");
+			message.times           = timing_stats;
 			timing_stats            = StatsForPeriod::default();
 		}
 		//	Connections stats buffer
@@ -677,7 +706,8 @@ fn stats_processor(
 				buffers.connections.pop_back();
 			}
 			conn_stats.started_at   = current_second + Duration::seconds(i);
-			buffers.connections.push_front(conn_stats);
+			buffers.connections.push_front(conn_stats.clone());
+			message.connections     = conn_stats;
 			conn_stats              = StatsForPeriod::default();
 		}
 		//	Memory stats buffer
@@ -686,11 +716,13 @@ fn stats_processor(
 				buffers.memory.pop_back();
 			}
 			memory_stats.started_at = current_second + Duration::seconds(i);
-			buffers.memory.push_front(memory_stats);
+			buffers.memory.push_front(memory_stats.clone());
+			message.memory          = memory_stats;
 			memory_stats            = StatsForPeriod::default();
 		}
 		*appstate.Stats.last_second.write() = current_second;
 		current_second = new_second;
+		appstate.Broadcast.send(message).expect("Failed to broadcast stats");
 	}
 	
 	(timing_stats, conn_stats, memory_stats, current_second)
@@ -882,13 +914,13 @@ pub async fn get_stats_raw(
 	};
 	//	Convert the statistics buffers
 	match params.buffer {
-		Some(BufferType::Times) => {
+		Some(MeasurementType::Times) => {
 			response.times       = process_buffer(&buffers.responses,   params.from, params.limit);
 		},
-		Some(BufferType::Connections) => {
+		Some(MeasurementType::Connections) => {
 			response.connections = process_buffer(&buffers.connections, params.from, params.limit);
 		},
-		Some(BufferType::Memory) => {
+		Some(MeasurementType::Memory) => {
 			response.memory      = process_buffer(&buffers.memory,      params.from, params.limit);
 		},
 		None => {
@@ -914,22 +946,27 @@ pub async fn get_stats_raw(
 /// # Parameters
 /// 
 /// * `state`  - The application state.
+/// * `params` - The parameters for the request.
 /// * `ws_req` - The websocket request.
 /// 
 #[utoipa::path(
 	get,
 	path = "/api/stats/feed",
 	tag  = "health",
+	params(
+		GetStatsFeedParams
+	),
 	responses(
 		(status = 200, description = "Application statistics event feed", body = Response)
 	)
 )]
 pub async fn get_stats_feed(
-	State(state): State<Arc<AppState>>,
-	ws_req:       WebSocketUpgrade,
+	State(state):  State<Arc<AppState>>,
+	Query(params): Query<GetStatsFeedParams>,
+	ws_req:        WebSocketUpgrade,
 ) -> Response {
 	//	Establish a handshake with the WebSocket
-	ws_req.on_upgrade(move |socket| ws_stats_feed(Arc::clone(&state), socket))
+	ws_req.on_upgrade(move |socket| ws_stats_feed(Arc::clone(&state), socket, params.r#type))
 }
 
 //		ws_stats_feed															
@@ -940,14 +977,22 @@ pub async fn get_stats_feed(
 /// broadcast channel. The events are [`StatsForPeriod`] instances, sent as
 /// JSON objects.
 /// 
+/// Notably, if not filtered by measurement type, all measurement types will
+/// have their statistics returned in a JSON object, with the type names as keys
+/// and the statistics data in sub-objects. However, when filtered by type, only
+/// the statistics object for that one type will be returned. This is in order
+/// to keep the transmitted data as efficient as possible.
+/// 
 /// # Parameters
 /// 
 /// * `state` - The application state.
 /// * `ws`    - The websocket stream.
+/// * `scope` - The type of measurement statistics to send.
 /// 
 pub async fn ws_stats_feed(
 	state:  Arc<AppState>,
 	mut ws: WebSocket,
+	scope:  Option<MeasurementType>,
 ) {
 	//		Preparation															
 	info!("WebSocket connection established");
@@ -1019,7 +1064,25 @@ pub async fn ws_stats_feed(
 		//		Send stats data													
 		//	Handle new data from the broadcast channel
 		Ok(data) = rx.recv() => {
-			if let Err(err) = ws.send(Message::Text(json!{data}.to_string())).await {
+			let response = match scope {
+				Some(MeasurementType::Times) => {
+					json!{StatsResponseForPeriod::from(&data.times)}
+				},
+				Some(MeasurementType::Connections) => {
+					json!{StatsResponseForPeriod::from(&data.connections)}
+				},
+				Some(MeasurementType::Memory) => {
+					json!{StatsResponseForPeriod::from(&data.memory)}
+				},
+				None => {
+					json!{btree_map!{
+						"times":       StatsResponseForPeriod::from(&data.times),
+						"connections": StatsResponseForPeriod::from(&data.connections),
+						"memory":      StatsResponseForPeriod::from(&data.memory),
+					}}
+				},
+			};
+			if let Err(err) = ws.send(Message::Text(response.to_string())).await {
 				warn!("Failed to send data over WebSocket: {}", err);
 				break;
 			}

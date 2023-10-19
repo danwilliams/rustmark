@@ -4,7 +4,7 @@
 
 use crate::{
 	handlers,
-	stats::{AppStats, ResponseMetrics, StatsForPeriod, self},
+	stats::{AppStats, ResponseMetrics, AllStatsForPeriod, self},
 };
 use axum::{
 	http::{Uri, Method},
@@ -255,7 +255,7 @@ pub struct AppState {
 	/// to. This is the receiver side only. Each interested party can subscribe
 	/// to this channel to receive the latest statistics for a given period on
 	/// a real-time basis.
-	pub Broadcast: Broadcaster<StatsForPeriod>,
+	pub Broadcast: Broadcaster<AllStatsForPeriod>,
 	
 	/// The application secret.
 	pub Secret:   [u8; 64],
