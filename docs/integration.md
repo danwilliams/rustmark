@@ -20,7 +20,7 @@ There is a simple availability check endpoint at `/api/ping`. This endpoint is
 intended to be used by monitoring systems to check that the application is
 available.
 
-  - **`GET /api/ping`**
+  - **`GET /api/ping`** \
     Returns a `200 OK` response with an empty body.
 
 The health check endpoints are not authenticated, and not versioned.
@@ -29,15 +29,15 @@ The health check endpoints are not authenticated, and not versioned.
 
 Statistics are available at `/api/stats`.
 
-  - **`GET /api/stats`**
+  - **`GET /api/stats`** \
     Returns a `200 OK` response with a JSON body containing various statistics
     about the API service.
 
-  - **`GET /api/stats/history`**
+  - **`GET /api/stats/history`** \
     Returns a `200 OK` response with a JSON body containing historical interval
     statistics about the API service.
 
-  - **`GET /api/stats/feed`**
+  - **`GET /api/stats/feed`** \
     Returns a `200 OK` response with a status code of `101 Switching Protocols`
     and the `Connection` header set to `Upgrade`. This will upgrade the HTTP
     connection to a WebSocket connection, It will then stream statistics every
@@ -53,27 +53,27 @@ are calculated for each endpoint, and for each HTTP status code returned.
 Average, maximum, and minimum response times plus sample count are tracked for
 each interval, and summarised for each period of time configured.
 
-  - **Response times**
+  - **Response times** \
     These are straightforward, being the amount of time taken to respond to a
     request.
 
-  - **Active connections**
+  - **Active connections** \
     The connection average is not a measure of connections over time. For that,
     the number of requests per period can be used, to work out, for instance,
     the number of requests per second. That's a trivial calculation. Rather, the
     connection average is the average number of connections in existence when
     the system is being used. Periods of zero activity will not affect this
-    average - although obviously they will cause the requests per time period to
+    average — although obviously they will cause the requests per time period to
     fall. When each response is served, the number of active connections is
     sampled, and this is used for the average. This is more important than
     requests per second for connection monitoring, as it shows the average load
     profile of the system: in other words, "when the system is actively used,
     what is the typical number of connections". This is what the average, max,
-    and min are measuring - and so the min will never fall below 1. The
+    and min are measuring — and so the min will never fall below 1. The
     importance of these statistics is that they help ensure the system is
     providing what is needed when it is asked.
 
-  - **Memory usage**
+  - **Memory usage** \
     The memory usage is the amount of memory used by the application at the end
     of processing each request and preparing its response. This is not a measure
     of the peak memory usage whilst processing the request, although if there
