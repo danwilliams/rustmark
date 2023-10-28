@@ -162,8 +162,8 @@ async fn get_static_asset(
 	uri:     Uri,
 	context: AssetContext
 ) -> impl IntoResponse {
-	let path       =  uri.path().trim_start_matches('/');
-	let mime_type  =  mime_guess::from_path(path).first_or_text_plain();
+	let path      = uri.path().trim_start_matches('/');
+	let mime_type = mime_guess::from_path(path).first_or_text_plain();
 	let (basedir, local_path, behavior) = match context {
 		AssetContext::Public    => (
 			&ASSETS_DIR,
@@ -176,7 +176,7 @@ async fn get_static_asset(
 			&state.Config.local_loading.protected_assets
 		),
 	};
-	let is_local   =  match behavior {
+	let is_local = match behavior {
 		LoadingBehavior::Deny       => false,
 		LoadingBehavior::Supplement => basedir.get_file(path).is_none(),
 		LoadingBehavior::Override   => local_path.exists(),

@@ -63,11 +63,11 @@ use utoipa_swagger_ui::SwaggerUi;
 //		Constants
 
 #[global_allocator]
-static GLOBAL: Jemalloc = Jemalloc;
+static GLOBAL:       Jemalloc = Jemalloc;
 
-static TEMPLATE_DIR: Dir<'_> = include_dir!("html");
-static ASSETS_DIR:   Dir<'_> = include_dir!("static");
-static CONTENT_DIR:  Dir<'_> = include_dir!("$OUT_DIR");
+static TEMPLATE_DIR: Dir<'_>  = include_dir!("html");
+static ASSETS_DIR:   Dir<'_>  = include_dir!("static");
+static CONTENT_DIR:  Dir<'_>  = include_dir!("$OUT_DIR");
 
 
 
@@ -114,7 +114,7 @@ async fn main() {
 	let mut tera      = Tera::default();
 	tera.add_raw_templates(templates).expect("Error parsing templates");
 	tera.autoescape_on(vec![".tera.html", ".html"]);
-	let (sender, rec) = flume::unbounded();
+	let (send, recv)  = flume::unbounded();
 	let (tx, _rx)     = broadcast::channel(10);
 	let secret        = rand::thread_rng().gen::<[u8; 64]>();
 	let session_store = SessionMemoryStore::new();
@@ -125,7 +125,7 @@ async fn main() {
 				started_at: Utc::now().naive_utc(),
 				..Default::default()
 			},
-			Queue:      sender,
+			Queue:      send,
 			Broadcast:  tx,
 		},
 		Secret:         secret,
@@ -133,7 +133,7 @@ async fn main() {
 		Template:       tera,
 	});
 	if shared_state.Config.stats.enabled {
-		start_stats_processor(rec, Arc::clone(&shared_state)).await;
+		start_stats_processor(recv, Arc::clone(&shared_state)).await;
 	}
 	//	Protected routes
 	let app           = Router::new()

@@ -522,7 +522,7 @@ pub async fn stats_layer<B>(
 	next:            Next<B>,
 ) -> Response {
 	//	Create statistics context
-	let stats_cx    = StatsContext::default();
+	let stats_cx = StatsContext::default();
 	request.extensions_mut().insert(stats_cx.clone());
 	
 	//	Check if statistics are enabled
@@ -531,9 +531,9 @@ pub async fn stats_layer<B>(
 	}
 	
 	//	Obtain endpoint details
-	let endpoint    = Endpoint {
-		path:         request.uri().path().to_string(),
-		method:       request.method().clone(),
+	let endpoint = Endpoint {
+		path:      request.uri().path().to_string(),
+		method:    request.method().clone(),
 	};
 	
 	//	Update requests counter
@@ -541,16 +541,16 @@ pub async fn stats_layer<B>(
 	appstate.Stats.Data.connections.fetch_add(1, Ordering::Relaxed);
 	
 	//	Process request
-	let response    = next.run(request).await;
+	let response = next.run(request).await;
 	
 	//	Add response time to the queue
 	appstate.Stats.Queue.send(ResponseMetrics {
 		endpoint,
-		started_at:   stats_cx.started_at,
-		time_taken:   (Utc::now().naive_utc() - stats_cx.started_at).num_microseconds().unwrap() as u64,
-		status_code:  response.status(),
-		connections:  appstate.Stats.Data.connections.load(Ordering::Relaxed) as u64,
-		memory:	      Malloc::read().unwrap() as u64,
+		started_at:  stats_cx.started_at,
+		time_taken:  (Utc::now().naive_utc() - stats_cx.started_at).num_microseconds().unwrap() as u64,
+		status_code: response.status(),
+		connections: appstate.Stats.Data.connections.load(Ordering::Relaxed) as u64,
+		memory:	     Malloc::read().unwrap() as u64,
 	}).expect("Failed to send response time");
 	
 	appstate.Stats.Data.connections.fetch_sub(1, Ordering::Relaxed);
@@ -729,9 +729,9 @@ fn stats_processor(
 		drop(totals);
 		
 	//		Check time period													
-		new_second      = metrics.started_at.with_nanosecond(0).unwrap();
+		new_second = metrics.started_at.with_nanosecond(0).unwrap();
 	} else {
-		new_second      = Utc::now().naive_utc().with_nanosecond(0).unwrap();
+		new_second = Utc::now().naive_utc().with_nanosecond(0).unwrap();
 	};
 	
 	//	Check to see if we've moved into a new time period. We want to increment
@@ -971,16 +971,16 @@ pub async fn get_stats_history(
 	};
 	//	Convert the statistics buffers
 	match params.buffer {
-		Some(MeasurementType::Times) => {
+		Some(MeasurementType::Times)       => {
 			response.times       = process_buffer(&buffers.responses,   params.from, params.limit);
 		},
 		Some(MeasurementType::Connections) => {
 			response.connections = process_buffer(&buffers.connections, params.from, params.limit);
 		},
-		Some(MeasurementType::Memory) => {
+		Some(MeasurementType::Memory)      => {
 			response.memory      = process_buffer(&buffers.memory,      params.from, params.limit);
 		},
-		None => {
+		None                               => {
 			response.times       = process_buffer(&buffers.responses,   params.from, params.limit);
 			response.connections = process_buffer(&buffers.connections, params.from, params.limit);
 			response.memory      = process_buffer(&buffers.memory,      params.from, params.limit);
@@ -1122,16 +1122,16 @@ pub async fn ws_stats_feed(
 		//	Handle new data from the broadcast channel
 		Ok(data) = rx.recv() => {
 			let response = match scope {
-				Some(MeasurementType::Times) => {
+				Some(MeasurementType::Times)       => {
 					json!{StatsResponseForPeriod::from(&data.times)}
 				},
 				Some(MeasurementType::Connections) => {
 					json!{StatsResponseForPeriod::from(&data.connections)}
 				},
-				Some(MeasurementType::Memory) => {
+				Some(MeasurementType::Memory)      => {
 					json!{StatsResponseForPeriod::from(&data.memory)}
 				},
-				None => {
+				None                               => {
 					json!{btree_map!{
 						"times":       StatsResponseForPeriod::from(&data.times),
 						"connections": StatsResponseForPeriod::from(&data.connections),

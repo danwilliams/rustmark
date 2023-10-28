@@ -179,8 +179,8 @@ pub fn process_details(blockquotes: &Selection) {
 			//	inside it that were found in the original selection will be orphaned and
 			//	and will no longer be valid.
 			process_details(&blockquote.select("blockquote"));
-			let mut summary: Vec<String> =  vec![];
-			let mut para_html            =  paragraph.html()
+			let mut summary: Vec<String> = vec![];
+			let mut para_html            = paragraph.html()
 				.strip_prefix("<p>").unwrap()
 				.strip_suffix("</p>").unwrap()
 				.trim()
@@ -190,11 +190,11 @@ pub fn process_details(blockquotes: &Selection) {
 				match para_html.split_once('\n') { 
 					Some((line, rest))   => {
 						summary.push(line.strip_prefix("-&gt;").unwrap().trim().to_owned());
-						para_html        =  rest.trim().to_owned();
+						para_html        = rest.trim().to_owned();
 					},
 					None                 => {
 						summary.push(para_html.strip_prefix("-&gt;").unwrap().trim().to_owned());
-						para_html        =  s!("");
+						para_html        = s!("");
 					},
 				}
 			}
