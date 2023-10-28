@@ -819,7 +819,7 @@ fn stats_processor(
 	path = "/api/stats",
 	tag  = "health",
 	responses(
-		(status = 200, description = "Application statistics overview", body = StatsResponse)
+		(status = 200, description = "Application statistics overview", body = StatsResponse),
 	)
 )]
 pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse> {
@@ -935,10 +935,10 @@ pub async fn get_stats(State(state): State<Arc<AppState>>) -> Json<StatsResponse
 	path = "/api/stats/history",
 	tag  = "health",
 	params(
-		GetStatsHistoryParams
+		GetStatsHistoryParams,
 	),
 	responses(
-		(status = 200, description = "Historical application statistics interval data", body = StatsHistoryResponse)
+		(status = 200, description = "Historical application statistics interval data", body = StatsHistoryResponse),
 	)
 )]
 pub async fn get_stats_history(
@@ -1011,11 +1011,11 @@ pub async fn get_stats_history(
 	path = "/api/stats/feed",
 	tag  = "health",
 	params(
-		GetStatsFeedParams
+		GetStatsFeedParams,
 	),
 	responses(
-		(status = 200, description = "Application statistics event feed")
-	)
+		(status = 200, description = "Application statistics event feed"),
+	),
 )]
 pub async fn get_stats_feed(
 	State(state):  State<Arc<AppState>>,

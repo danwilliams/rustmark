@@ -21,8 +21,8 @@ mod tests;
 	path = "/api/ping",
 	tag  = "health",
 	responses(
-		(status = 200, description = "Availability check")
-	)
+		(status = 200, description = "Availability check"),
+	),
 )]
 pub async fn get_ping() {}
 
