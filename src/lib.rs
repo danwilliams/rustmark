@@ -258,7 +258,7 @@ pub fn process_callouts(blockquotes: &Selection) {
 			para_html     = strong.html().to_string();
 			strong.remove();
 		}
-		let open          = !vec!["image", "images", "screenshot", "screenshots"].contains(&&*class);
+		let open          = !["image", "images", "screenshot", "screenshots"].contains(&&*class);
 		let mut chld_html = blockquote.children().iter()
 			.map(|c| c.html().to_string())
 			.collect::<Vec<String>>()

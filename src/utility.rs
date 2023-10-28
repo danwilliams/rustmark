@@ -319,7 +319,7 @@ pub fn extract_uri_query_parts(uri: Uri) -> HashMap<String, String> {
 				.into_owned()
 				.collect()
 		})
-		.unwrap_or_else(HashMap::new)
+		.unwrap_or_default()
 }
 
 //		build_uri																
