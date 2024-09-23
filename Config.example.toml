@@ -3,19 +3,23 @@ port   = 8000
 logdir = "log"
 title  = "Rustmark"
 
-[local_loading]
-html             = "Deny"
-markdown         = "Supplement"
-protected_assets = "Override"
-public_assets    = "Override"
+[html_templates]
+behavior   = "Deny"
+local_path = "html"
 
-[local_paths]
-html             = "html"
-markdown         = "content"
-protected_assets = "content"
-public_assets    = "static"
+[markdown]
+behavior   = "Supplement"
+local_path = "content"
 
-[static_files]
+[assets.protected]
+behavior   = "Override"
+local_path = "content"
+
+[assets.public]
+behavior   = "Override"
+local_path = "static"
+
+[assets.static_files]
 stream_threshold = 1000
 stream_buffer    = 256
 read_buffer      = 128
@@ -28,7 +32,7 @@ memory_buffer_size     = 86_400 # One day: 60 * 60 * 24
 ws_ping_interval       = 60
 ws_ping_timeout        = 10
 
-[stats_periods]
+[stats.periods]
 second =      1
 minute =     60
 hour   =  3_600

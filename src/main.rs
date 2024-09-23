@@ -1,7 +1,6 @@
-//! Terracotta: Full example
+//! Rustmark
 //! 
-//! Boilerplate webserver application based on Axum, with full functionality,
-//! i.e. all features enabled.
+//! Extensible web application for serving Markdown-based content.
 //! 
 
 

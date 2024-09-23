@@ -1,30 +1,21 @@
 //		Packages
 
-use crate::{
-	ASSETS_DIR,
-	CONTENT_DIR,
-	utility::*,
+use crate::state::AppState;
+use axum::{
+	extract::State,
+	http::{StatusCode, Uri},
+	response::{Html, IntoResponse},
 };
 use rustmark::{Heading, self};
-
-use axum::{
-	body::Body,
-	extract::State,
-	http::{HeaderValue, StatusCode, Uri, header},
-	response::{IntoResponse, Response},
-};
-use mime_guess::{self};
-use serde_json::{self};
 use std::{
 	fs,
 	sync::Arc,
 };
-use tera::Context;
-use tokio::{
-	fs::File,
-	io::{AsyncReadExt, BufReader},
+use terracotta::{
+	app::config::LoadingBehavior,
+	assets::handlers::get_protected_static_asset,
 };
-use tokio_util::io::ReaderStream;
+use tera::Context;
 
 
 
@@ -57,16 +48,16 @@ pub async fn get_page(
 	if !path.ends_with(".md") {
 		return get_protected_static_asset(State(state), uri).await.into_response();
 	}
-	let local_path =  state.Config.local_paths.markdown.join(path);
-	let is_local   =  match state.Config.local_loading.markdown {
+	let local_path =  state.config.markdown.local_path.join(path);
+	let is_local   =  match state.config.markdown.behavior {
 		LoadingBehavior::Deny       => false,
-		LoadingBehavior::Supplement => CONTENT_DIR.get_file(path).is_none(),
+		LoadingBehavior::Supplement => state.content_dir.get_file(path).is_none(),
 		LoadingBehavior::Override   => local_path.exists(),
 	};
 	let text       =  if is_local {
 		local_path.exists().then(|| fs::read_to_string(local_path).ok()).flatten()
 	} else {
-		CONTENT_DIR.get_file(path).and_then(|file| file.contents_utf8().map(|text| text.to_string()))
+		state.content_dir.get_file(path).and_then(|file| file.contents_utf8().map(|text| text.to_string()))
 	};
 	match text {
 		None       => (StatusCode::NOT_FOUND).into_response(),
@@ -88,16 +79,16 @@ pub async fn get_page(
 			let mut context = Context::new();
 			let template    = if path == "index.md" { "index" } else { "page" };
 			let title       = if path == "index.md" {
-				state.Config.title.clone()
+				state.config.title.clone()
 			} else {
-				format!("{} - {}", title, &state.Config.title)
+				format!("{} - {}", title, &state.config.title)
 			};
 			context.insert("Title",   &title);
 			context.insert("ToC",     &toc);
 			context.insert("Content", &html);
 			(
 				StatusCode::OK,
-				render(state, template, context),
+				Html(state.tera.render(template, &context).unwrap()),
 			).into_response()
 		},
 	}

@@ -6,13 +6,13 @@
 
 use crate::{
 	auth::{Credentials, User},
-	handlers::get_index,
+	handlers::{get_index, get_page},
 	state::AppState,
 };
 use axum::routing::{MethodRouter, get, post};
 use std::sync::Arc;
 use terracotta::{
-	assets::handlers::{get_protected_static_asset, get_public_static_asset},
+	assets::handlers::get_public_static_asset,
 	auth::handlers::{get_logout, post_login},
 	health::handlers::{get_ping, get_version},
 	stats::handlers::{get_stats, get_stats_feed, get_stats_history},
@@ -27,7 +27,7 @@ use terracotta::{
 pub fn protected() -> Vec<(&'static str, MethodRouter<Arc<AppState>>)> {
 	vec![
 		("/",      get(get_index)),
-		("/*path", get(get_protected_static_asset)),
+		("/*path", get(get_page))    //  Also handles get_protected_static_asset(uri)
 	]
 }
 
