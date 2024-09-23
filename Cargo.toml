@@ -139,7 +139,7 @@ renamed_function_params           = "deny"
 tests_outside_test_module         = "deny"
 try_err                           = "deny"
 unwrap_in_result                  = "deny"
-#unwrap_used                       = "deny" # Temporarily disabled
+unwrap_used                       = "deny"
 wildcard_enum_match_arm           = "deny"
 ##	Warn
 absolute_paths                    = "warn"

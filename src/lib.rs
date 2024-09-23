@@ -161,11 +161,19 @@ pub fn find_title(document: &Document, remove_title: bool) -> String {
 pub fn find_headings(document: &Document) -> Vec<Heading> {
 	let mut toc: Vec<Heading> = vec![];
 	for element in document.select("h1, h2, h3, h4, h5, h6").iter() {
-		let node  = element.get(0).unwrap();
-		let id    = element.select("a").attr("id").unwrap().to_string();
-		let tag   = node.node_name().unwrap().to_string().to_lowercase();
-		let text  = node.text().to_string();
-		let level = tag.strip_prefix('h').unwrap().parse::<u8>().unwrap();
+		let Some(node) = element.get(0) else {
+			continue;
+		};
+		let Some(id) = element.select("a").attr("id").map(|s| s.to_string()) else {
+			continue;
+		};
+		let Some(tag) = node.node_name().map(|s| s.to_string().to_lowercase()) else {
+			continue;
+		};
+		let Some(level) = tag.strip_prefix('h').map(|s| s.parse::<u8>().unwrap_or(6)) else {
+			continue;
+		};
+		let text = node.text().to_string();
 		toc.push(Heading { level, id, text });
 	}
 	toc
@@ -184,6 +192,8 @@ pub fn find_headings(document: &Document) -> Vec<Heading> {
 /// * `blockquotes` - The selection of HTML blockquote elements to search for
 ///                   details blocks.
 /// 
+#[allow(clippy::allow_attributes,   reason = "using expect below doesn't work")]
+#[allow(clippy::missing_panics_doc, reason = "Infallible")]
 pub fn process_details(blockquotes: &Selection<'_>) {
 	//	Find all blockquotes that match details syntax.
 	for mut blockquote in blockquotes.iter() {
@@ -195,37 +205,37 @@ pub fn process_details(blockquotes: &Selection<'_>) {
 			//	inside it that were found in the original selection will be orphaned and
 			//	and will no longer be valid.
 			process_details(&blockquote.select("blockquote"));
-			let mut summary: Vec<String> = vec![];
-			let mut para_html            = paragraph.html()
-				.strip_prefix("<p>").unwrap()
-				.strip_suffix("</p>").unwrap()
-				.trim()
-				.to_owned()
-			;
+			let mut summary         = vec![];
+			let Some(mut para_html) = paragraph.html()
+				.strip_prefix("<p>")
+				.and_then(|s| s.strip_suffix("</p>"))
+				.map(|s| s.trim().to_owned())
+			else {
+				continue;
+			};
+			#[expect(clippy::unwrap_used, reason = "The prefix is checked in the loop and so must be present")]
 			while para_html.starts_with("-&gt;") {
 				if let Some((line, rest)) = para_html.split_once('\n') {
 					summary.push(line.strip_prefix("-&gt;").unwrap().trim().to_owned());
-					para_html        = rest.trim().to_owned();
+					para_html = rest.trim().to_owned();
 				} else {
 					summary.push(para_html.strip_prefix("-&gt;").unwrap().trim().to_owned());
-					para_html        = s!("");
+					para_html = s!("");
 				}
 			}
 			//	This is somewhat yucky, but Nipper doesn't provide any way to access the
 			//	inner HTML of an element, and the element children only provide access
 			//	to the HTML nodes, not the text nodes.
 			paragraph.replace_with_html(format!(
-				r#"<summary>{}</summary><p>{}</p>"#,
+				r"<summary>{}</summary><p>{para_html}</p>",
 				summary.join("\n"),
-				para_html,
 			));
-			blockquote.replace_with_html(format!(
-				r#"<details>{}</details>"#,
-				blockquote.html()
-					.strip_prefix("<blockquote>").unwrap()
-					.strip_suffix("</blockquote>").unwrap()
-				,
-			));
+			if let Some(content) = blockquote.html()
+				.strip_prefix("<blockquote>")
+				.and_then(|s| s.strip_suffix("</blockquote>"))
+			{
+				blockquote.replace_with_html(format!(r"<details>{content}</details>"));
+			}
 		}
 	}
 }
@@ -257,14 +267,17 @@ pub fn process_callouts(blockquotes: &Selection<'_>) {
 		blockquote.add_class("callout");
 		blockquote.add_class(&class);
 		let para_html: String;
-		if para_text.strip_prefix(&strong_text).unwrap().starts_with(':') {
+		if para_text
+			.strip_prefix(&strong_text)
+			.is_some_and(|stripped| stripped.starts_with(':'))
+		{
 			//	There doesn't seem to be a better way of removing just the text from the
 			//	paragraph, and the paragraph may contain other elements and not just
 			//	text, so those need to be preserved.
-			para_html     = paragraph.html()
-				.strip_prefix("<p>").unwrap()
-				.strip_suffix("</p>").unwrap()
-				.to_owned()
+			para_html = paragraph.html()
+				.strip_prefix("<p>")
+				.and_then(|s| s.strip_suffix("</p>"))
+				.map_or_else(|| paragraph.html().to_string(), ToOwned::to_owned)
 			;
 			paragraph.remove();
 		} else {
@@ -323,7 +336,9 @@ pub fn process_callouts(blockquotes: &Selection<'_>) {
 pub fn process_headings(document: &Document) {
 	let mut headings         = vec!["h2", "h3", "h4", "h5", "h6"];
 	loop {
-		let heading_tag      = headings.last().unwrap().to_owned();
+		let Some(heading_tag) = headings.last().map(ToOwned::to_owned) else {
+			continue;
+		};
 		let mut heading_html = String::new();
 		let mut buffer_html  = String::new();
 		let mut active       = false;
@@ -337,7 +352,9 @@ pub fn process_headings(document: &Document) {
 			);
 			if let Some(node) = element.get(0) {
 				if node.node_name().is_some() {
-					let tag   = node.node_name().unwrap().to_string().to_lowercase();
+					let Some(tag) = node.node_name().map(|s| s.to_string().to_lowercase()) else {
+						continue;
+					};
 					if !active && tag == heading_tag {
 						active        = true;
 						heading_html  = element.html().to_string();
