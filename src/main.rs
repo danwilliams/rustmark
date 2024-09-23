@@ -1,10 +1,28 @@
+//! Rustmark
+//! 
+//! Extensible web application for serving Markdown-based content.
+//! 
+
+
+
+//		Global configuration
+
+//	Customisations of the standard linting configuration
+#![allow(unreachable_pub,                 reason = "Not useful in binaries")]
+#![allow(clippy::doc_markdown,            reason = "Too many false positives")]
+#![allow(clippy::expect_used,             reason = "Acceptable in a binary crate")]
+#![allow(clippy::multiple_crate_versions, reason = "Cannot resolve all these")]
+#![allow(clippy::unwrap_used,             reason = "Somewhat acceptable in a binary crate")]
+
+
+
 //		Modules
 
 mod auth;
-mod errors;
+mod config;
 mod handlers;
-mod health;
-mod stats;
+mod routes;
+mod state;
 mod utility;
 
 
@@ -12,62 +30,34 @@ mod utility;
 //		Packages
 
 use crate::{
-	auth::*,
-	errors::*,
-	handlers::*,
-	health::*,
-	stats::*,
-	utility::*,
+	auth::User,
+	config::Config,
+	routes::{protected, public},
+	state::AppState,
+	utility::ApiDoc,
 };
-use axum::{
-	Router,
-	middleware,
-	routing::{get, post},
+use std::sync::Arc;
+use terracotta::{
+	app::{
+		create::{app_full as create_app, server as create_server},
+		errors::AppError,
+		init::{load_config, setup_logging},
+		state::StateProvider,
+	},
+	stats::worker::start as start_stats_processor,
 };
-use axum_sessions::{
-	SessionLayer,
-	async_session::MemoryStore as SessionMemoryStore,
-};
-use chrono::Utc;
-use figment::{
-	Figment,
-	providers::{Env, Format, Serialized, Toml},
-};
-use flume::{self};
-use include_dir::{Dir, include_dir};
-use rand::Rng;
-use ring::hmac::{HMAC_SHA512, self};
-use std::{
-	net::SocketAddr,
-	sync::Arc,
-	time::Duration,
-};
-use tera::Tera;
 use tikv_jemallocator::Jemalloc;
-use tokio::sync::broadcast;
-use tower_http::catch_panic::CatchPanicLayer;
-use tracing::{Level, Span, info};
-use tracing_appender::{self};
-use tracing_subscriber::{
-	fmt::writer::MakeWriterExt,
-	layer::SubscriberExt,
-	util::SubscriberInitExt,
-};
+use tracing::info;
 use utoipa::OpenApi;
-use utoipa_rapidoc::RapiDoc;
-use utoipa_redoc::{Redoc, Servable};
-use utoipa_swagger_ui::SwaggerUi;
 
 
 
 //		Constants
 
+/// The global allocator. This is changed to [`Jemalloc`] in order to obtain
+/// memory usage statistics.
 #[global_allocator]
-static GLOBAL:       Jemalloc = Jemalloc;
-
-static TEMPLATE_DIR: Dir<'_>  = include_dir!("html");
-static ASSETS_DIR:   Dir<'_>  = include_dir!("static");
-static CONTENT_DIR:  Dir<'_>  = include_dir!("$OUT_DIR");
+static GLOBAL: Jemalloc = Jemalloc;
 
 
 
@@ -75,124 +65,15 @@ static CONTENT_DIR:  Dir<'_>  = include_dir!("$OUT_DIR");
 
 //		main																	
 #[tokio::main]
-async fn main() {
-	let config: Config = Figment::from(Serialized::defaults(Config::default()))
-		.merge(Toml::file("Config.toml"))
-		.merge(Env::raw())
-		.extract()
-		.expect("Error loading config")
-	;
-	let (non_blocking_appender, _guard) = tracing_appender::non_blocking(
-		tracing_appender::rolling::daily(&config.logdir, "general.log")
-	);
-	tracing_subscriber::registry()
-		.with(
-			tracing_subscriber::EnvFilter::try_from_default_env()
-				.unwrap_or_else(|_| "rustmark=debug,tower_http=debug".into()),
-		)
-		.with(
-			tracing_subscriber::fmt::layer()
-				.with_writer(std::io::stdout.with_max_level(Level::DEBUG))
-		)
-		.with(
-			tracing_subscriber::fmt::layer()
-				.with_writer(non_blocking_appender.with_max_level(Level::INFO))
-		)
-		.init()
-	;
-	let addr          = SocketAddr::from((config.host, config.port));
-	let mut templates = vec![];
-	for file in TEMPLATE_DIR.find("**/*.tera.html").expect("Failed to read glob pattern") {
-		templates.push((
-			file.path().file_name().unwrap()
-				.to_str().unwrap()
-				.strip_suffix(".tera.html").unwrap()
-				.to_owned(),
-			TEMPLATE_DIR.get_file(file.path()).unwrap().contents_utf8().unwrap(),
-		));
-	}
-	let mut tera      = Tera::default();
-	tera.add_raw_templates(templates).expect("Error parsing templates");
-	tera.autoescape_on(vec![".tera.html", ".html"]);
-	let (send, recv)  = flume::unbounded();
-	let (tx, _rx)     = broadcast::channel(10);
-	let secret        = rand::thread_rng().gen::<[u8; 64]>();
-	let session_store = SessionMemoryStore::new();
-	let shared_state  = Arc::new(AppState {
-		Config:         config,
-		Stats:          AppStateStats {
-			Data:       AppStats {
-				started_at: Utc::now().naive_utc(),
-				..Default::default()
-			},
-			Queue:      send,
-			Broadcast:  tx,
-		},
-		Secret:         secret,
-		Key:            hmac::Key::new(HMAC_SHA512, &secret),
-		Template:       tera,
-	});
-	if shared_state.Config.stats.enabled {
-		start_stats_processor(recv, Arc::clone(&shared_state)).await;
-	}
-	//	Protected routes
-	let app           = Router::new()
-		.route("/",      get(get_index))
-		.route("/*path", get(get_page))   //  Also handles get_protected_static_asset(uri)
-		.route_layer(middleware::from_fn_with_state(Arc::clone(&shared_state), protect))
-		.merge(
-			//	Public routes
-			Router::new()
-				.route("/api/ping",          get(get_ping))
-				.route("/api/stats",         get(get_stats))
-				.route("/api/stats/history", get(get_stats_history))
-				.route("/api/stats/feed",    get(get_stats_feed))
-				.route("/login",             post(post_login))
-				.route("/logout",            get(get_logout))
-				.route("/css/*path",         get(get_public_static_asset))
-				.route("/img/*path",         get(get_public_static_asset))
-				.route("/js/*path",          get(get_public_static_asset))
-				.route("/webfonts/*path",    get(get_public_static_asset))
-		)
-		.merge(SwaggerUi::new("/api-docs/swagger").url("/api-docs/openapi.json", ApiDoc::openapi()))
-		.merge(Redoc::with_url("/api-docs/redoc", ApiDoc::openapi()))
-		.merge(RapiDoc::new("/api-docs/openapi.json").path("/api-docs/rapidoc"))
-		.fallback(no_route)
-		.layer(CatchPanicLayer::new())
-		.layer(middleware::from_fn_with_state(Arc::clone(&shared_state), graceful_error_layer))
-		.layer(middleware::from_fn_with_state(Arc::clone(&shared_state), auth_layer))
-		.layer(SessionLayer::new(session_store, &secret).with_secure(false))
-		.layer(middleware::from_fn_with_state(Arc::clone(&shared_state), stats_layer))
-		.with_state(shared_state)
-		.layer(tower_http::trace::TraceLayer::new_for_http()
-			.on_request(
-				tower_http::trace::DefaultOnRequest::new()
-					.level(Level::INFO)
-			)
-			.on_response(
-				tower_http::trace::DefaultOnResponse::new()
-					.level(Level::INFO)
-					.latency_unit(tower_http::LatencyUnit::Micros)
-			)
-			.on_body_chunk(|chunk: &bytes::Bytes, _latency: Duration, _span: &Span| {
-				tracing::debug!("Sending {} bytes", chunk.len())
-			})
-			.on_eos(|_trailers: Option<&axum::http::HeaderMap>, stream_duration: Duration, _span: &Span| {
-				tracing::debug!("Stream closed after {:?}", stream_duration)
-			})
-			.on_failure(|_error: tower_http::classify::ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
-				tracing::error!("Something went wrong")
-			})
-		)
-		.layer(CatchPanicLayer::new())
-		.layer(middleware::from_fn(final_error_layer))
-	;
-	info!("Listening on {}", addr);
-	axum::Server::bind(&addr)
-		.serve(app.into_make_service())
-		.await
-		.unwrap()
-	;
+async fn main() -> Result<(), AppError> {
+	let config = load_config::<Config>()?;
+	let _guard = setup_logging(&config.logdir);
+	let state  = Arc::new(AppState::new(config));
+	start_stats_processor(&state).await;
+	let app    = create_app::<_, User, User>(&state, protected(), public(), ApiDoc::openapi());
+	let server = create_server(app, &*state).await?;
+	info!("Listening on {}", state.address().expect("Server address not set"));
+	server.await.unwrap()
 }
 
 
