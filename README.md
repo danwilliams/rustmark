@@ -1,9 +1,11 @@
 # Rustmark
 
-[Rust]:     https://www.rust-lang.org/
+[Rust]:       https://www.rust-lang.org/
+[Terracotta]: https://crates.io/crates/terracotta
 
-Rustmark is a simple Markdown server written in [Rust][]. It is intended to be
-easy to use, easy to fork and customise, and easy to deploy.
+Rustmark is a simple Markdown server written in [Rust][], and based on
+[Terracotta][]. It is intended to be easy to use, easy to fork and customise,
+and easy to deploy.
 
 Rustmark provides both library and binary features, and has also been designed
 to be cloned and used as a starting point for new projects that might extend its
@@ -53,7 +55,6 @@ for use.
 [Nerd Fonts]:      https://www.nerdfonts.com/
 [Syntect]:         https://crates.io/crates/syntect
 [Tera]:            https://crates.io/crates/tera
-[Terracotta]:      https://crates.io/crates/terracotta
 [Tracing]:         https://crates.io/crates/tracing
 [Twemoji]:         https://twemoji.twitter.com/
 
@@ -308,7 +309,7 @@ to customise the core logic, or extend it, then you should refer to the
 
 ### Structure
 
-Rustmark is based on [Terracotta][], which is a web application template. This
+Rustmark is based on [Terracotta][], which is a web application framework. This
 document focuses on Rustmark, but if you want to know more about the underlying
 application structure, you should refer to the [Developer documentation][Dev structure].
 
@@ -362,11 +363,10 @@ There are some key points to note about the environment you choose:
 
   - Debian and Ubuntu are the Linux distros of choice, although other distros
     should also work just fine, as there are no special requirements.
+  - Running natively on MacOS works fine.
   - Running natively on Windows is not targeted or tested, and there are no
     plans to support it, so although it may work, it also may not. Running on
     WSL does work fine, and is the recommended way to run on Windows.
-  - Running natively on MacOS is untested, although there is no known technical
-    reason why it would not work.
 
 Typically, you will set up Rust using [`rustup`][Rustup], which is the
 recommended way to install Rust. The `stable` toolchain is targeted, as the
@@ -420,14 +420,19 @@ as they will not be cached if loaded locally, so will be parsed on every
 request unless baked in. This is more important for production environments than
 development ones, where it might be desirable to re-parse each time.
 
-The following options should be specified under a `[local_loading]` heading:
+The following type headings are available:
 
-  - `html`             - The loading behaviour for HTML templates.
-  - `markdown`         - The loading behaviour for Markdown content.
-  - `protected_assets` - The loading behaviour for protected static assets.
-  - `public_assets`    - The loading behaviour for public static assets.
+  - `html_templates`   - HTML templates.
+  - `markdown`         - Markdown content.
+  - `assets.protected` - Protected static assets.
+  - `assets.public`    - Public static assets.
 
-Each of these options can be one of the following values:
+The following options should be specified under the individual type headings:
+
+  - `behavior`   - The loading behaviour.
+  - `local_path` - The path to the files on the local filesystem.
+
+The `behavior` option can be one of the following values:
 
   - `Deny`       - Deny loading from the local filesystem. This is the default
                    for all the options.
@@ -436,35 +441,29 @@ Each of these options can be one of the following values:
   - `Override`   - Load from the local filesystem if present, and otherwise load
                    from the baked-in resources.
 
-As shown here:
+For those types configured to allow loading from the local filesystem, the
+following options can be specified under the individual type headings:
 
-```toml
-[local_loading]
-html             = "Deny"
-markdown         = "Supplement" # default is "Deny"
-protected_assets = "Override"   # default is "Deny"
-public_assets    = "Override"   # default is "Deny"
-```
-
-For those options that allow loading from the local filesystem, the following
-options can be specified under a `[local_paths]` heading:
-
-  - `html`             - The path to the HTML templates. Defaults to `html`.
-  - `markdown`         - The path to the Markdown content. Defaults to
-                         `content`.
-  - `protected_assets` - The path to the protected static assets. Defaults to
-                         `content`.
-  - `public_assets`    - The path to the public static assets. Defaults to
-                         `static`.
+  - `local_path` - The path to the files.
 
 As shown here:
 
 ```toml
-[local_paths]
-html             = "html"
-markdown         = "content"
-protected_assets = "content"
-public_assets    = "static"
+[html_templates]
+behavior   = "Deny"
+local_path = "html"
+
+[markdown]
+behavior   = "Supplement" # default is "Deny"
+local_path = "html"
+
+[assets.protected]
+behavior   = "Override"   # default is "Deny"
+local_path = "content"
+
+[assets.public]
+behavior   = "Override"   # default is "Deny"
+local_path = "static"
 ```
 
 #### Static file options
@@ -488,7 +487,8 @@ that they would need to be decreased a little on a very busy system with a lot
 of large files, where the memory usage could become a problem and the raw speed
 of each download becomes a secondary concern.
 
-The following options should be specified under a `[static_files]` heading:
+The following options should be specified under an `[assets.static_files]`
+heading:
 
   - `stream_threshold` - The size of the file, in KB, above which it will be
                          streamed to the client. Defaults to `1000` (1MiB).
@@ -502,7 +502,7 @@ Each of these options accepts an integer value.
 As shown here:
 
 ```toml
-[static_files]
+[assets.static_files]
 stream_threshold = 1000 # 1MiB — files above this size will be streamed
 stream_buffer    = 256  # 256KB
 read_buffer      = 128  # 128KB

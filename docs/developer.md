@@ -71,7 +71,7 @@ use cases.
 [Terracotta]:           https://crates.io/crates/terracotta
 [Terracotta structure]: https://github.com/danwilliams/terracotta/docs/developer.md#codebase-structure
 
-Rustmark is based on [Terracotta][], which is a web application template. This
+Rustmark is based on [Terracotta][], which is a web application framework. This
 document focuses on Rustmark, but if you want to know more about the underlying
 application structure, you should refer to the [Terracotta structure
 documentation][Terracotta structure].
