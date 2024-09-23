@@ -1,3 +1,23 @@
+//! Rustmark build script.
+//! 
+//! This script is used to parse Markdown files and generate HTML files from
+//! them, so that they can be compiled into the application and won't need to
+//! be parsed at runtime.
+//! 
+
+
+
+//		Global configuration
+
+//	Customisations of the standard linting configuration
+#![allow(unreachable_pub,                 reason = "Not useful in binaries")]
+#![allow(clippy::doc_markdown,            reason = "Too many false positives")]
+#![allow(clippy::expect_used,             reason = "Acceptable in a build script")]
+#![allow(clippy::multiple_crate_versions, reason = "Cannot resolve all these")]
+#![allow(clippy::unwrap_used,             reason = "Somewhat acceptable in a build script")]
+
+
+
 //		Modules
 
 #[path = "src/lib.rs"]
@@ -7,7 +27,6 @@ mod rustmark;
 
 //		Packages
 
-use serde_json::{self};
 use std::{
 	env,
 	fs::{File, self},
@@ -15,7 +34,7 @@ use std::{
 	path::Path,
 	time,
 };
-use tokio::{self};
+use tokio::task::spawn_blocking;
 use walkdir::WalkDir;
 
 
@@ -26,6 +45,7 @@ use walkdir::WalkDir;
 #[tokio::main]
 async fn main() {
 	println!("cargo:rerun-if-changed=content");
+	println!("cargo:rustc-cfg=build_script");
 	//	We use unwrap throughout because this is a build script, and if there
 	//	are any errors, we want the build to fail and for us to see the error.
 	let env_out_dir = env::var("OUT_DIR").unwrap();
@@ -36,8 +56,8 @@ async fn main() {
 	//		Traverse output directory											
 	//	We do this first so that we can delete any files that are no longer
 	//	present in the input directory.
-	for output_path in WalkDir::new(output_root).follow_links(true) {
-		let output_path = output_path.unwrap().path().to_path_buf();
+	for output_path_entry in WalkDir::new(output_root).follow_links(true) {
+		let output_path = output_path_entry.unwrap().path().to_path_buf();
 		let input_path  = input_root.join(output_path.strip_prefix(output_root).unwrap());
 		if output_path == output_root || !output_path.exists() {
 			continue;
@@ -61,8 +81,8 @@ async fn main() {
 	}
 	
 	//		Traverse input directory											
-	for input_path in WalkDir::new(input_root).follow_links(true) {
-		let input_path  = input_path.unwrap().path().to_path_buf();
+	for input_path_entry in WalkDir::new(input_root).follow_links(true) {
+		let input_path  = input_path_entry.unwrap().path().to_path_buf();
 		let output_path = output_root.join(input_path.strip_prefix(input_root).unwrap());
 		println!("Found: {}", input_path.display());
 		if input_path == input_root {
@@ -100,13 +120,13 @@ async fn main() {
 		//		Handle files													
 		//	We spawn a new task for each file, so that we can process them in
 		//	parallel to whatever degree is allowed by the runtime.
-		let task = tokio::spawn(async move {
+		let task = spawn_blocking(move ||
 			if input_path.extension().is_some() && input_path.extension().unwrap() == "md" {
-				parse(&input_path, &output_path).await;
+				parse(&input_path, &output_path);
 			} else {
-				copy(&input_path, &output_path).await;
+				copy(&input_path, &output_path);
 			}
-		});
+		);
 		tasks.push(task);
 	}
 	//	Wait for all tasks to finish
@@ -123,12 +143,12 @@ async fn main() {
 /// * `input_path`  - The path to the input file.
 /// * `output_path` - The path to the output file.
 /// 
-async fn copy(input_path: &Path, output_path: &Path) {
+fn copy(input_path: &Path, output_path: &Path) {
 	//	We ideally want to use hardlinks here in order to save space, but when
 	//	they were used, problems were found whereby the input files were getting
 	//	truncated.
 	println!("Copying file: {} -> {}", input_path.display(), output_path.display());
-	fs::copy(input_path, output_path).unwrap();
+	_ = fs::copy(input_path, output_path).unwrap();
 }
 
 //		parse																	
@@ -139,7 +159,7 @@ async fn copy(input_path: &Path, output_path: &Path) {
 /// * `input_path`  - The path to the input file.
 /// * `output_path` - The path to the output file.
 /// 
-async fn parse(input_path: &Path, output_path: &Path) {
+fn parse(input_path: &Path, output_path: &Path) {
 	println!("Parsing file: {}", input_path.display());
 	let (title, toc, html) = rustmark::parse(
 		&fs::read_to_string(input_path).unwrap(),

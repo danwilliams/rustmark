@@ -1,3 +1,18 @@
+//! Rustmark
+//!
+//! Extensible web application for serving Markdown-based content.
+//!
+
+
+
+//		Global configuration
+
+//	Customisations of the standard linting configuration
+#![allow(clippy::doc_markdown,            reason = "Too many false positives")]
+#![allow(clippy::multiple_crate_versions, reason = "Cannot resolve all these")]
+
+
+
 //		Packages
 
 use comrak::{
@@ -51,6 +66,7 @@ pub struct Heading {
 /// * `toc`   - A table of contents based on headings found.
 /// * `title` - The page title.
 /// 
+#[must_use]
 pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<Heading>, StrTendril) {
 	//		Parse Markdown														
 	let adaptor     = SyntectAdapter::new("base16-ocean.dark");
@@ -168,7 +184,7 @@ pub fn find_headings(document: &Document) -> Vec<Heading> {
 /// * `blockquotes` - The selection of HTML blockquote elements to search for
 ///                   details blocks.
 /// 
-pub fn process_details(blockquotes: &Selection) {
+pub fn process_details(blockquotes: &Selection<'_>) {
 	//	Find all blockquotes that match details syntax.
 	for mut blockquote in blockquotes.iter() {
 		let mut paragraph = blockquote.select("p:first-child").first();
@@ -187,15 +203,12 @@ pub fn process_details(blockquotes: &Selection) {
 				.to_owned()
 			;
 			while para_html.starts_with("-&gt;") {
-				match para_html.split_once('\n') { 
-					Some((line, rest))   => {
-						summary.push(line.strip_prefix("-&gt;").unwrap().trim().to_owned());
-						para_html        = rest.trim().to_owned();
-					},
-					None                 => {
-						summary.push(para_html.strip_prefix("-&gt;").unwrap().trim().to_owned());
-						para_html        = s!("");
-					},
+				if let Some((line, rest)) = para_html.split_once('\n') {
+					summary.push(line.strip_prefix("-&gt;").unwrap().trim().to_owned());
+					para_html        = rest.trim().to_owned();
+				} else {
+					summary.push(para_html.strip_prefix("-&gt;").unwrap().trim().to_owned());
+					para_html        = s!("");
 				}
 			}
 			//	This is somewhat yucky, but Nipper doesn't provide any way to access the
@@ -230,7 +243,7 @@ pub fn process_details(blockquotes: &Selection) {
 /// * `blockquotes` - The selection of HTML blockquote elements to search for
 ///                   callouts.
 /// 
-pub fn process_callouts(blockquotes: &Selection) {
+pub fn process_callouts(blockquotes: &Selection<'_>) {
 	//	Find all blockquotes that match callout syntax.
 	for mut blockquote in blockquotes.iter() {
 		let mut paragraph = blockquote.select("p:first-child").first();
@@ -269,19 +282,16 @@ pub fn process_callouts(blockquotes: &Selection) {
 			.trim()
 			.to_owned()
 		;
-		blockquote.set_html(if chld_html.is_empty() {
-			format!(
-				r#"<p>{}</p>"#,
-				para_html,
-			)
-		} else {
-			format!(
-				r#"<details {} class="callout-collapse"><summary>{}</summary>{}</details>"#,
-				if open { "open" } else { "" },
-				para_html,
-				chld_html,
-			)
-		});
+		blockquote.set_html(
+			if chld_html.is_empty() {
+				format!(r#"<p>{para_html}</p>"#)
+			} else {
+				format!(
+					r#"<details {} class="callout-collapse"><summary>{para_html}</summary>{chld_html}</details>"#,
+					if open { "open" } else { "" },
+				)
+			}
+		);
 		//	We need to specially process the contents of the blockquote, because the
 		//	HTML has been rewritten, and so any references to nested blockquotes
 		//	inside it that were found in the original selection have been orphaned
@@ -320,19 +330,11 @@ pub fn process_headings(document: &Document) {
 		let mut elements     = document.select("body > *").iter().enumerate().peekable();
 		while let Some((_, mut element)) = elements.next() {
 			let next_element = elements.peek().cloned();
-			let next_tag     = match &next_element {
-				None               => s!(""),
-				Some((_, element)) => match element.get(0) {
-					None           => s!(""),
-					Some(node)     => {
-						if node.node_name().is_none() {
-							s!("")
-						} else {
-							node.node_name().unwrap().to_string().to_lowercase()
-						}
-					},
-				},
-			};
+			let next_tag     = next_element.clone().map_or_else(|| s!(""), |(_, el)|
+				el.get(0).map_or_else(|| s!(""), |node|
+					node.node_name().map_or_else(|| s!(""), |name| name.to_string().to_lowercase())
+				),
+			);
 			if let Some(node) = element.get(0) {
 				if node.node_name().is_some() {
 					let tag   = node.node_name().unwrap().to_string().to_lowercase();
@@ -354,10 +356,7 @@ pub fn process_headings(document: &Document) {
 			||	next_element.is_none()
 			{
 				element.replace_with_html(format!(
-					r#"<details open class="heading-collapse {}"><summary>{}</summary>{}</details>"#,
-					heading_tag,
-					heading_html,
-					buffer_html,
+					r#"<details open class="heading-collapse {heading_tag}"><summary>{heading_html}</summary>{buffer_html}</details>"#,
 				));
 				active       = false;
 				heading_html = String::new();
@@ -366,7 +365,7 @@ pub fn process_headings(document: &Document) {
 			}
 			element.remove();
 		}
-		headings.pop();
+		_ = headings.pop();
 		if headings.is_empty() {
 			break;
 		}
