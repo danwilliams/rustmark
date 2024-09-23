@@ -1,46 +1,46 @@
 [package]
-name = "rustmark"
-version = "0.5.0"
-description = "Extensible web application for serving Markdown-based content"
-categories = ["asynchronous", "parser-implementations", "text-processing", "web-programming", "web-programming::http-server"]
-keywords = ["web", "server", "markdown", "template", "authentication"]
-edition = "2021"
-license = "MIT"
-authors = ["Dan Williams <dan@dotfive.co.uk>"]
-repository = "https://github.com/danwilliams/rustmark"
-readme = "README.md"
+name          = "rustmark"
+version       = "0.5.0"
+description   = "Extensible web application for serving Markdown-based content"
+categories    = ["asynchronous", "parser-implementations", "text-processing", "web-programming", "web-programming::http-server"]
+keywords      = ["web", "server", "markdown", "template", "authentication"]
+edition       = "2021"
+license       = "MIT"
+authors       = ["Dan Williams <dan@dotfive.co.uk>"]
+repository    = "https://github.com/danwilliams/rustmark"
+readme        = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.release]
-strip = true     # Automatically strip symbols from the binary
-opt-level = 3    # Maximum optimisation (this is the cargo default)
-lto = "thin"     # Enable link-time optimisation (fast)
+strip     = true   # Automatically strip symbols from the binary
+opt-level = 3      # Maximum optimisation (this is the cargo default)
+lto       = "thin" # Enable link-time optimisation (fast)
 
 [dependencies]
-axum = { version = "0.7.5", features = ["ws"] }
-comrak = { version = "0.18.0", features = ["emojis", "shortcodes"] }
-include_dir = { version = "0.7.4", features = ["glob"] }
-nipper = "0.1.9"
-parking_lot = "0.12.3"
-rubedo = "0.6.2"
-serde = { version = "1.0.210", features = ["derive"] }
-serde_json = { version = "1.0.128", features = ["preserve_order"] }
-smart-default = "0.7.1"
-tendril = "0.4.3"
-tera = "1.20.0"
-terracotta = { version = "0.4.0", features = ["full"] }
-tikv-jemallocator = "0.6.0"
-tokio = { version = "1.40.0", features = ["fs", "io-std", "io-util", "macros", "rt-multi-thread"] }
-tracing = "0.1.40"
-utoipa = { version = "4.2.3", features = ["axum_extras", "chrono", "preserve_order", "indexmap"] }
+axum               = { version = "0.7.5", features = ["ws"] }
+comrak             = { version = "0.18.0", features = ["emojis", "shortcodes"] }
+include_dir        = { version = "0.7.4", features = ["glob"] }
+nipper             = "0.1.9"
+parking_lot        = "0.12.3"
+rubedo             = "0.6.2"
+serde              = { version = "1.0.210", features = ["derive"] }
+serde_json         = { version = "1.0.128", features = ["preserve_order"] }
+smart-default      = "0.7.1"
+tendril            = "0.4.3"
+tera               = "1.20.0"
+terracotta         = { version = "0.4.0", features = ["full"] }
+tikv-jemallocator  = "0.6.0"
+tokio              = { version = "1.40.0", features = ["fs", "io-std", "io-util", "macros", "rt-multi-thread"] }
+tracing            = "0.1.40"
+utoipa             = { version = "4.2.3", features = ["axum_extras", "chrono", "preserve_order", "indexmap"] }
 
 [build-dependencies]
-comrak = { version = "0.18.0", features = ["emojis", "shortcodes"] }
-nipper = "0.1.9"
-rubedo = "0.6.2"
-serde = { version = "1.0.210", features = ["derive"] }
-serde_json = { version = "1.0.128", features = ["preserve_order"] }
-tendril = "0.4.3"
-tokio = { version = "1.40.0", features = ["io-std", "io-util", "macros", "rt", "rt-multi-thread", "time"] }
-walkdir = "2.4.0"
+comrak             = { version = "0.18.0", features = ["emojis", "shortcodes"] }
+nipper             = "0.1.9"
+rubedo             = "0.6.2"
+serde              = { version = "1.0.210", features = ["derive"] }
+serde_json         = { version = "1.0.128", features = ["preserve_order"] }
+tendril            = "0.4.3"
+tokio              = { version = "1.40.0", features = ["io-std", "io-util", "macros", "rt", "rt-multi-thread", "time"] }
+walkdir            = "2.4.0"
