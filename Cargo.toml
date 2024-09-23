@@ -1,6 +1,6 @@
 [package]
 name          = "rustmark"
-version       = "0.5.0"
+version       = "0.6.0"
 description   = "Extensible web application for serving Markdown-based content"
 categories    = ["asynchronous", "parser-implementations", "text-processing", "web-programming", "web-programming::http-server"]
 keywords      = ["web", "server", "markdown", "template", "authentication"]
@@ -8,6 +8,7 @@ edition       = "2021"
 rust-version  = "1.81.0"
 license       = "MIT"
 authors       = ["Dan Williams <dan@dotfive.co.uk>"]
+documentation = "https://docs.rs/rustmark"
 repository    = "https://github.com/danwilliams/rustmark"
 readme        = "README.md"
 

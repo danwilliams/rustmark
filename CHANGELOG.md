@@ -18,6 +18,29 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Semantic Versioning][].
 
 
+## 0.6.0 (23 September 2024)
+
+### Added
+
+  - Added `/api/version` endpoint to `health` module
+  - Added MSRV (Minimum Supported Rust Version) in `Cargo.toml`, set to 1.81.0
+  - Added standard linting configuration
+
+### Changed
+
+  - Upgraded to [Terracotta][] 0.4.0, now a library
+  - Updated [Font Awesome][] from 6.4.0 -> 6.6.0
+  - Updated [Bulma][] from 0.9.4 -> 1.0.2
+  - Adjusted logo/nav CSS for dark mode
+  - Improved error-handling
+  - Updated crate dependencies
+  - Updated documentation
+
+### Removed
+
+  - Removed non-custom [Terracotta][] functionality which is now in the library
+
+
 ## 0.5.0 (28 October 2023)
 
 ### Added
