@@ -34,10 +34,12 @@ smart-default      = "0.7.1"
 tendril            = "0.4.3"
 tera               = "1.20.0"
 terracotta         = { version = "0.4.0", features = ["full"] }
-tikv-jemallocator  = "0.6.0"
 tokio              = { version = "1.40.0", features = ["fs", "io-std", "io-util", "macros", "rt-multi-thread"] }
 tracing            = "0.1.40"
 utoipa             = { version = "4.2.3", features = ["axum_extras", "chrono", "preserve_order", "indexmap"] }
+
+[target.'cfg(not(windows))'.dependencies]
+tikv-jemallocator  = "0.6.0"
 
 [build-dependencies]
 comrak             = { version = "0.18.0", features = ["emojis", "shortcodes"] }
