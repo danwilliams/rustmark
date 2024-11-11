@@ -1,5 +1,11 @@
 # Rustmark
 
+![Rust](https://img.shields.io/badge/Rust-1.81%2B-b7410e?style=flat&logo=rust&logoColor=white&labelColor=b7410e)
+[![Crate version](https://img.shields.io/crates/v/rustmark?style=flat)](https://crates.io/crates/rustmark)
+[![CI](https://img.shields.io/github/actions/workflow/status/danwilliams/rustmark/ci.yml?style=flat&logo=github&logoColor=white&label=build%2Ftest)](https://github.com/danwilliams/rustmark/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/docsrs/rustmark?style=flat&logo=docs.rs&logoColor=white)](https://docs.rs/crate/rustmark/latest)
+![License](https://img.shields.io/github/license/danwilliams/rustmark?style=flat)
+
 [Rust]:       https://www.rust-lang.org/
 [Terracotta]: https://crates.io/crates/terracotta
 
