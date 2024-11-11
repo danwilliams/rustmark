@@ -133,7 +133,7 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<Heading>, StrTe
 pub fn find_title(document: &Document, remove_title: bool) -> String {
 	let mut title = document.select("h1:first-child").text().to_string();
 	if title.is_empty() {
-		title     = s!("Untitled");
+		"Untitled".clone_into(&mut title);
 	}
 	if remove_title {
 		document.select("h1:first-child").remove();
@@ -220,7 +220,7 @@ pub fn process_details(blockquotes: &Selection<'_>) {
 					para_html = rest.trim().to_owned();
 				} else {
 					summary.push(para_html.strip_prefix("-&gt;").unwrap().trim().to_owned());
-					para_html = s!("");
+					para_html = String::new();
 				}
 			}
 			//	This is somewhat yucky, but Nipper doesn't provide any way to access the
@@ -290,10 +290,10 @@ pub fn process_callouts(blockquotes: &Selection<'_>) {
 			.collect::<Vec<String>>()
 			.join("\n")
 		;
-		chld_html         = chld_html
+		chld_html
 			.replace("<p></p>", "")
 			.trim()
-			.to_owned()
+			.clone_into(&mut chld_html)
 		;
 		blockquote.set_html(
 			if chld_html.is_empty() {
