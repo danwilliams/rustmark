@@ -1,5 +1,6 @@
 # Changelog
 
+[Bulma]:               https://bulma.io/
 [Docker]:              https://www.docker.com/
 [Font Awesome]:        https://fontawesome.com/
 [Keep a Changelog]:    https://keepachangelog.com/en/1.0.0/
@@ -16,6 +17,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog][], and this project adheres to
 [Semantic Versioning][].
+
+
+## 0.6.1 (12 November 2024)
+
+### Changed
+
+  - Updated lint configuration for Rust 1.82
+  - Updated crate dependencies
 
 
 ## 0.6.0 (23 September 2024)
