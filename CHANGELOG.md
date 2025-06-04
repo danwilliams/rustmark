@@ -19,6 +19,13 @@ The format is based on [Keep a Changelog][], and this project adheres to
 [Semantic Versioning][].
 
 
+## 0.6.3 (04 June 2025)
+
+### Fixed
+
+  - Updated routes to new Axum style
+
+
 ## 0.6.2 (04 June 2025)
 
 ### Changed
