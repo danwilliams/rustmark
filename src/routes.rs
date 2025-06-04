@@ -26,8 +26,8 @@ use terracotta::{
 /// Returns a list of protected routes.
 pub fn protected() -> Vec<(&'static str, MethodRouter<Arc<AppState>>)> {
 	vec![
-		("/",      get(get_index)),
-		("/*path", get(get_page))    //  Also handles get_protected_static_asset(uri)
+		("/",        get(get_index)),
+		("/{*path}", get(get_page))    //  Also handles get_protected_static_asset(uri)
 	]
 }
 
@@ -42,10 +42,10 @@ pub fn public() -> Vec<(&'static str, MethodRouter<Arc<AppState>>)> {
 		("/api/stats/feed",    get(get_stats_feed)),
 		("/login",             post(post_login::<_, Credentials, User, User>)),
 		("/logout",            get(get_logout::<User>)),
-		("/css/*path",         get(get_public_static_asset)),
-		("/img/*path",         get(get_public_static_asset)),
-		("/js/*path",          get(get_public_static_asset)),
-		("/webfonts/*path",    get(get_public_static_asset)),
+		("/css/{*path}",       get(get_public_static_asset)),
+		("/img/{*path}",       get(get_public_static_asset)),
+		("/js/{*path}",        get(get_public_static_asset)),
+		("/webfonts/{*path}",  get(get_public_static_asset)),
 	]
 }
 
