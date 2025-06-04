@@ -69,7 +69,7 @@ pub struct Heading {
 #[must_use]
 pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<Heading>, StrTendril) {
 	//		Parse Markdown														
-	let adaptor     = SyntectAdapter::new("base16-ocean.dark");
+	let adaptor     = SyntectAdapter::new(Some("base16-ocean.dark"));
 	let mut plugins = ComrakPlugins::default();
 	plugins.render.codefence_syntax_highlighter = Some(&adaptor);
 	let html        = markdown_to_html_with_plugins(
@@ -87,11 +87,13 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<Heading>, StrTe
 				description_lists:         true,
 				front_matter_delimiter:    Some(s!("---")),
 				shortcodes:                true,
+				..Default::default()
 			},
 			parse:                         ComrakParseOptions {
 				smart:                     true,
 				default_info_string:       Some(s!("")),
 				relaxed_tasklist_matching: true,
+				..Default::default()
 			},
 			render:                        ComrakRenderOptions {
 				hardbreaks:                false,
@@ -102,6 +104,7 @@ pub fn parse(markdown: &str, remove_title: bool) -> (String, Vec<Heading>, StrTe
 				escape:                    false,
 				list_style:                ListStyleType::Dash,
 				sourcepos:                 false,
+				..Default::default()
 			},
 		},
 		&plugins,

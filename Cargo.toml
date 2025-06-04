@@ -22,33 +22,33 @@ lto       = "thin" # Enable link-time optimisation (fast)
 #==============================[  DEPENDENCIES  ]===============================
 
 [dependencies]
-axum               = { version = "0.7.7", features = ["ws"] }
-comrak             = { version = "0.18.0", features = ["emojis", "shortcodes"] }
+axum               = { version = "0.8.4", features = ["ws"] }
+comrak             = { version = "0.39.0", features = ["emojis", "shortcodes"] }
 include_dir        = { version = "0.7.4", features = ["glob"] }
 nipper             = "0.1.9"
-parking_lot        = "0.12.3"
-rubedo             = "0.6.3"
-serde              = { version = "1.0.215", features = ["derive"] }
-serde_json         = { version = "1.0.132", features = ["preserve_order"] }
+parking_lot        = "0.12.4"
+rubedo             = "0.6.4"
+serde              = { version = "1.0.219", features = ["derive"] }
+serde_json         = { version = "1.0.140", features = ["preserve_order"] }
 smart-default      = "0.7.1"
 tendril            = "0.4.3"
 tera               = "1.20.0"
-terracotta         = { version = "0.4.1", features = ["full"] }
-tokio              = { version = "1.41.1", features = ["fs", "io-std", "io-util", "macros", "rt-multi-thread"] }
-tracing            = "0.1.40"
-utoipa             = { version = "4.2.3", features = ["axum_extras", "chrono", "preserve_order", "indexmap"] }
+terracotta         = { version = "0.4.2", features = ["full"] }
+tokio              = { version = "1.45.1", features = ["fs", "io-std", "io-util", "macros", "rt-multi-thread"] }
+tracing            = "0.1.41"
+utoipa             = { version = "5.3.1", features = ["axum_extras", "chrono", "preserve_order", "indexmap"] }
 
 [target.'cfg(not(windows))'.dependencies]
 tikv-jemallocator  = "0.6.0"
 
 [build-dependencies]
-comrak             = { version = "0.18.0", features = ["emojis", "shortcodes"] }
+comrak             = { version = "0.39.0", features = ["emojis", "shortcodes"] }
 nipper             = "0.1.9"
-rubedo             = "0.6.3"
-serde              = { version = "1.0.215", features = ["derive"] }
-serde_json         = { version = "1.0.132", features = ["preserve_order"] }
+rubedo             = "0.6.4"
+serde              = { version = "1.0.219", features = ["derive"] }
+serde_json         = { version = "1.0.140", features = ["preserve_order"] }
 tendril            = "0.4.3"
-tokio              = { version = "1.41.1", features = ["io-std", "io-util", "macros", "rt", "rt-multi-thread", "time"] }
+tokio              = { version = "1.45.1", features = ["io-std", "io-util", "macros", "rt", "rt-multi-thread", "time"] }
 walkdir            = "2.5.0"
 
 #=================================[  LINTS  ]===================================
