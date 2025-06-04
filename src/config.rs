@@ -2,7 +2,7 @@
 
 
 
-//		Packages
+//		Packages																										
 
 use core::net::IpAddr;
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ use terracotta::{
 
 
 
-//		Structs
+//		Structs																											
 
 //		Config																	
 /// The main configuration options for the application.

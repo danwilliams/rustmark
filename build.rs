@@ -7,7 +7,7 @@
 
 
 
-//		Global configuration
+//		Global configuration																							
 
 //	Customisations of the standard linting configuration
 #![allow(unreachable_pub,                 reason = "Not useful in binaries")]
@@ -18,14 +18,14 @@
 
 
 
-//		Modules
+//		Modules																											
 
 #[path = "src/lib.rs"]
 mod rustmark;
 
 
 
-//		Packages
+//		Packages																										
 
 use std::{
 	env,
@@ -39,7 +39,7 @@ use walkdir::WalkDir;
 
 
 
-//		Functions
+//		Functions																										
 
 //		main																	
 #[tokio::main]

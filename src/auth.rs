@@ -2,7 +2,7 @@
 
 
 
-//		Packages
+//		Packages																										
 
 use serde::{Deserialize, Serialize};
 use terracotta::auth::{
@@ -12,7 +12,7 @@ use terracotta::auth::{
 
 
 
-//		Structs
+//		Structs																											
 
 //		Credentials																
 /// The data required to authenticate a user.

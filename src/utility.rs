@@ -2,14 +2,14 @@
 
 
 
-//		Packages
+//		Packages																										
 
 use terracotta::{health, stats};
 use utoipa::OpenApi;
 
 
 
-//		Structs
+//		Structs																											
 
 //		ApiDoc																	
 /// The OpenAPI documentation for the API.

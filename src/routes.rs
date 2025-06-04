@@ -2,7 +2,7 @@
 
 
 
-//		Packages
+//		Packages																										
 
 use crate::{
 	auth::{Credentials, User},
@@ -20,7 +20,7 @@ use terracotta::{
 
 
 
-//		Functions
+//		Functions																										
 
 //		protected																
 /// Returns a list of protected routes.

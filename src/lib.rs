@@ -5,7 +5,7 @@
 
 
 
-//		Global configuration
+//		Global configuration																							
 
 //	Customisations of the standard linting configuration
 #![allow(clippy::doc_markdown,            reason = "Too many false positives")]
@@ -13,7 +13,7 @@
 
 
 
-//		Packages
+//		Packages																										
 
 use comrak::{
 	ComrakOptions,
@@ -32,7 +32,7 @@ use tendril::StrTendril;
 
 
 
-//		Structs
+//		Structs																											
 
 //		Heading																	
 /// A heading extracted from Markdown.
@@ -50,7 +50,7 @@ pub struct Heading {
 
 
 
-//		Functions
+//		Functions																										
 
 //		parse																	
 /// Parses Markdown into HTML, extract metadata, and return the result.
