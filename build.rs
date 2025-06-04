@@ -76,7 +76,6 @@ async fn main() {
 				println!("Deleting file: {}", output_path.display());
 				fs::remove_file(&output_path).unwrap();
 			}
-			continue;
 		}
 	}
 	

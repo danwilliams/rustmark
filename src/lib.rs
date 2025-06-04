@@ -297,7 +297,7 @@ pub fn process_callouts(blockquotes: &Selection<'_>) {
 		;
 		blockquote.set_html(
 			if chld_html.is_empty() {
-				format!(r#"<p>{para_html}</p>"#)
+				format!(r"<p>{para_html}</p>")
 			} else {
 				format!(
 					r#"<details {} class="callout-collapse"><summary>{para_html}</summary>{chld_html}</details>"#,
@@ -362,7 +362,7 @@ pub fn process_headings(document: &Document) {
 						continue;
 					}
 				}
-			};
+			}
 			if !active {
 				continue;
 			}

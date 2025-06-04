@@ -42,12 +42,12 @@ use terracotta::{
 		create::{app_full as create_app, server as create_server},
 		errors::AppError,
 		init::{load_config, setup_logging},
-		state::StateProvider,
+		state::StateProvider as _,
 	},
 	stats::worker::start as start_stats_processor,
 };
 use tracing::info;
-use utoipa::OpenApi;
+use utoipa::OpenApi as _;
 
 #[cfg(not(windows))]
 use tikv_jemallocator::Jemalloc;
@@ -68,6 +68,7 @@ static GLOBAL: Jemalloc = Jemalloc;
 
 //		main																	
 #[tokio::main]
+#[expect(clippy::result_large_err, reason = "Size doesn't matter here as it's only for the main process")]
 async fn main() -> Result<(), AppError> {
 	let config = load_config::<Config>()?;
 	let _guard = setup_logging(&config.logdir);

@@ -62,6 +62,7 @@ pub async fn get_page(
 	let possible_text = if is_local {
 		local_path.exists().then(|| fs::read_to_string(local_path).ok()).flatten()
 	} else {
+		#[expect(clippy::return_and_then, reason = "False positive - cannot use `?` here")]
 		state.content_dir.get_file(path).and_then(|file| file.contents_utf8().map(ToOwned::to_owned))
 	};
 	possible_text.map_or_else(|| (StatusCode::NOT_FOUND).into_response(), |text| {
