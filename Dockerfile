@@ -55,7 +55,7 @@ ARG cargo_opts=""
 
 # Initial non-project build to cache dependencies
 WORKDIR /usr/src/rustmark
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
 RUN <<EOF
     set -e
     mkdir src
@@ -105,7 +105,7 @@ ARG profile=release
 
 WORKDIR /usr/src
 COPY --from=builder /usr/src/rustmark/target/x86_64-unknown-linux-musl/$profile/rustmark ./
-COPY Config.toml ./
+COPY Config.docker.toml ./Config.toml
 RUN mkdir content html static
 
 EXPOSE 8000

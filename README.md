@@ -596,7 +596,7 @@ upx --best target/release/rustmark
 scp target/release/rustmark you@yourserver:/path/to/deployment/directory
 ```
 
-### Docker
+### Docker (custom build)
 
 A common deployment scenario is to use [Docker][]. The Rustmark repository
 includes a `Dockerfile`, which can be used to build a Docker image. This image
@@ -733,6 +733,102 @@ docker run \
   -v /path/to/assets:/usr/src/static:ro \
   rustmark
 ```
+
+### Docker (public image)
+
+Rustmark is also available as a publicly-published Docker container, which can
+be used for easy deployment without needing to compile the application yourself.
+The official container images are available on GitHub Container Registry.
+
+#### Using the public Docker container
+
+Pull and run the latest image:
+
+```sh
+docker run -p 8000:8000 ghcr.io/danwilliams/rustmark:latest
+```
+
+To serve your own Markdown content, mount a volume:
+
+```sh
+docker run -p 8000:8000 \
+  -v /path/to/your/content:/usr/src/content \
+  ghcr.io/danwilliams/rustmark:latest
+```
+
+With a custom configuration file:
+
+```sh
+docker run -p 8000:8000 \
+  -v /path/to/your/content:/usr/src/content \
+  -v /path/to/your/Config.toml:/usr/src/Config.toml \
+  ghcr.io/danwilliams/rustmark:latest
+```
+
+Note that you will almost certainly want to provide a custom configuration file,
+at the very least to set a list of users and passwords. It's best to copy the
+`Config.docker.toml` file for this purpose.
+
+With persistent logs:
+
+```sh
+docker run -p 8000:8000 \
+  -v /path/to/logs:/usr/src/log \
+  ghcr.io/danwilliams/rustmark:latest
+```
+
+Note: By default, file logs are written inside the container with daily rotation
+and are lost when the container restarts. For production use, either mount a log
+volume as shown above, or rely on Docker's log collection (`docker logs`) which
+captures `stdout`/`stderr` output.
+
+Using environment variables instead of a config file:
+
+```sh
+docker run -p 8000:8000 \
+  -e RUSTMARK_HTTP_HOST="0.0.0.0" \
+  -e RUSTMARK_HTTP_PORT=8000 \
+  -e RUSTMARK_TITLE="My Documentation" \
+  -v /path/to/your/content:/usr/src/content \
+  ghcr.io/danwilliams/rustmark:latest
+```
+
+Note: The container includes a default `Config.toml` optimised for container
+use, with `host = "0.0.0.0"` to accept external connections. By default the
+loading behaviour is set to `Override` for Markdown content (this uses mounted
+content first, then falls back to built-in docs). You can mount your own
+`Config.toml` to `/usr/src/Config.toml` to completely replace these defaults.
+Environment variables take precedence over config file values.
+
+#### Building your own image
+
+You can build custom images based on the official Rustmark image, with your
+content baked in:
+
+  1. Create a `Dockerfile` in your content repository:
+     
+     ```dockerfile
+     FROM ghcr.io/danwilliams/rustmark:latest
+     
+     # Copy your content
+     COPY content /usr/src/content
+     COPY static /usr/src/static
+     COPY html /usr/src/html
+     
+     # Optionally add custom configuration
+     COPY Config.toml /usr/src/Config.toml
+     ```
+  
+  2. Build and run:
+     
+     ```sh
+     docker build -t my-rustmark-site .
+     docker run -p 8000:8000 my-rustmark-site
+     ```
+
+The container exposes port `8000` by default. The working directory is
+`/usr/src`, containing the Rustmark binary and directories for content, static
+files, and HTML templates.
 
 
 ## Legal

@@ -1,0 +1,29 @@
+# Container-optimised configuration for Rustmark.
+#
+# This file is used as the default when running in Docker. Mount your own
+# Config.toml to /usr/src/Config.toml to override completely.
+#
+
+host   = "0.0.0.0" # Accept connections from outside the container
+port   = 8000
+
+[html_templates]
+behavior   = "Deny"
+local_path = "html"
+
+[markdown]
+behavior   = "Override"
+local_path = "content"
+
+[assets.protected]
+behavior   = "Override"
+local_path = "content"
+
+[assets.public]
+behavior   = "Override"
+local_path = "static"
+
+[users]
+# No users are defined by default in the Docker configuration, but you will need
+# to define at least one user to access the web interface. Do so in the format
+# username = "password".
