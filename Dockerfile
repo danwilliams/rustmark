@@ -11,7 +11,11 @@ RUN <<EOF
     apt-get install -y \
         clang \
         musl-tools
-    rustup target add $(uname -m)-unknown-linux-musl
+    case "$(uname -m)" in
+        x86_64)  rustup target add x86_64-unknown-linux-musl ;;
+        aarch64) rustup target add aarch64-unknown-linux-gnu ;;
+        *)       echo "Unsupported architecture: $(uname -m)" >&2 ; exit 1 ;;
+    esac
 EOF
 
 # Install build dependencies
@@ -39,8 +43,12 @@ WORKDIR /usr/src
 RUN <<EOF
     set -e
     mkdir -p rustmark/.cargo
+    case "$(uname -m)" in
+        x86_64)  RUST_TARGET="x86_64-unknown-linux-musl" ;;
+        aarch64) RUST_TARGET="aarch64-unknown-linux-gnu" ;;
+    esac
     printf '
-[target.'$(uname -m)'-unknown-linux-musl]
+[target.'$RUST_TARGET']
 linker = "clang"
 rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/mold"]' \
         > rustmark/.cargo/config.toml
@@ -65,11 +73,15 @@ RUN <<EOF
     mkdir src
     echo "fn main() {}" > src/main.rs
     cp src/main.rs build.rs
-    cargo build --profile=$profile --target=$(uname -m)-unknown-linux-musl $cargo_opts
+    case "$(uname -m)" in
+        x86_64)  RUST_TARGET="x86_64-unknown-linux-musl" ;;
+        aarch64) RUST_TARGET="aarch64-unknown-linux-gnu" ;;
+    esac
+    cargo build --profile=$profile --target=$RUST_TARGET $cargo_opts
     rm build.rs
     rm src/main.rs
     rmdir src
-    target_path=/usr/src/rustmark/target/$(uname -m)-unknown-linux-musl
+    target_path=/usr/src/rustmark/target/$RUST_TARGET
     ln -s $target_path/debug $target_path/dev
 EOF
 
@@ -83,7 +95,11 @@ RUN <<EOF
     set -e
     touch src/main.rs
     touch build.rs
-    cargo build --profile=$profile --target=$(uname -m)-unknown-linux-musl $cargo_opts
+    case "$(uname -m)" in
+        x86_64)  RUST_TARGET="x86_64-unknown-linux-musl" ;;
+        aarch64) RUST_TARGET="aarch64-unknown-linux-gnu" ;;
+    esac
+    cargo build --profile=$profile --target=$RUST_TARGET $cargo_opts
 EOF
 
 # The "upx" argument can be set to 1 or 0 to enable or disable compression of
@@ -96,21 +112,29 @@ ARG upx=1
 RUN <<EOF
     set -e
     if [ "$upx" = "1" ] && [ "$profile" != "dev" ]; then
-        upx --best target/$(uname -m)-unknown-linux-musl/$profile/rustmark
+        case "$(uname -m)" in
+            x86_64)  RUST_TARGET="x86_64-unknown-linux-musl" ;;
+            aarch64) RUST_TARGET="aarch64-unknown-linux-gnu" ;;
+        esac
+        upx --best target/$RUST_TARGET/$profile/rustmark
     fi
 EOF
 
 
 # RUNNER
 
-FROM alpine
+# Platform-specific base images
+FROM alpine:latest AS runner-amd64
+FROM gcr.io/distroless/cc:latest AS runner-arm64
+
+# Select the appropriate runner based on target architecture
+FROM runner-${TARGETARCH}
 
 ARG profile=release
 
 WORKDIR /usr/src
-COPY --from=builder /usr/src/rustmark/target/*-unknown-linux-musl/$profile/rustmark ./
+COPY --from=builder /usr/src/rustmark/target/*/$profile/rustmark ./
 COPY Config.docker.toml ./Config.toml
-RUN mkdir content html static
 
 EXPOSE 8000
 
