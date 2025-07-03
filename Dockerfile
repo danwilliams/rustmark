@@ -11,7 +11,7 @@ RUN <<EOF
     apt-get install -y \
         clang \
         musl-tools
-    rustup target add x86_64-unknown-linux-musl
+    rustup target add $(uname -m)-unknown-linux-musl
 EOF
 
 # Install build dependencies
@@ -19,12 +19,16 @@ WORKDIR /usr/src
 RUN <<EOF
     set -e
     mkdir mold
-    curl -SL https://github.com/rui314/mold/releases/download/v1.11.0/mold-1.11.0-x86_64-linux.tar.gz \
+    curl -SL https://github.com/rui314/mold/releases/download/v2.40.1/mold-2.40.1-$(uname -m)-linux.tar.gz \
         | tar --strip-components=1 -xzC mold
     mv mold/bin/mold /usr/local/bin/
     rm -rf mold
     mkdir upx
-    curl -SL https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-amd64_linux.tar.xz \
+    case "$(uname -m)" in
+        x86_64)  UPX_ARCH="amd64" ;;
+        aarch64) UPX_ARCH="arm64" ;;
+    esac
+    curl -SL https://github.com/upx/upx/releases/download/v5.0.1/upx-5.0.1-${UPX_ARCH}_linux.tar.xz \
         | tar --strip-components=1 -xJC upx
     mv upx/upx /usr/local/bin/
     rm -rf upx
@@ -36,10 +40,10 @@ RUN <<EOF
     set -e
     mkdir -p rustmark/.cargo
     printf '
-[target.x86_64-unknown-linux-musl]
+[target.'$(uname -m)'-unknown-linux-musl]
 linker = "clang"
 rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/mold"]' \
-        > rustmark/.cargo/config
+        > rustmark/.cargo/config.toml
 EOF
 
 # By default, this Dockerfile builds in release mode. To build for local dev,
@@ -61,11 +65,11 @@ RUN <<EOF
     mkdir src
     echo "fn main() {}" > src/main.rs
     cp src/main.rs build.rs
-    cargo build --profile=$profile --target=x86_64-unknown-linux-musl $cargo_opts
+    cargo build --profile=$profile --target=$(uname -m)-unknown-linux-musl $cargo_opts
     rm build.rs
     rm src/main.rs
     rmdir src
-    target_path=/usr/src/rustmark/target/x86_64-unknown-linux-musl
+    target_path=/usr/src/rustmark/target/$(uname -m)-unknown-linux-musl
     ln -s $target_path/debug $target_path/dev
 EOF
 
@@ -79,7 +83,7 @@ RUN <<EOF
     set -e
     touch src/main.rs
     touch build.rs
-    cargo build --profile=$profile --target=x86_64-unknown-linux-musl $cargo_opts
+    cargo build --profile=$profile --target=$(uname -m)-unknown-linux-musl $cargo_opts
 EOF
 
 # The "upx" argument can be set to 1 or 0 to enable or disable compression of
@@ -92,7 +96,7 @@ ARG upx=1
 RUN <<EOF
     set -e
     if [ "$upx" = "1" ] && [ "$profile" != "dev" ]; then
-        upx --best target/x86_64-unknown-linux-musl/$profile/rustmark
+        upx --best target/$(uname -m)-unknown-linux-musl/$profile/rustmark
     fi
 EOF
 
@@ -104,7 +108,7 @@ FROM alpine
 ARG profile=release
 
 WORKDIR /usr/src
-COPY --from=builder /usr/src/rustmark/target/x86_64-unknown-linux-musl/$profile/rustmark ./
+COPY --from=builder /usr/src/rustmark/target/*-unknown-linux-musl/$profile/rustmark ./
 COPY Config.docker.toml ./Config.toml
 RUN mkdir content html static
 
